@@ -313,6 +313,7 @@ export default function Tracker() {
   const [profileColors, setProfileColors] = useState({});
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
+  const [clockNow, setClockNow] = useState(Date.now());
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
   const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
@@ -366,6 +367,11 @@ export default function Tracker() {
   const [tFat, setTFat] = useState("");
   const [tFiberMin, setTFiberMin] = useState("");
   const [tFiberMax, setTFiberMax] = useState("");
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -515,7 +521,7 @@ export default function Tracker() {
   }
 
   function fastElapsed(startedAt) {
-    const ms = Math.max(0, Date.now() - new Date(startedAt).getTime());
+    const ms = Math.max(0, clockNow - new Date(startedAt).getTime());
     const totalMinutes = Math.floor(ms / 60000);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -972,18 +978,34 @@ export default function Tracker() {
                   </div>
                   <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
                 </div>
-
-                {activeFasts[activeUser] && (
-                  <div style={{ ...cardStyle, background: "#F1EBDD", borderColor: "#D8CCB8", padding: "1.1rem 1.25rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                      <div>
-                        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>You’re fasting</div>
-                        <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>Started {new Date(activeFasts[activeUser].started_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} · {fastElapsed(activeFasts[activeUser].started_at)}</div>
+                {isMine && (
+                  <div style={{ ...cardStyle, background: activeFasts[activeUser] ? "#F1EBDD" : "#FFF8EE", borderColor: activeFasts[activeUser] ? "#D8CCB8" : "#E6D6C1", padding: "1.05rem 1.2rem" }}>
+                    {activeFasts[activeUser] ? (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>You’re fasting</div>
+                          <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>
+                            Started {new Date(activeFasts[activeUser].started_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} · {fastElapsed(activeFasts[activeUser].started_at)}
+                          </div>
+                        </div>
+                        <button onClick={endFast} disabled={fastBusy} style={{ flexShrink: 0, background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
+                          {fastBusy ? "Ending…" : "End fast"}
+                        </button>
                       </div>
-                      {isMine && <button onClick={endFast} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>End fast</button>}
-                    </div>
+                    ) : (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                        <div>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600 }}>Fasting today?</div>
+                          <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>WITH can adjust your Today prompts while you fast.</div>
+                        </div>
+                        <button onClick={startFast} disabled={fastBusy} style={{ flexShrink: 0, background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
+                          {fastBusy ? "Starting…" : "Start fast"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
+
 
                 {!hasAnything && (
                   <div style={{ ...cardStyle, padding: "1.45rem", background: "#FFF8EE", borderColor: "#E6D6C1" }}>
@@ -1006,7 +1028,6 @@ export default function Tracker() {
                       ))}
                     </div>
                   </div>
-                  {!activeFasts[activeUser] && <button onClick={startFast} disabled={fastBusy} style={{ marginTop: 8, background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "7px 2px" }}>Fasting today? Start a fast</button>}
                 )}
 
                 {hasAnything && (
