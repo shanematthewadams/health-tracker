@@ -4,6 +4,17 @@ import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut,
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
+const PROFILE_COLORS = [
+  { name: "Terracotta", value: "#D9825B", dim: "#B96E4B", text: "#3C2418" },
+  { name: "Lavender", value: "#8F7AAE", dim: "#776590", text: "#2F2639" },
+  { name: "Sage", value: "#7E9A7B", dim: "#667E64", text: "#1F2D20" },
+  { name: "Dusty blue", value: "#6F8FA8", dim: "#5D788D", text: "#1E2A33" },
+  { name: "Ochre", value: "#C4934A", dim: "#A5793C", text: "#332716" },
+  { name: "Rose", value: "#B97878", dim: "#996363", text: "#332020" },
+  { name: "Teal", value: "#5E918B", dim: "#4D7772", text: "#18302D" },
+  { name: "Plum", value: "#8A6680", dim: "#715369", text: "#2E202B" },
+];
+
 const USER_COLOR = { Shane: "#D9825B", Alli: "#8F7AAE" };
 const USER_COLOR_DIM = { Shane: "#B96E4B", Alli: "#776590" };
 const USER_TEXT_ON = { Shane: "#3C2418", Alli: "#2F2639" };
@@ -299,6 +310,9 @@ export default function Tracker() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
+  const [profileColors, setProfileColors] = useState({});
+  const [activeFasts, setActiveFasts] = useState({});
+  const [fastBusy, setFastBusy] = useState(false);
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
   const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
@@ -401,6 +415,7 @@ export default function Tracker() {
         };
       });
       setProfiles(pmap);
+      setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
       if (owned) setProfileNameInput(owned.name || "");
@@ -410,7 +425,7 @@ export default function Tracker() {
       const profileIds = Object.values(pmap).map((p) => p.id);
       if (!profileIds.length) throw new Error("No health profiles exist for this household.");
 
-      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes] = await Promise.all([
+      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes] = await Promise.all([
         supabase.from("weight_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("food_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("activity_entries").select("*").eq("household_id", hid).order("entry_date"),
@@ -419,6 +434,7 @@ export default function Tracker() {
         supabase.from("saved_foods").select("*").eq("household_id", hid).order("name"),
         supabase.from("global_foods").select("*").order("name"),
         supabase.from("household_food_state").select("*").eq("household_id", hid),
+        supabase.from("fasting_entries").select("*").in("profile_id", profileIds).is("ended_at", null),
       ]);
       for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes]) if (r.error) throw r.error;
       const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
@@ -431,6 +447,12 @@ export default function Tracker() {
       setGlobalFoods((globalFoodsRes.data || []).map((f) => ({ ...f, source: "global", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber) })));
       setFoodStates(foodStatesRes.data || []);
       setData(next);
+      const fastMap = {};
+      (fastsRes?.data || []).forEach((f) => {
+        const name = Object.keys(pmap).find((n) => pmap[n].id === f.profile_id);
+        if (name) fastMap[name] = f;
+      });
+      setActiveFasts(fastMap);
     } catch (e) {
       setSaveError(e.message || "Could not load your household data.");
     } finally { setLoading(false); }
@@ -454,6 +476,51 @@ export default function Tracker() {
   useEffect(() => {
     document.title = householdName ? `WITH — ${householdName}` : "WITH";
   }, [householdName]);
+
+  async function saveProfileColor(color) {
+    if (!ownedProfileId) return;
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.from("profiles").update({ profile_color: color }).eq("id", ownedProfileId);
+    if (error) setAccountError(error.message);
+    else {
+      setProfileColors((prev) => ({ ...prev, [profileNameInput || activeUser]: color }));
+      setAccountMessage("Your color is updated.");
+      await loadAll();
+    }
+    setAccountBusy(false);
+  }
+
+  async function startFast() {
+    if (!activeCanEdit || fastBusy) return;
+    const p = profileFor(activeUser); if (!p) return;
+    setFastBusy(true); setSaveError(null);
+    const { error } = await supabase.from("fasting_entries").insert({
+      household_id: householdId,
+      profile_id: p.id,
+      started_at: new Date().toISOString(),
+    });
+    if (error) setSaveError(error.message);
+    else { showSuccess("Fast started", "fast"); await loadAll(); }
+    setFastBusy(false);
+  }
+
+  async function endFast() {
+    if (!activeCanEdit || fastBusy) return;
+    const fast = activeFasts[activeUser]; if (!fast) return;
+    setFastBusy(true); setSaveError(null);
+    const { error } = await supabase.from("fasting_entries").update({ ended_at: new Date().toISOString() }).eq("id", fast.id);
+    if (error) setSaveError(error.message);
+    else { showSuccess("Fast ended", "fast"); await loadAll(); }
+    setFastBusy(false);
+  }
+
+  function fastElapsed(startedAt) {
+    const ms = Math.max(0, Date.now() - new Date(startedAt).getTime());
+    const totalMinutes = Math.floor(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+  }
 
   async function saveProfileName() {
     if (!ownedProfileId || !profileNameInput.trim()) return;
@@ -491,6 +558,21 @@ export default function Tracker() {
     if (error) { setAccountError(error.message || "Could not delete account."); setAccountBusy(false); return; }
     await supabase.auth.signOut();
     setAccountBusy(false);
+  }
+
+  function profileColor(name, dim=false) {
+    const chosen = profileColors[name];
+    if (chosen) {
+      const match = PROFILE_COLORS.find((c) => c.value === chosen);
+      if (match) return dim ? match.dim : match.value;
+      return chosen;
+    }
+    return userColor(name, dim);
+  }
+  function profileText(name) {
+    const chosen = profileColors[name];
+    const match = PROFILE_COLORS.find((c) => c.value === chosen);
+    return match?.text || userText(name);
   }
 
   function profileFor(name) { return profiles[name]; }
@@ -803,7 +885,7 @@ export default function Tracker() {
     { id: "log", label: "Log", icon: PlusCircle },
     { id: "trends", label: "Trends", icon: TrendingUp },
     { id: "goals", label: "Goals", icon: Target },
-    { id: "profile", label: "Profile", icon: UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight },
+    { id: "profile", label: "Profile", icon: UserCircle },
   ];
 
   return (
@@ -832,8 +914,8 @@ export default function Tracker() {
                 <button key={u} onClick={() => setActiveUser(u)} style={{
                   border: "none", padding: "9px 16px", borderRadius: 8,
                   fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 15,
-                  background: activeUser === u ? userColor(u) : "transparent",
-                  color: activeUser === u ? USER_TEXT_ON[u] : TEXT_MUTED,
+                  background: activeUser === u ? profileColor(u) : "transparent",
+                  color: activeUser === u ? profileText(u) : TEXT_MUTED,
                 }}>{u}</button>
               ))}
               </div>
@@ -891,15 +973,27 @@ export default function Tracker() {
                   <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
                 </div>
 
+                {activeFasts[activeUser] && (
+                  <div style={{ ...cardStyle, background: "#F1EBDD", borderColor: "#D8CCB8", padding: "1.1rem 1.25rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                      <div>
+                        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>You’re fasting</div>
+                        <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>Started {new Date(activeFasts[activeUser].started_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} · {fastElapsed(activeFasts[activeUser].started_at)}</div>
+                      </div>
+                      {isMine && <button onClick={endFast} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>End fast</button>}
+                    </div>
+                  </div>
+                )}
+
                 {!hasAnything && (
                   <div style={{ ...cardStyle, padding: "1.45rem", background: "#FFF8EE", borderColor: "#E6D6C1" }}>
                     <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>
-                      {isMine ? "Nothing here yet." : "Nothing shared yet."}
+                      {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
                     </div>
                     <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: isMine ? 16 : 0 }}>
-                      {isMine ? "Add something whenever you’re ready. A little information is still useful information." : `${activeUser} hasn’t added anything today.`}
+                      {isMine ? (activeFasts[activeUser] ? "You’re fasting right now. You can still add water, activity, weight or steps. Food stays available whenever you need to backfill it." : "Add something whenever you’re ready. A little information is still useful information.") : `${activeUser} hasn’t added anything today.`}
                     </div>
-                    {isMine && <button onClick={() => openLog("food")} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), width: "auto", paddingInline: 20 }}>Add something</button>}
+                    {isMine && <button onClick={() => openLog(activeFasts[activeUser] ? "water" : "food")} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 20 }}>Add something</button>}
                   </div>
                 )}
 
@@ -912,6 +1006,7 @@ export default function Tracker() {
                       ))}
                     </div>
                   </div>
+                  {!activeFasts[activeUser] && <button onClick={startFast} disabled={fastBusy} style={{ marginTop: 8, background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "7px 2px" }}>Fasting today? Start a fast</button>}
                 )}
 
                 {hasAnything && (
@@ -922,7 +1017,7 @@ export default function Tracker() {
                       <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round(ts.calories)} <span style={{ color: TEXT_MUTED, fontSize: 13, fontWeight: 500 }}>/ {targets.calories}</span></div>
                     </div>
                     <div style={{ height: 8, borderRadius: 99, background: SURFACE_2, overflow: "hidden", marginBottom: 16 }}>
-                      <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: userColor(activeUser), borderRadius: 99 }} />
+                      <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: profileColor(activeUser), borderRadius: 99 }} />
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "9px 16px", marginBottom: 15 }}>
                       {[
@@ -948,7 +1043,7 @@ export default function Tracker() {
                 <div style={cardStyle}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={headingStyle}>Today so far</div>
-                    {isMine && <button onClick={() => openLog("food")} style={{ background: "none", border: "none", color: userColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add food</button>}
+                    {isMine && <button onClick={() => openLog("food")} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add food</button>}
                   </div>
 
                   {todaysFoods.length === 0 && todaysActivities.length === 0 && ts.water === 0 && ts.steps == null && todaysWeight.length === 0 ? (
@@ -1015,7 +1110,7 @@ export default function Tracker() {
                 ["water","Water",Droplet],
                 ["steps","Steps",Footprints],
               ].map(([id,label,Icon]) => (
-                <button key={id} onClick={() => { setLogTab(id); localStorage.setItem("with-log-tab", id); }} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? userColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
+                <button key={id} onClick={() => { setLogTab(id); localStorage.setItem("with-log-tab", id); }} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
                   <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
                   {label}
                 </button>
@@ -1037,18 +1132,18 @@ export default function Tracker() {
                       {[
                         ["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"],
                       ].map(([id, label]) => (
-                        <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? userColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
+                        <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? profileColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
                       ))}
                     </div>
                     <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
                       {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
                         <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
-                          <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? userColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
+                          <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? profileColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
                             <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
                             <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
                           </button>
-                          <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? userColor(activeUser) : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? profileColor(activeUser) : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} />
                           </button>
                         </div>
@@ -1107,8 +1202,8 @@ export default function Tracker() {
               {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
               {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                <button onClick={saveSavedFoodOnly} style={bigButton(userColor(activeUser), userText(activeUser))}>Save changes</button>
-              </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
+                <button onClick={saveSavedFoodOnly} style={bigButton(profileColor(activeUser), profileText(activeUser))}>Save changes</button>
+              </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
             </div>
 
             </>}
@@ -1120,7 +1215,7 @@ export default function Tracker() {
               <div style={fieldLabel}>Date</div>
               <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
               {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : "Log weight"}</button>
+              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : "Log weight"}</button>
               {data[activeUser].weights.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
@@ -1144,7 +1239,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
+              <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
             </div>
 
             </>}
@@ -1160,7 +1255,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
+              <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
             </div>
             </>}
             {logTab === "steps" && <>
@@ -1170,7 +1265,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : "Save steps"}</button>
+              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : "Save steps"}</button>
             </div>
 
             </>}
@@ -1191,11 +1286,11 @@ export default function Tracker() {
                   const info = goalInfo(u);
                   return (
                     <div key={u}>
-                      <div style={{ fontSize: 11, color: userColor(u), fontWeight: 700 }}>{u}</div>
+                      <div style={{ fontSize: 11, color: profileColor(u), fontWeight: 700 }}>{u}</div>
                       <div className="num" style={{ fontSize: 16 }}>
                         {info ? `${info.latest} lb` : "—"}
                         {info && info.latest !== info.start && (
-                          <span style={{ color: info.latest < info.start ? userColor(u) : WARN, fontSize: 12, marginLeft: 6 }}>
+                          <span style={{ color: info.latest < info.start ? profileColor(u) : WARN, fontSize: 12, marginLeft: 6 }}>
                             {info.latest < info.start ? "▼" : "▲"} {Math.abs(info.latest - info.start).toFixed(1)}
                           </span>
                         )}
@@ -1215,8 +1310,8 @@ export default function Tracker() {
                       <YAxis tick={{ fill: TEXT_MUTED, fontSize: 10 }} axisLine={{ stroke: BORDER }} tickLine={false} domain={["dataMin - 3", "dataMax + 3"]} width={32} />
                       <Tooltip contentStyle={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12 }} labelStyle={{ color: TEXT }} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      {profileNames.map((u) => <Line key={u} type="monotone" dataKey={u} name={u} stroke={userColor(u)} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />)}
-                      {profileNames.map((u) => <Line key={`${u}-avg`} type="monotone" dataKey={`${u}Avg`} name={`${u} avg`} stroke={userColor(u)} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />)}
+                      {profileNames.map((u) => <Line key={u} type="monotone" dataKey={u} name={u} stroke={profileColor(u)} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />)}
+                      {profileNames.map((u) => <Line key={`${u}-avg`} type="monotone" dataKey={`${u}Avg`} name={`${u} avg`} stroke={profileColor(u)} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />)}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -1227,11 +1322,11 @@ export default function Tracker() {
               <div style={headingStyle}>Last 14 days</div>
               {profileNames.map((u) => (
                 <div key={u} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: u === "Alli" ? 10 : 0 }}>
-                  <div style={{ width: 40, fontSize: 11, color: userColor(u), fontWeight: 700 }}>{u}</div>
+                  <div style={{ width: 40, fontSize: 11, color: profileColor(u), fontWeight: 700 }}>{u}</div>
                   <div style={{ display: "flex", gap: 3, flex: 1 }}>
                     {streaks.days.map((d, i) => (
                       <div key={d} title={`${fmtDate(d)}: ${streaks.result[u][i] ? "logged" : "nothing logged"}`}
-                        style={{ flex: 1, height: 18, borderRadius: 3, background: streaks.result[u][i] ? userColor(u) : SURFACE_2, border: `1px solid ${streaks.result[u][i] ? userColor(u) : BORDER}` }} />
+                        style={{ flex: 1, height: 18, borderRadius: 3, background: streaks.result[u][i] ? profileColor(u) : SURFACE_2, border: `1px solid ${streaks.result[u][i] ? profileColor(u) : BORDER}` }} />
                     ))}
                   </div>
                 </div>
@@ -1251,7 +1346,7 @@ export default function Tracker() {
               <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1" }}>
                 <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
                 <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
-                {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
+                {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
               </div>
             ) : !editingGoals ? (
               <>
@@ -1268,7 +1363,8 @@ export default function Tracker() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
                       <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
                         <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Bodyweight lost</div>
-                        <div style={{ fontSize: 21, fontWeight: 700 }}>{(gi.start - gi.latest).toFixed(1)} lb</div>
+                        <div style={{ fontSize: 24, fontWeight: 700 }}>{gi.pctLost.toFixed(1)}%</div>
+                        <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{(gi.start - gi.latest).toFixed(1)} lb</div>
                       </div>
                       <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
                         <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>To go</div>
@@ -1281,7 +1377,7 @@ export default function Tracker() {
                 <div style={cardStyle}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
                     <div style={headingStyle}>Daily targets</div>
-                    {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: userColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>Edit</button>}
+                    {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>Edit</button>}
                   </div>
                   <div style={{ display: "grid", gap: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Calories</span><strong>{data[activeUser].targets.calories || "—"}</strong></div>
@@ -1316,7 +1412,7 @@ export default function Tracker() {
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <button onClick={() => setEditingGoals(false)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                    <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Save changes</button>
+                    <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>Save changes</button>
                   </div>
                 </div>
               </>
@@ -1345,7 +1441,7 @@ export default function Tracker() {
                     {data[activeUser]?.goalWeight ? `${data[activeUser].goalWeight} lb${data[activeUser].goalDate ? ` by ${fmtGoalDate(data[activeUser].goalDate)}` : ""}` : "Not set yet"}
                   </div>
                 </div>
-                <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: userColor(activeUser, true), display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>Manage <ChevronRight style={{ width: 14, height: 14 }} /></button>
+                <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: profileColor(activeUser, true), display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>Manage <ChevronRight style={{ width: 14, height: 14 }} /></button>
               </div>
             </div>
 
@@ -1353,7 +1449,14 @@ export default function Tracker() {
               <div style={headingStyle}>Your profile</div>
               <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>This is how your name appears to the people you’re with.</div>
               <div style={fieldLabel}>Profile name</div>
-              <input type="text" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+              <input type="text" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} />
+              <div style={fieldLabel}>Your color</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                {PROFILE_COLORS.map((c) => {
+                  const selected = (profileColors[profileNameInput || activeUser] || profileColor(profileNameInput || activeUser)) === c.value;
+                  return <button key={c.value} type="button" title={c.name} aria-label={`Choose ${c.name}`} onClick={() => saveProfileColor(c.value)} style={{ width: 36, height: 36, borderRadius: "50%", background: c.value, border: selected ? `3px solid ${TEXT}` : `2px solid ${SURFACE}`, boxShadow: selected ? `0 0 0 2px ${BORDER}` : `0 0 0 1px ${BORDER}`, padding: 0 }} />;
+                })}
+              </div>
               <button onClick={saveProfileName} disabled={accountBusy} style={bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane)}>Save profile</button>
             </div>
 
@@ -1417,7 +1520,7 @@ export default function Tracker() {
               <button key={id} onClick={() => id === "log" ? openLog(logTab) : setTab(id)} style={{
                 flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 3,
-                color: active ? userColor(activeUser) : TEXT_MUTED,
+                color: active ? profileColor(activeUser) : TEXT_MUTED,
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
                 <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'Fraunces', serif", fontStyle: "italic" }}>{label}</span>
