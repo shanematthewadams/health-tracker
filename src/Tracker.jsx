@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2 } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star } from "lucide-react";
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
@@ -128,6 +128,8 @@ export default function Tracker() {
   const [saveAsSaved, setSaveAsSaved] = useState(false);
   const [editingSavedId, setEditingSavedId] = useState(null);
   const [showManageSaved, setShowManageSaved] = useState(false);
+  const [foodStates, setFoodStates] = useState([]);
+  const [foodLibraryTab, setFoodLibraryTab] = useState("recent");
 
   const [weightInput, setWeightInput] = useState("");
   const [weightDate, setWeightDate] = useState(todayStr());
@@ -201,7 +203,7 @@ export default function Tracker() {
       const profileIds = Object.values(pmap).map((p) => p.id);
       if (!profileIds.length) throw new Error("No health profiles exist for this household.");
 
-      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes] = await Promise.all([
+      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes] = await Promise.all([
         supabase.from("weight_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("food_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("activity_entries").select("*").eq("household_id", hid).order("entry_date"),
@@ -209,8 +211,9 @@ export default function Tracker() {
         supabase.from("water_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("saved_foods").select("*").eq("household_id", hid).order("name"),
         supabase.from("global_foods").select("*").order("name"),
+        supabase.from("household_food_state").select("*").eq("household_id", hid),
       ]);
-      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes]) if (r.error) throw r.error;
+      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes]) if (r.error) throw r.error;
       const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
       for (const w of weightsRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].weights.push({ id: w.id, date: w.entry_date, weight: num(w.weight) }); }
       for (const f of foodsRes.data || []) { const n = nameById[f.profile_id]; if (next[n]) next[n].foods.push({ id: f.id, date: f.entry_date, name: f.name, calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), meal: f.meal, notes: f.notes || "" }); }
@@ -219,6 +222,7 @@ export default function Tracker() {
       for (const w of waterRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
       setSavedFoods((savedFoodsRes.data || []).map((f) => ({ ...f, source: "household", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), use_count: Number(f.use_count || 0) })));
       setGlobalFoods((globalFoodsRes.data || []).map((f) => ({ ...f, source: "global", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber) })));
+      setFoodStates(foodStatesRes.data || []);
       setData(next);
     } catch (e) {
       setSaveError(e.message || "Could not load your household data.");
@@ -314,6 +318,37 @@ export default function Tracker() {
     if (selectedSavedFoodId === `household:${id}` || editingSavedId === id) clearFoodForm();
   }
 
+  function stateForFood(source, id) {
+    return foodStates.find((s) => s.food_source === source && s.food_id === id);
+  }
+
+  function isFavoriteFood(food) {
+    return !!stateForFood(food.source || "household", food.id)?.is_favorite;
+  }
+
+  async function toggleFavorite(food) {
+    const source = food.source || "household";
+    const current = stateForFood(source, food.id);
+    const nextFavorite = !current?.is_favorite;
+    await runWrite(async () => {
+      const payload = { household_id: householdId, food_source: source, food_id: food.id, is_favorite: nextFavorite };
+      const { error } = await supabase.from("household_food_state").upsert(payload, { onConflict: "household_id,food_source,food_id" });
+      if (error) throw error;
+    });
+  }
+
+  async function recordFoodUse(source, id) {
+    if (!id) return;
+    const current = stateForFood(source, id);
+    const payload = {
+      household_id: householdId, food_source: source, food_id: id,
+      is_favorite: !!current?.is_favorite, use_count: Number(current?.use_count || 0) + 1,
+      last_used_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("household_food_state").upsert(payload, { onConflict: "household_id,food_source,food_id" });
+    if (error) throw error;
+  }
+
   async function addFood() {
     if (!foodName.trim()) { setFoodError("Give it a name."); return; }
     const cals = parseFloat(foodCals) || 0, protein = parseFloat(foodProtein) || 0;
@@ -326,12 +361,14 @@ export default function Tracker() {
       if (saveAsSaved && !selectedSavedFoodId) {
         const { data: sf, error: sfError } = await supabase.from("saved_foods").insert({ household_id: householdId, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, default_meal: foodMeal, notes: foodNotes.trim() || null, serving_label: foodServingLabel.trim() || "1 serving", use_count: 1, last_used_at: new Date().toISOString() }).select("id").single();
         if (sfError) throw sfError; savedId = sf.id;
+        await recordFoodUse("household", savedId);
       } else if (selectedSavedFoodId && selectedSource === "household") {
         savedId = selectedId;
         const food = savedFoods.find((f) => f.id === selectedId);
         const { error: useError } = await supabase.from("saved_foods").update({ use_count: (food?.use_count || 0) + 1, last_used_at: new Date().toISOString() }).eq("id", selectedId);
         if (useError) throw useError;
       }
+      if (selectedSavedFoodId) await recordFoodUse(selectedSource, selectedId);
       const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
       if (error) throw error;
     });
@@ -371,24 +408,37 @@ export default function Tracker() {
     });
   }
 
-  const filteredSavedFoods = useMemo(() => {
+  const allLibraryFoods = useMemo(() => [...savedFoods, ...globalFoods], [savedFoods, globalFoods]);
+
+  const managedSavedFoods = useMemo(() => {
     const q = savedSearch.trim().toLowerCase();
-    const list = q ? savedFoods.filter((f) => f.name.toLowerCase().includes(q)) : savedFoods;
-    return list.slice().sort((a, b) => {
-      if (q) return a.name.localeCompare(b.name);
-      const ad = a.last_used_at ? new Date(a.last_used_at).getTime() : 0;
-      const bd = b.last_used_at ? new Date(b.last_used_at).getTime() : 0;
-      if (bd !== ad) return bd - ad;
-      if ((b.use_count || 0) !== (a.use_count || 0)) return (b.use_count || 0) - (a.use_count || 0);
-      return a.name.localeCompare(b.name);
-    });
+    return savedFoods.filter((f) => !q || f.name.toLowerCase().includes(q)).slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [savedFoods, savedSearch]);
 
-  const filteredGlobalFoods = useMemo(() => {
+  const visibleLibraryFoods = useMemo(() => {
     const q = savedSearch.trim().toLowerCase();
-    const list = q ? globalFoods.filter((f) => f.name.toLowerCase().includes(q)) : globalFoods;
-    return list.slice().sort((a, b) => a.name.localeCompare(b.name));
-  }, [globalFoods, savedSearch]);
+    let list = allLibraryFoods;
+    if (q) {
+      list = list.filter((f) => f.name.toLowerCase().includes(q));
+    } else if (foodLibraryTab === "favorites") {
+      list = list.filter(isFavoriteFood);
+    } else if (foodLibraryTab === "mine") {
+      list = list.filter((f) => f.source === "household");
+    } else if (foodLibraryTab === "shared") {
+      list = list.filter((f) => f.source === "global");
+    } else {
+      list = list.filter((f) => !!stateForFood(f.source, f.id)?.last_used_at);
+    }
+    return list.slice().sort((a, b) => {
+      if (q) return a.name.localeCompare(b.name);
+      if (foodLibraryTab === "recent") {
+        const ad = stateForFood(a.source, a.id)?.last_used_at || "";
+        const bd = stateForFood(b.source, b.id)?.last_used_at || "";
+        return bd.localeCompare(ad);
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [allLibraryFoods, savedSearch, foodLibraryTab, foodStates]);
 
   const chartData = useMemo(() => {
     const dateSet = new Set();
@@ -608,34 +658,33 @@ export default function Tracker() {
               {(savedFoods.length > 0 || globalFoods.length > 0) && (
                 <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Find a food</div>
-                  <input type="text" placeholder="Search your foods + shared library" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
-                  {!showManageSaved && <div style={{ display: "grid", gap: 10 }}>
-                    {filteredSavedFoods.length > 0 && <div>
-                      <div style={{ fontSize: 10, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Your household</div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {filteredSavedFoods.slice(0, savedSearch ? 8 : 5).map((f) => (
-                          <button key={`household-${f.id}`} onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `household:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `household:${f.id}` ? USER_COLOR[activeUser] : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
+                  <input type="text" placeholder="Search all foods" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+                  {!showManageSaved && <>
+                    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
+                      {[
+                        ["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"],
+                      ].map(([id, label]) => (
+                        <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? USER_COLOR[activeUser] : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
+                      ))}
+                    </div>
+                    <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+                      {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
+                        <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
+                          <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? USER_COLOR[activeUser] : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
                             <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
+                            <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
                           </button>
-                        ))}
-                      </div>
-                    </div>}
-                    {filteredGlobalFoods.length > 0 && <div>
-                      <div style={{ fontSize: 10, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Shared library</div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {filteredGlobalFoods.slice(0, savedSearch ? 8 : 5).map((f) => (
-                          <button key={`global-${f.id}`} onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `global:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `global:${f.id}` ? USER_COLOR[activeUser] : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
-                            <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
+                          <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? USER_COLOR[activeUser] : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} />
                           </button>
-                        ))}
-                      </div>
-                    </div>}
-                    {filteredSavedFoods.length === 0 && filteredGlobalFoods.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12 }}>No foods match that search.</div>}
-                  </div>}
+                        </div>
+                      ))}
+                      {visibleLibraryFoods.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{savedSearch ? "No foods match that search." : foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>}
+                    </div>
+                  </>}
                   {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
-                    {filteredSavedFoods.map((f) => <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: `1px solid ${BORDER}`, padding: "8px 0" }}>
+                    {managedSavedFoods.map((f) => <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: `1px solid ${BORDER}`, padding: "8px 0" }}>
                       <div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{f.name}</div><div className="num" style={{ fontSize: 11, color: TEXT_MUTED }}>{f.serving_label || "1 serving"} · {Math.round(f.calories)} cal</div></div>
                       <div style={{ display: "flex", gap: 4 }}>
                         <button aria-label={`Edit ${f.name}`} onClick={() => editSavedFood(f)} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 6 }}><Pencil style={{ width: 15, height: 15 }} /></button>
