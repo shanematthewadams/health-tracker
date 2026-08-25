@@ -448,7 +448,7 @@ export default function Tracker() {
         supabase.from("household_food_state").select("*").eq("household_id", hid),
         supabase.from("fasting_entries").select("*").in("profile_id", profileIds).is("ended_at", null),
       ]);
-      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes]) if (r.error) throw r.error;
+      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes]) if (r.error) throw r.error;
       const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
       for (const w of weightsRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].weights.push({ id: w.id, date: w.entry_date, weight: num(w.weight) }); }
       for (const f of foodsRes.data || []) { const n = nameById[f.profile_id]; if (next[n]) next[n].foods.push({ id: f.id, date: f.entry_date, name: f.name, calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), meal: f.meal, notes: f.notes || "" }); }
@@ -513,41 +513,85 @@ export default function Tracker() {
 
   async function startFast() {
     if (!activeCanEdit || fastBusy) return;
-    const p = profileFor(activeUser); if (!p) return;
-    const started = new Date(`${fastStartDate}T${fastStartTime}`);
+    const p = profileFor(activeUser);
+    if (!p) { setSaveError("Your profile could not be found."); return; }
+
+    const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
+
     setFastBusy(true); setSaveError(null);
-    const { error } = await supabase.from("fasting_entries").insert({
-      household_id: householdId,
-      profile_id: p.id,
-      started_at: started.toISOString(),
-    });
-    if (error) setSaveError(error.message);
-    else { setFastEditorOpen(false); showSuccess("Fast started", "fast"); await loadAll(); }
+    const { data: created, error } = await supabase
+      .from("fasting_entries")
+      .insert({
+        household_id: householdId,
+        profile_id: p.id,
+        started_at: started.toISOString(),
+      })
+      .select("*")
+      .single();
+
+    if (error) {
+      setSaveError(`Could not start fast: ${error.message}`);
+    } else {
+      setActiveFasts((prev) => ({ ...prev, [activeUser]: created }));
+      setFastEditorOpen(false);
+      setClockNow(Date.now());
+      showSuccess("Fast started", "fast");
+    }
     setFastBusy(false);
   }
 
   async function updateFastStart() {
     if (!activeCanEdit || fastBusy) return;
-    const fast = activeFasts[activeUser]; if (!fast) return;
-    const started = new Date(`${fastStartDate}T${fastStartTime}`);
+    const fast = activeFasts[activeUser];
+    if (!fast) { setSaveError("No active fast was found."); return; }
+
+    const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
+
     setFastBusy(true); setSaveError(null);
-    const { error } = await supabase.from("fasting_entries").update({ started_at: started.toISOString() }).eq("id", fast.id);
-    if (error) setSaveError(error.message);
-    else { setFastEditorOpen(false); showSuccess("Fast start updated", "fast"); await loadAll(); }
+    const { data: updated, error } = await supabase
+      .from("fasting_entries")
+      .update({ started_at: started.toISOString() })
+      .eq("id", fast.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      setSaveError(`Could not update fast: ${error.message}`);
+    } else {
+      setActiveFasts((prev) => ({ ...prev, [activeUser]: updated }));
+      setFastEditorOpen(false);
+      setClockNow(Date.now());
+      showSuccess("Fast start updated", "fast");
+    }
     setFastBusy(false);
   }
 
   async function endFast() {
     if (!activeCanEdit || fastBusy) return;
-    const fast = activeFasts[activeUser]; if (!fast) return;
+    const fast = activeFasts[activeUser];
+    if (!fast) { setSaveError("No active fast was found."); return; }
+
     setFastBusy(true); setSaveError(null);
-    const { error } = await supabase.from("fasting_entries").update({ ended_at: new Date().toISOString() }).eq("id", fast.id);
-    if (error) setSaveError(error.message);
-    else { showSuccess("Fast ended", "fast"); await loadAll(); }
+    const { error } = await supabase
+      .from("fasting_entries")
+      .update({ ended_at: new Date().toISOString() })
+      .eq("id", fast.id);
+
+    if (error) {
+      setSaveError(`Could not end fast: ${error.message}`);
+    } else {
+      setActiveFasts((prev) => {
+        const next = { ...prev };
+        delete next[activeUser];
+        return next;
+      });
+      setFastEditorOpen(false);
+      showSuccess("Fast ended", "fast");
+    }
     setFastBusy(false);
   }
 
@@ -948,7 +992,7 @@ export default function Tracker() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ display: "flex", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3 }}>
               {profileNames.map((u) => (
-                <button key={u} onClick={() => setActiveUser(u)} style={{
+                <button key={u} onClick={() => { setActiveUser(u); setFastEditorOpen(false); }} style={{
                   border: "none", padding: "9px 16px", borderRadius: 8,
                   fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 15,
                   background: activeUser === u ? profileColor(u) : "transparent",
