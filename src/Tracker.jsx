@@ -314,6 +314,12 @@ export default function Tracker() {
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
   const [clockNow, setClockNow] = useState(Date.now());
+  const [fastEditorOpen, setFastEditorOpen] = useState(false);
+  const [fastStartDate, setFastStartDate] = useState(todayStr());
+  const [fastStartTime, setFastStartTime] = useState(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  });
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
   const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
@@ -496,17 +502,42 @@ export default function Tracker() {
     setAccountBusy(false);
   }
 
+  function openFastEditor(existing = null) {
+    const d = existing?.started_at ? new Date(existing.started_at) : new Date();
+    const localDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const localTime = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    setFastStartDate(localDate);
+    setFastStartTime(localTime);
+    setFastEditorOpen(true);
+  }
+
   async function startFast() {
     if (!activeCanEdit || fastBusy) return;
     const p = profileFor(activeUser); if (!p) return;
+    const started = new Date(`${fastStartDate}T${fastStartTime}`);
+    if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
+    if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
     setFastBusy(true); setSaveError(null);
     const { error } = await supabase.from("fasting_entries").insert({
       household_id: householdId,
       profile_id: p.id,
-      started_at: new Date().toISOString(),
+      started_at: started.toISOString(),
     });
     if (error) setSaveError(error.message);
-    else { showSuccess("Fast started", "fast"); await loadAll(); }
+    else { setFastEditorOpen(false); showSuccess("Fast started", "fast"); await loadAll(); }
+    setFastBusy(false);
+  }
+
+  async function updateFastStart() {
+    if (!activeCanEdit || fastBusy) return;
+    const fast = activeFasts[activeUser]; if (!fast) return;
+    const started = new Date(`${fastStartDate}T${fastStartTime}`);
+    if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
+    if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
+    setFastBusy(true); setSaveError(null);
+    const { error } = await supabase.from("fasting_entries").update({ started_at: started.toISOString() }).eq("id", fast.id);
+    if (error) setSaveError(error.message);
+    else { setFastEditorOpen(false); showSuccess("Fast start updated", "fast"); await loadAll(); }
     setFastBusy(false);
   }
 
@@ -988,9 +1019,12 @@ export default function Tracker() {
                             Started {new Date(activeFasts[activeUser].started_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} · {fastElapsed(activeFasts[activeUser].started_at)}
                           </div>
                         </div>
-                        <button onClick={endFast} disabled={fastBusy} style={{ flexShrink: 0, background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                          {fastBusy ? "Ending…" : "End fast"}
-                        </button>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => openFastEditor(activeFasts[activeUser])} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Edit</button>
+                          <button onClick={endFast} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
+                            {fastBusy ? "Ending…" : "End fast"}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -998,8 +1032,8 @@ export default function Tracker() {
                           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600 }}>Fasting today?</div>
                           <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>WITH can adjust your Today prompts while you fast.</div>
                         </div>
-                        <button onClick={startFast} disabled={fastBusy} style={{ flexShrink: 0, background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                          {fastBusy ? "Starting…" : "Start fast"}
+                        <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ flexShrink: 0, background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
+                          Start fast
                         </button>
                       </div>
                     )}
