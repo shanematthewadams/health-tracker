@@ -301,6 +301,9 @@ export default function Tracker() {
   const [profiles, setProfiles] = useState({});
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
+  const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
+  const [toast, setToast] = useState(null);
+  const [buttonSuccess, setButtonSuccess] = useState(null);
   const [data, setData] = useState({ Alli: emptyData("Alli"), Shane: emptyData("Shane") });
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState(null);
@@ -498,6 +501,21 @@ export default function Tracker() {
     catch (e) { setSaveError(e.message || "Save failed. Try again."); return false; }
   }
 
+  function showSuccess(message, kind) {
+    setToast(message);
+    setButtonSuccess(kind);
+    window.clearTimeout(window.__withToastTimer);
+    window.clearTimeout(window.__withButtonTimer);
+    window.__withToastTimer = window.setTimeout(() => setToast(null), 2800);
+    window.__withButtonTimer = window.setTimeout(() => setButtonSuccess(null), 1400);
+  }
+
+  function openLog(kind = logTab) {
+    setLogTab(kind);
+    localStorage.setItem("with-log-tab", kind);
+    setTab("log");
+  }
+
   async function addWeight() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = parseFloat(weightInput);
@@ -508,7 +526,7 @@ export default function Tracker() {
       const { error } = await supabase.from("weight_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: weightDate, weight: val }, { onConflict: "profile_id,entry_date" });
       if (error) throw error;
     });
-    if (ok) setWeightInput("");
+    if (ok) { setWeightInput(""); showSuccess(`${val} lb logged`, "weight"); }
   }
   async function deleteWeight(id) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("weight_entries").delete().eq("id", id); if (error) throw error; }); }
@@ -627,7 +645,7 @@ export default function Tracker() {
       const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
       if (error) throw error;
     });
-    if (ok) clearFoodForm();
+    if (ok) { const loggedName = foodName.trim(); clearFoodForm(); showSuccess(`${loggedName} added`, "food"); }
   }
   async function deleteFood(id) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
@@ -637,21 +655,21 @@ export default function Tracker() {
     const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) return;
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
-    if (ok) setStepsInput("");
+    if (ok) { setStepsInput(""); showSuccess(`${val.toLocaleString()} steps saved`, "steps"); }
   }
   async function addWater(amount) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) return;
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
-    if (ok) setWaterOz("");
+    if (ok) { setWaterOz(""); showSuccess(`${val} oz water added`, "water"); }
   }
   async function addActivity() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     if (!actName.trim()) return; const cals = parseFloat(actCals) || 0; if (!cals) return;
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
-    if (ok) { setActName(""); setActCals(""); }
+    if (ok) { const loggedActivity = actName.trim(); setActName(""); setActCals(""); showSuccess(`${loggedActivity} added`, "activity"); }
   }
   async function deleteActivity(id) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("activity_entries").delete().eq("id", id); if (error) throw error; }); }
@@ -852,11 +870,11 @@ export default function Tracker() {
               const orderedKeys = [...MEAL_ORDER.filter((m) => groups[m]), ...Object.keys(groups).filter((k) => !MEAL_ORDER.includes(k))];
 
               const quick = [
-                ["Food", "log"],
-                ["Weight", "log"],
-                ["Activity", "log"],
-                ["Water", "log"],
-                ["Steps", "log"],
+                ["Food", "food"],
+                ["Weight", "weight"],
+                ["Activity", "activity"],
+                ["Water", "water"],
+                ["Steps", "steps"],
               ];
 
               return <>
@@ -875,7 +893,7 @@ export default function Tracker() {
                     <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: isMine ? 16 : 0 }}>
                       {isMine ? "Add something whenever you’re ready. A little information is still useful information." : `${activeUser} hasn’t added anything today.`}
                     </div>
-                    {isMine && <button onClick={() => setTab("log")} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), width: "auto", paddingInline: 20 }}>Add something</button>}
+                    {isMine && <button onClick={() => openLog("food")} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), width: "auto", paddingInline: 20 }}>Add something</button>}
                   </div>
                 )}
 
@@ -883,8 +901,8 @@ export default function Tracker() {
                   <div style={{ marginBottom: "1rem" }}>
                     <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, margin: "0 2px 8px", textTransform: "uppercase", letterSpacing: ".06em" }}>Quick add</div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
-                      {quick.map(([label]) => (
-                        <button key={label} onClick={() => setTab("log")} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "11px 4px", fontSize: 11, fontWeight: 700, boxShadow: "0 3px 12px rgba(65,48,30,.035)" }}>+ {label}</button>
+                      {quick.map(([label, kind]) => (
+                        <button key={label} onClick={() => openLog(kind)} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "11px 4px", fontSize: 11, fontWeight: 700, boxShadow: "0 3px 12px rgba(65,48,30,.035)" }}>+ {label}</button>
                       ))}
                     </div>
                   </div>
@@ -924,7 +942,7 @@ export default function Tracker() {
                 <div style={cardStyle}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={headingStyle}>Today so far</div>
-                    {isMine && <button onClick={() => setTab("log")} style={{ background: "none", border: "none", color: userColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add</button>}
+                    {isMine && <button onClick={() => openLog("food")} style={{ background: "none", border: "none", color: userColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add food</button>}
                   </div>
 
                   {todaysFoods.length === 0 && todaysActivities.length === 0 && ts.water === 0 && ts.steps == null && todaysWeight.length === 0 ? (
@@ -979,27 +997,12 @@ export default function Tracker() {
 
         {tab === "log" && (
           <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Weight</div>
-              <div style={fieldLabel}>Weight (lb)</div>
-              <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Log weight</button>
-              {data[activeUser].weights.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
-                    <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
-                      <span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span>
-                      <span className="num">{w.weight} lb</span>
-                      <button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "2px 1px 10px", marginBottom: 6, WebkitOverflowScrolling: "touch" }}>
+              {[["food","Food"],["weight","Weight"],["activity","Activity"],["water","Water"],["steps","Steps"]].map(([id,label]) => (
+                <button key={id} onClick={() => { setLogTab(id); localStorage.setItem("with-log-tab", id); }} style={{ flexShrink: 0, border: `1px solid ${logTab === id ? userColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>{label}</button>
+              ))}
             </div>
-
+            {logTab === "food" && <>
             <div style={cardStyle}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ ...headingStyle, marginBottom: 0 }}>Food</div>
@@ -1086,9 +1089,34 @@ export default function Tracker() {
               {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
                 <button onClick={saveSavedFoodOnly} style={bigButton(userColor(activeUser), userText(activeUser))}>Save changes</button>
-              </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
+              </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
             </div>
 
+            </>}
+            {logTab === "weight" && <>
+            <div style={cardStyle}>
+              <div style={headingStyle}>Weight</div>
+              <div style={fieldLabel}>Weight (lb)</div>
+              <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <div style={fieldLabel}>Date</div>
+              <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+              {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
+              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : "Log weight"}</button>
+              {data[activeUser].weights.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
+                    <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
+                      <span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span>
+                      <span className="num">{w.weight} lb</span>
+                      <button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            </>}
+            {logTab === "activity" && <>
             <div style={cardStyle}>
               <div style={headingStyle}>Activity</div>
               <div style={fieldLabel}>Activity</div>
@@ -1097,18 +1125,11 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Log activity</button>
+              <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
             </div>
 
-            <div style={cardStyle}>
-              <div style={headingStyle}>Steps</div>
-              <div style={fieldLabel}>Step count</div>
-              <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Save steps</button>
-            </div>
-
+            </>}
+            {logTab === "water" && <>
             <div style={cardStyle}>
               <div style={headingStyle}>Water</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
@@ -1120,8 +1141,20 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Add water</button>
+              <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
             </div>
+            </>}
+            {logTab === "steps" && <>
+            <div style={cardStyle}>
+              <div style={headingStyle}>Steps</div>
+              <div style={fieldLabel}>Step count</div>
+              <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <div style={fieldLabel}>Date</div>
+              <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : "Save steps"}</button>
+            </div>
+
+            </>}
           </>
         )}
 
@@ -1278,6 +1311,12 @@ export default function Tracker() {
 
       </div>
 
+      {toast && (
+        <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(45,35,25,.18)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
+          ✓ {toast}
+        </div>
+      )}
+
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, background: SURFACE, borderTop: `1px solid ${BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10,
@@ -1286,7 +1325,7 @@ export default function Tracker() {
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
-              <button key={id} onClick={() => setTab(id)} style={{
+              <button key={id} onClick={() => id === "log" ? openLog(logTab) : setTab(id)} style={{
                 flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 3,
                 color: active ? userColor(activeUser) : TEXT_MUTED,
