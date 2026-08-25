@@ -1,0 +1,11 @@
+SUPABASE DASHBOARD SETUP
+
+1. Open your Supabase project.
+2. Click Edge Functions in the left sidebar.
+3. Click Deploy a new function.
+4. Choose Via Editor / create from scratch.
+5. Name the function exactly: delete-account
+6. Replace the editor contents with supabase/functions/delete-account/index.ts from this project.
+7. Deploy the function.
+
+Do NOT paste a service-role key into the React app. Supabase Edge Functions receive the server-side service-role environment variable securely.

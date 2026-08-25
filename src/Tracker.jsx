@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users, UserCircle } from "lucide-react";
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
@@ -275,6 +275,14 @@ export default function Tracker() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [profileNameInput, setProfileNameInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
+  const [accountError, setAccountError] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [accountBusy, setAccountBusy] = useState(false);
   const [householdId, setHouseholdId] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -381,6 +389,8 @@ export default function Tracker() {
       setProfiles(pmap);
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
+      if (owned) setProfileNameInput(owned.name || "");
+      setEmailInput(session.user.email || "");
       if (owned) setActiveUser(owned.name);
       else if (!pmap[activeUser] && Object.keys(pmap).length) setActiveUser(Object.keys(pmap)[0]);
       const profileIds = Object.values(pmap).map((p) => p.id);
@@ -427,6 +437,48 @@ export default function Tracker() {
   useEffect(() => {
     if (profileNames.length && !profiles[activeUser]) setActiveUser(profileNames[0]);
   }, [profiles, activeUser]);
+  useEffect(() => {
+    document.title = householdName ? `WITH — ${householdName}` : "WITH";
+  }, [householdName]);
+
+  async function saveProfileName() {
+    if (!ownedProfileId || !profileNameInput.trim()) return;
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.from("profiles").update({ name: profileNameInput.trim() }).eq("id", ownedProfileId);
+    if (error) setAccountError(error.message);
+    else { setAccountMessage("Profile name updated."); await loadAll(); }
+    setAccountBusy(false);
+  }
+
+  async function saveEmail() {
+    if (!emailInput.trim()) return;
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.auth.updateUser({ email: emailInput.trim() });
+    if (error) setAccountError(error.message);
+    else setAccountMessage("Email update requested. Check your inbox to confirm the change.");
+    setAccountBusy(false);
+  }
+
+  async function savePassword() {
+    setAccountError(""); setAccountMessage("");
+    if (newPasswordInput.length < 6) { setAccountError("Use at least 6 characters."); return; }
+    if (newPasswordInput !== confirmPasswordInput) { setAccountError("Those passwords don't match."); return; }
+    setAccountBusy(true);
+    const { error } = await supabase.auth.updateUser({ password: newPasswordInput });
+    if (error) setAccountError(error.message);
+    else { setAccountMessage("Password updated."); setNewPasswordInput(""); setConfirmPasswordInput(""); }
+    setAccountBusy(false);
+  }
+
+  async function deleteAccount() {
+    if (deleteConfirm !== "DELETE") { setAccountError('Type DELETE to confirm.'); return; }
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.functions.invoke("delete-account");
+    if (error) { setAccountError(error.message || "Could not delete account."); setAccountBusy(false); return; }
+    await supabase.auth.signOut();
+    setAccountBusy(false);
+  }
+
   function profileFor(name) { return profiles[name]; }
   function canEdit(name) { return profiles[name]?.user_id === session?.user?.id; }
   const activeCanEdit = canEdit(activeUser);
@@ -717,6 +769,7 @@ export default function Tracker() {
     { id: "log", label: "Log", icon: PlusCircle },
     { id: "trends", label: "Trends", icon: TrendingUp },
     { id: "goals", label: "Goals", icon: Target },
+    { id: "profile", label: "Profile", icon: UserCircle },
   ];
 
   return (
@@ -1089,6 +1142,57 @@ export default function Tracker() {
             </div>
           </>
         )}
+        {tab === "profile" && (
+          <>
+            <div style={cardStyle}>
+              <div style={headingStyle}>Your profile</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>This is how your name appears to the people you’re with.</div>
+              <div style={fieldLabel}>Profile name</div>
+              <input type="text" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+              <button onClick={saveProfileName} disabled={accountBusy} style={bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane)}>Save profile</button>
+            </div>
+
+            <div style={cardStyle}>
+              <div style={headingStyle}>Account</div>
+              <div style={fieldLabel}>Email</div>
+              <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <button onClick={saveEmail} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginBottom: 18 }}>Update email</button>
+
+              <div style={fieldLabel}>New password</div>
+              <input type="password" minLength={6} value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <div style={fieldLabel}>Confirm new password</div>
+              <input type="password" minLength={6} value={confirmPasswordInput} onChange={(e) => setConfirmPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <button onClick={savePassword} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Change password</button>
+
+              {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 12 }}>{accountError}</div>}
+              {accountMessage && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginTop: 12 }}>{accountMessage}</div>}
+            </div>
+
+            <div style={cardStyle}>
+              <div style={headingStyle}>Your With</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{householdName}</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>{profileNames.length} {profileNames.length === 1 ? "person" : "people"} you’re with</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {profileNames.map((name) => <span key={name} style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "6px 9px", fontSize: 12 }}>{name}</span>)}
+              </div>
+            </div>
+
+            <div style={cardStyle}>
+              <button onClick={() => supabase.auth.signOut()} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Sign out</button>
+            </div>
+
+            <div style={{ ...cardStyle, borderColor: "#6E3531" }}>
+              <div style={{ ...headingStyle, color: WARN }}>Delete account</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>
+                This permanently removes your login, your profile, and your personal health entries. It does not delete other people or their data.
+              </div>
+              <div style={fieldLabel}>Type DELETE to confirm</div>
+              <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <button onClick={deleteAccount} disabled={accountBusy || deleteConfirm !== "DELETE"} style={{ ...bigButton("#6E3531", "#FFE8E4"), opacity: deleteConfirm === "DELETE" ? 1 : .55 }}>Delete my account</button>
+            </div>
+          </>
+        )}
+
       </div>
 
       <div style={{
