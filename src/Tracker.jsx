@@ -1,12 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users } from "lucide-react";
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
 const USER_COLOR = { Shane: "#FF8C4B", Alli: "#C9A8FF" };
 const USER_COLOR_DIM = { Shane: "#B3652F", Alli: "#8F76B3" };
 const USER_TEXT_ON = { Shane: "#4A1D00", Alli: "#2E1065" };
+function userColor(name, dim=false) {
+  if (USER_COLOR[name]) return dim ? USER_COLOR_DIM[name] : USER_COLOR[name];
+  const palette = dim ? ["#6FA39A","#A1845C","#7F88B8","#A46E83"] : ["#9ED8CE","#D8B77E","#AEB7EA","#D69AAF"];
+  let n = 0; for (const c of String(name)) n = (n + c.charCodeAt(0)) % palette.length;
+  return palette[n];
+}
+function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
 const GOAL_DATE = "2026-12-31";
 
 const BG = "#14171A";
@@ -78,33 +85,96 @@ function ProgressRow({ label, value, target, unit, color }) {
   );
 }
 
-function Login() {
+function AuthScreen() {
+  const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function signIn(e) {
+  async function submit(e) {
     e.preventDefault();
-    setBusy(true); setError("");
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) setError(authError.message);
+    setBusy(true); setError(""); setMessage("");
+    if (mode === "signin") {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) setError(authError.message);
+    } else {
+      const { data, error: authError } = await supabase.auth.signUp({ email, password });
+      if (authError) setError(authError.message);
+      else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
+      else setMessage("Account created. Setting up your household…");
+    }
     setBusy(false);
   }
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
-      <form onSubmit={signIn} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, lineHeight: 1.05, marginBottom: 8 }}>Shane &amp; Alli's<br/>Health Tracker</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 24 }}>Sign in to your household.</div>
+      <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 34, lineHeight: 1, marginBottom: 8 }}>Common Ground</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Health goals are personal. Progress doesn't have to be.</div>
+        <div style={{ display: "flex", background: SURFACE_2, borderRadius: 9, padding: 3, marginBottom: 20 }}>
+          {["signin","signup"].map((m) => <button type="button" key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }} style={{ flex: 1, border: "none", borderRadius: 7, padding: 9, background: mode === m ? SURFACE : "transparent", color: mode === m ? TEXT : TEXT_MUTED, fontWeight: 700 }}>{m === "signin" ? "Sign in" : "Create account"}</button>)}
+        </div>
         <div style={fieldLabel}>Email</div>
         <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         <div style={fieldLabel}>Password</div>
-        <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <input type="password" minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>{busy ? "Signing in…" : "Sign in"}</button>
+        {message && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginBottom: 10 }}>{message}</div>}
+        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>{busy ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}</button>
       </form>
+    </div>
+  );
+}
+
+function Onboarding({ onComplete }) {
+  const [mode, setMode] = useState(null);
+  const [householdName, setHouseholdName] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function createHousehold(e) {
+    e.preventDefault(); setBusy(true); setError("");
+    const { error } = await supabase.rpc("create_household", { household_name: householdName.trim(), profile_name: profileName.trim() });
+    if (error) setError(error.message); else await onComplete();
+    setBusy(false);
+  }
+  async function joinHousehold(e) {
+    e.preventDefault(); setBusy(true); setError("");
+    const { error } = await supabase.rpc("join_household", { invite_code_input: inviteCode.trim().toUpperCase(), profile_name: profileName.trim() });
+    if (error) setError(error.message); else await onComplete();
+    setBusy(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
+      <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to Common Ground</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Your account is ready. Now tell us where you belong.</div>
+        {!mode ? <>
+          <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Create a household</button>
+          <button onClick={() => setMode("join")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Join a household</button>
+        </> : (
+          <form onSubmit={mode === "create" ? createHousehold : joinHousehold}>
+            {mode === "create" ? <>
+              <div style={fieldLabel}>Household name</div>
+              <input required placeholder="e.g. Shane & Alli" value={householdName} onChange={(e) => setHouseholdName(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+            </> : <>
+              <div style={fieldLabel}>Invite code</div>
+              <input required placeholder="e.g. A7K2M9QX" value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} style={{ ...inputStyle, marginBottom: 12, textTransform: "uppercase" }} />
+            </>}
+            <div style={fieldLabel}>Your profile name</div>
+            <input required placeholder="e.g. Shane" value={profileName} onChange={(e) => setProfileName(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+            {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
+            <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Create household" : "Join household"}</button>
+            <button type="button" onClick={() => { setMode(null); setError(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 8 }}>Back</button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -113,6 +183,9 @@ export default function Tracker() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [householdId, setHouseholdId] = useState(null);
+  const [householdName, setHouseholdName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profiles, setProfiles] = useState({});
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
@@ -183,14 +256,23 @@ export default function Tracker() {
         .from("household_members").select("household_id").eq("user_id", session.user.id).limit(1);
       if (memberError) throw memberError;
       const hid = memberships?.[0]?.household_id;
-      if (!hid) throw new Error("Your login is not linked to a household yet.");
+      if (!hid) {
+        setNeedsOnboarding(true);
+        setHouseholdId(null);
+        setLoading(false);
+        return;
+      }
+      setNeedsOnboarding(false);
       setHouseholdId(hid);
+      const { data: householdRow } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
+      setHouseholdName(householdRow?.name || "Your household");
+      setInviteCode(householdRow?.invite_code || "");
 
       const { data: profileRows, error: profileError } = await supabase
         .from("profiles").select("*").eq("household_id", hid);
       if (profileError) throw profileError;
       const pmap = {};
-      const next = { Alli: emptyData("Alli"), Shane: emptyData("Shane") };
+      const next = {};
       (profileRows || []).forEach((p) => {
         pmap[p.name] = p;
         next[p.name] = {
@@ -200,6 +282,7 @@ export default function Tracker() {
         };
       });
       setProfiles(pmap);
+      if (!pmap[activeUser] && Object.keys(pmap).length) setActiveUser(Object.keys(pmap)[0]);
       const profileIds = Object.values(pmap).map((p) => p.id);
       if (!profileIds.length) throw new Error("No health profiles exist for this household.");
 
@@ -239,6 +322,10 @@ export default function Tracker() {
     setTCarbs(u.targets.carbs); setTFat(u.targets.fat); setTFiberMin(u.targets.fiberMin); setTFiberMax(u.targets.fiberMax);
   }, [activeUser, loading, data]);
 
+  const profileNames = Object.keys(profiles);
+  useEffect(() => {
+    if (profileNames.length && !profiles[activeUser]) setActiveUser(profileNames[0]);
+  }, [profiles, activeUser]);
   function profileFor(name) { return profiles[name]; }
   async function runWrite(work) {
     setSaveError(null);
@@ -442,13 +529,13 @@ export default function Tracker() {
 
   const chartData = useMemo(() => {
     const dateSet = new Set();
-    USERS.forEach((u) => data[u].weights.forEach((w) => dateSet.add(w.date)));
+    profileNames.forEach((u) => data[u].weights.forEach((w) => dateSet.add(w.date)));
     const dates = Array.from(dateSet).sort();
     const avgMaps = {};
-    USERS.forEach((u) => { avgMaps[u] = rollingAvgSeries(data[u].weights.slice().sort((a, b) => a.date.localeCompare(b.date)), 7); });
+    profileNames.forEach((u) => { avgMaps[u] = rollingAvgSeries(data[u].weights.slice().sort((a, b) => a.date.localeCompare(b.date)), 7); });
     return dates.map((d) => {
       const row = { date: d, label: fmtDate(d) };
-      USERS.forEach((u) => {
+      profileNames.forEach((u) => {
         const found = data[u].weights.find((w) => w.date === d);
         if (found) row[u] = found.weight;
         if (avgMaps[u][d] != null) row[`${u}Avg`] = Math.round(avgMaps[u][d] * 10) / 10;
@@ -461,7 +548,7 @@ export default function Tracker() {
     const days = [];
     for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
     const result = {};
-    USERS.forEach((u) => {
+    profileNames.forEach((u) => {
       const logged = new Set([
         ...data[u].weights.map((w) => w.date), ...data[u].foods.map((f) => f.date),
         ...data[u].steps.map((s) => s.date), ...data[u].water.map((w) => w.date), ...data[u].activities.map((a) => a.date),
@@ -474,7 +561,7 @@ export default function Tracker() {
   const today = todayStr();
   const todayStats = useMemo(() => {
     const out = {};
-    USERS.forEach((u) => {
+    profileNames.forEach((u) => {
       const foods = data[u].foods.filter((f) => f.date === today);
       const consumed = foods.reduce((acc, f) => ({
         calories: acc.calories + f.calories, protein: acc.protein + f.protein,
@@ -500,7 +587,8 @@ export default function Tracker() {
   if (!authReady) {
     return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>checking your session...</div>;
   }
-  if (!session) return <Login />;
+  if (!session) return <AuthScreen />;
+  if (needsOnboarding) return <Onboarding onComplete={loadAll} />;
   if (loading) {
     return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the household ledger...</div>;
   }
@@ -532,15 +620,16 @@ export default function Tracker() {
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.9rem 1rem 0.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 21, lineHeight: 1.15 }}>
-              Shane &amp; Alli's<br />Health Tracker
+              Common Ground
+              <div style={{ fontFamily: "'Karla', sans-serif", fontStyle: "normal", fontWeight: 500, fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>{householdName}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ display: "flex", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3 }}>
-              {USERS.map((u) => (
+              {profileNames.map((u) => (
                 <button key={u} onClick={() => setActiveUser(u)} style={{
                   border: "none", padding: "9px 16px", borderRadius: 8,
                   fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 15,
-                  background: activeUser === u ? USER_COLOR[u] : "transparent",
+                  background: activeUser === u ? userColor(u) : "transparent",
                   color: activeUser === u ? USER_TEXT_ON[u] : TEXT_MUTED,
                 }}>{u}</button>
               ))}
@@ -548,7 +637,10 @@ export default function Tracker() {
               <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 7, display: "grid", placeItems: "center" }}><LogOut style={{ width: 18, height: 18 }} /></button>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: TEXT_MUTED }}>{weeksLeft} weeks until the Dec 31 goal date</div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <div style={{ fontSize: 12, color: TEXT_MUTED }}>{weeksLeft} weeks until the Dec 31 goal date</div>
+            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title="Copy household invite code" style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}><Users style={{ width: 13, height: 13 }} /> Invite {inviteCode}</button>}
+          </div>
         </div>
       </div>
 
@@ -565,13 +657,13 @@ export default function Tracker() {
                 const targets = data[activeUser].targets;
                 return (
                   <div>
-                    <ProgressRow label="Calories in" value={ts.calories} target={targets.calories} unit="" color={USER_COLOR[activeUser]} />
+                    <ProgressRow label="Calories in" value={ts.calories} target={targets.calories} unit="" color={userColor(activeUser)} />
                     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: TEXT_MUTED, margin: "2px 0 14px" }}>
                       <Zap style={{ width: 13, height: 13 }} /> {Math.round(ts.burned)} burned · net {Math.round(ts.net)} cal
                     </div>
-                    <ProgressRow label="Protein" value={ts.protein} target={targets.protein} unit="g" color={USER_COLOR_DIM[activeUser]} />
-                    <ProgressRow label="Carbs" value={ts.carbs} target={targets.carbs} unit="g" color={USER_COLOR_DIM[activeUser]} />
-                    <ProgressRow label="Fat" value={ts.fat} target={targets.fat} unit="g" color={USER_COLOR_DIM[activeUser]} />
+                    <ProgressRow label="Protein" value={ts.protein} target={targets.protein} unit="g" color={userColor(activeUser, true)} />
+                    <ProgressRow label="Carbs" value={ts.carbs} target={targets.carbs} unit="g" color={userColor(activeUser, true)} />
+                    <ProgressRow label="Fat" value={ts.fat} target={targets.fat} unit="g" color={userColor(activeUser, true)} />
                     <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 14 }}>
                       Fiber: <span className="num" style={{ color: TEXT }}>{Math.round(ts.fiber)}g</span> / {targets.fiberMin}–{targets.fiberMax}g
                     </div>
@@ -635,7 +727,7 @@ export default function Tracker() {
               <div style={fieldLabel}>Date</div>
               <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
               {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-              <button onClick={addWeight} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Log weight</button>
+              <button onClick={addWeight} style={bigButton(userColor(activeUser), userText(activeUser))}>Log weight</button>
               {data[activeUser].weights.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
@@ -664,18 +756,18 @@ export default function Tracker() {
                       {[
                         ["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"],
                       ].map(([id, label]) => (
-                        <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? USER_COLOR[activeUser] : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
+                        <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? userColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
                       ))}
                     </div>
                     <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
                       {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
                         <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
-                          <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? USER_COLOR[activeUser] : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
+                          <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? userColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
                             <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
                             <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
                           </button>
-                          <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? USER_COLOR[activeUser] : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? userColor(activeUser) : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} />
                           </button>
                         </div>
@@ -734,8 +826,8 @@ export default function Tracker() {
               {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
               {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                <button onClick={saveSavedFoodOnly} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Save changes</button>
-              </div> : <button onClick={addFood} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>{selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
+                <button onClick={saveSavedFoodOnly} style={bigButton(userColor(activeUser), userText(activeUser))}>Save changes</button>
+              </div> : <button onClick={addFood} style={bigButton(userColor(activeUser), userText(activeUser))}>{selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
             </div>
 
             <div style={cardStyle}>
@@ -746,7 +838,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={addActivity} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Log activity</button>
+              <button onClick={addActivity} style={bigButton(userColor(activeUser), userText(activeUser))}>Log activity</button>
             </div>
 
             <div style={cardStyle}>
@@ -755,7 +847,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveSteps} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Save steps</button>
+              <button onClick={saveSteps} style={bigButton(userColor(activeUser), userText(activeUser))}>Save steps</button>
             </div>
 
             <div style={cardStyle}>
@@ -769,7 +861,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={() => addWater()} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Add water</button>
+              <button onClick={() => addWater()} style={bigButton(userColor(activeUser), userText(activeUser))}>Add water</button>
             </div>
           </>
         )}
@@ -780,15 +872,15 @@ export default function Tracker() {
               <div style={headingStyle}>Weight trend</div>
               <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>solid = actual, dashed = 7-day avg</div>
               <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
-                {USERS.map((u) => {
+                {profileNames.map((u) => {
                   const info = goalInfo(u);
                   return (
                     <div key={u}>
-                      <div style={{ fontSize: 11, color: USER_COLOR[u], fontWeight: 700 }}>{u}</div>
+                      <div style={{ fontSize: 11, color: userColor(u), fontWeight: 700 }}>{u}</div>
                       <div className="num" style={{ fontSize: 16 }}>
                         {info ? `${info.latest} lb` : "—"}
                         {info && info.latest !== info.start && (
-                          <span style={{ color: info.latest < info.start ? USER_COLOR[u] : WARN, fontSize: 12, marginLeft: 6 }}>
+                          <span style={{ color: info.latest < info.start ? userColor(u) : WARN, fontSize: 12, marginLeft: 6 }}>
                             {info.latest < info.start ? "▼" : "▲"} {Math.abs(info.latest - info.start).toFixed(1)}
                           </span>
                         )}
@@ -808,10 +900,8 @@ export default function Tracker() {
                       <YAxis tick={{ fill: TEXT_MUTED, fontSize: 10 }} axisLine={{ stroke: BORDER }} tickLine={false} domain={["dataMin - 3", "dataMax + 3"]} width={32} />
                       <Tooltip contentStyle={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12 }} labelStyle={{ color: TEXT }} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Line type="monotone" dataKey="Alli" name="Alli" stroke={USER_COLOR.Alli} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
-                      <Line type="monotone" dataKey="AlliAvg" name="Alli avg" stroke={USER_COLOR.Alli} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
-                      <Line type="monotone" dataKey="Shane" name="Shane" stroke={USER_COLOR.Shane} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
-                      <Line type="monotone" dataKey="ShaneAvg" name="Shane avg" stroke={USER_COLOR.Shane} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
+                      {profileNames.map((u) => <Line key={u} type="monotone" dataKey={u} name={u} stroke={userColor(u)} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />)}
+                      {profileNames.map((u) => <Line key={`${u}-avg`} type="monotone" dataKey={`${u}Avg`} name={`${u} avg`} stroke={userColor(u)} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />)}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -820,13 +910,13 @@ export default function Tracker() {
 
             <div style={cardStyle}>
               <div style={headingStyle}>Last 14 days</div>
-              {USERS.map((u) => (
+              {profileNames.map((u) => (
                 <div key={u} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: u === "Alli" ? 10 : 0 }}>
-                  <div style={{ width: 40, fontSize: 11, color: USER_COLOR[u], fontWeight: 700 }}>{u}</div>
+                  <div style={{ width: 40, fontSize: 11, color: userColor(u), fontWeight: 700 }}>{u}</div>
                   <div style={{ display: "flex", gap: 3, flex: 1 }}>
                     {streaks.days.map((d, i) => (
                       <div key={d} title={`${fmtDate(d)}: ${streaks.result[u][i] ? "logged" : "nothing logged"}`}
-                        style={{ flex: 1, height: 18, borderRadius: 3, background: streaks.result[u][i] ? USER_COLOR[u] : SURFACE_2, border: `1px solid ${streaks.result[u][i] ? USER_COLOR[u] : BORDER}` }} />
+                        style={{ flex: 1, height: 18, borderRadius: 3, background: streaks.result[u][i] ? userColor(u) : SURFACE_2, border: `1px solid ${streaks.result[u][i] ? userColor(u) : BORDER}` }} />
                     ))}
                   </div>
                 </div>
@@ -841,7 +931,7 @@ export default function Tracker() {
               <div style={headingStyle}>Goal — {activeUser}</div>
               <div style={fieldLabel}>Goal weight (lb)</div>
               <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveGoal} style={{ ...bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser]), marginBottom: gi ? 16 : 0 }}>Save goal</button>
+              <button onClick={saveGoal} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), marginBottom: gi ? 16 : 0 }}>Save goal</button>
               {gi && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <div style={{ background: SURFACE_2, borderRadius: 10, padding: "0.75rem 1rem" }}>
@@ -870,7 +960,7 @@ export default function Tracker() {
                 <div><div style={fieldLabel}>Fiber min (g)</div><input type="number" value={tFiberMin} onChange={(e) => setTFiberMin(e.target.value)} style={inputStyle} /></div>
                 <div><div style={fieldLabel}>Fiber max (g)</div><input type="number" value={tFiberMax} onChange={(e) => setTFiberMax(e.target.value)} style={inputStyle} /></div>
               </div>
-              <button onClick={saveTargets} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Save targets</button>
+              <button onClick={saveTargets} style={bigButton(userColor(activeUser), userText(activeUser))}>Save targets</button>
             </div>
           </>
         )}
@@ -887,7 +977,7 @@ export default function Tracker() {
               <button key={id} onClick={() => setTab(id)} style={{
                 flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 3,
-                color: active ? USER_COLOR[activeUser] : TEXT_MUTED,
+                color: active ? userColor(activeUser) : TEXT_MUTED,
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
                 <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'Fraunces', serif", fontStyle: "italic" }}>{label}</span>
