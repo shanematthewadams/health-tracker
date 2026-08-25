@@ -313,6 +313,7 @@ export default function Tracker() {
   const [profileColors, setProfileColors] = useState({});
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
+  const [fastPromptDismissedDate, setFastPromptDismissedDate] = useState(null);
   const [clockNow, setClockNow] = useState(Date.now());
   const [fastEditorOpen, setFastEditorOpen] = useState(false);
   const [fastStartDate, setFastStartDate] = useState(todayStr());
@@ -430,7 +431,10 @@ export default function Tracker() {
       setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
-      if (owned) setProfileNameInput(owned.name || "");
+      if (owned) {
+        setProfileNameInput(owned.name || "");
+        setFastPromptDismissedDate(owned.fasting_prompt_dismissed_date || null);
+      }
       setEmailInput(session.user.email || "");
       if (owned) setActiveUser(owned.name);
       else if (!pmap[activeUser] && Object.keys(pmap).length) setActiveUser(Object.keys(pmap)[0]);
@@ -500,6 +504,22 @@ export default function Tracker() {
       await loadAll();
     }
     setAccountBusy(false);
+  }
+
+  const fastPromptDismissedToday = fastPromptDismissedDate === todayStr();
+
+  async function dismissFastPromptToday() {
+    if (!ownedProfileId) return;
+    const date = todayStr();
+    setFastPromptDismissedDate(date);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ fasting_prompt_dismissed_date: date })
+      .eq("id", ownedProfileId);
+    if (error) {
+      setSaveError(`Could not dismiss fasting prompt: ${error.message}`);
+      setFastPromptDismissedDate(null);
+    }
   }
 
   function openFastEditor(existing = null) {
@@ -1056,7 +1076,7 @@ export default function Tracker() {
                   </div>
                   <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
                 </div>
-                {isMine && (
+                {isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
                   <div style={{ ...cardStyle, background: activeFasts[activeUser] ? "#F1EBDD" : "#FFF8EE", borderColor: activeFasts[activeUser] ? "#D8CCB8" : "#E6D6C1", padding: "1.05rem 1.2rem" }}>
                     {activeFasts[activeUser] ? (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -1079,9 +1099,14 @@ export default function Tracker() {
                           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600 }}>Fasting today?</div>
                           <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>WITH can adjust your Today prompts while you fast.</div>
                         </div>
-                        <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ flexShrink: 0, background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                          Start fast
-                        </button>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>
+                            Not today
+                          </button>
+                          <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
+                            Start fast
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1268,6 +1293,46 @@ export default function Tracker() {
               ))}
             </div>
             {logTab === "food" && <>
+            {activeFasts[activeUser] ? (
+              <div style={{ ...cardStyle, background: "#F1EBDD", borderColor: "#D8CCB8", padding: "0.95rem 1.1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div>
+                  </div>
+                  {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
+                </div>
+              </div>
+            ) : activeCanEdit && !fastPromptDismissedToday ? (
+              <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1", padding: "0.95rem 1.1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button onClick={dismissFastPromptToday} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 9px", fontSize: 11, fontWeight: 700 }}>Not today</button>
+                    <button onClick={() => openFastEditor()} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Start fast</button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {activeCanEdit && fastEditorOpen && (
+              <div style={{ ...cardStyle, padding: "1.05rem 1.1rem" }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+                  {activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}
+                </div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>It defaults to right now. Backdating is completely fine.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                  <div><div style={fieldLabel}>Date</div><input type="date" max={todayStr()} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={inputStyle} /></div>
+                  <div><div style={fieldLabel}>Time</div><input type="time" value={fastStartTime} onChange={(e) => setFastStartTime(e.target.value)} style={inputStyle} /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
+                  <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
+                </div>
+              </div>
+            )}
             <div style={cardStyle}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ ...headingStyle, marginBottom: 0 }}>Food</div>
