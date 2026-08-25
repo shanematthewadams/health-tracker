@@ -14,7 +14,8 @@
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest",
-    "lucide-react": "latest"
+    "lucide-react": "latest",
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {}
 }

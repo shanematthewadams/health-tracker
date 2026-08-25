@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Flame, Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, Sparkles } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, Sparkles, LogOut } from "lucide-react";
+import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
 const USER_COLOR = { Shane: "#FF8C4B", Alli: "#C9A8FF" };
@@ -22,8 +23,6 @@ function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
-function uid() { return Math.random().toString(36).slice(2, 10); }
-
 function defaultTargets(u) {
   if (u === "Alli") return { bmr: 1340, calories: 1700, protein: 115, carbs: 185, fat: 55, fiberMin: 30, fiberMax: 40 };
   if (u === "Shane") return { bmr: 1960, calories: 2500, protein: 165, carbs: 300, fat: 70, fiberMin: 35, fiberMax: 45 };
@@ -47,6 +46,7 @@ function rollingAvgSeries(weightsSorted, windowSize) {
   }
   return out;
 }
+function num(v) { return v == null ? 0 : Number(v); }
 
 const inputStyle = {
   background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT,
@@ -78,7 +78,42 @@ function ProgressRow({ label, value, target, unit, color }) {
   );
 }
 
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function signIn(e) {
+    e.preventDefault();
+    setBusy(true); setError("");
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) setError(authError.message);
+    setBusy(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <form onSubmit={signIn} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, lineHeight: 1.05, marginBottom: 8 }}>Shane &amp; Alli's<br/>Health Tracker</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 24 }}>Sign in to your household.</div>
+        <div style={fieldLabel}>Email</div>
+        <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <div style={fieldLabel}>Password</div>
+        <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>{busy ? "Signing in…" : "Sign in"}</button>
+      </form>
+    </div>
+  );
+}
+
 export default function Tracker() {
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [householdId, setHouseholdId] = useState(null);
+  const [profiles, setProfiles] = useState({});
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
   const [data, setData] = useState({ Alli: emptyData("Alli"), Shane: emptyData("Shane") });
@@ -90,7 +125,7 @@ export default function Tracker() {
   const [weightError, setWeightError] = useState("");
 
   const [estimateText, setEstimateText] = useState("");
-  const [estimating, setEstimating] = useState(false);
+  const [estimating] = useState(false);
   const [estimateError, setEstimateError] = useState("");
   const [estimateNote, setEstimateNote] = useState("");
 
@@ -123,23 +158,66 @@ export default function Tracker() {
   const [tFiberMax, setTFiberMax] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const next = { Alli: emptyData("Alli"), Shane: emptyData("Shane") };
-      for (const u of USERS) {
-        try {
-          const raw = localStorage.getItem(`data:${u}`);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            next[u] = { ...emptyData(u), ...parsed };
-          }
-        } catch (e) {}
-      }
-      if (!cancelled) { setData(next); setLoading(false); }
-    }
-    load();
-    return () => { cancelled = true; };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthReady(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+    });
+    return () => subscription.unsubscribe();
   }, []);
+
+  async function loadAll() {
+    if (!session?.user) return;
+    setLoading(true); setSaveError(null);
+    try {
+      const { data: memberships, error: memberError } = await supabase
+        .from("household_members").select("household_id").eq("user_id", session.user.id).limit(1);
+      if (memberError) throw memberError;
+      const hid = memberships?.[0]?.household_id;
+      if (!hid) throw new Error("Your login is not linked to a household yet.");
+      setHouseholdId(hid);
+
+      const { data: profileRows, error: profileError } = await supabase
+        .from("profiles").select("*").eq("household_id", hid);
+      if (profileError) throw profileError;
+      const pmap = {};
+      const next = { Alli: emptyData("Alli"), Shane: emptyData("Shane") };
+      (profileRows || []).forEach((p) => {
+        pmap[p.name] = p;
+        next[p.name] = {
+          ...emptyData(p.name),
+          goalWeight: p.goal_weight == null ? null : num(p.goal_weight),
+          targets: { bmr: num(p.bmr), calories: num(p.calories), protein: num(p.protein), carbs: num(p.carbs), fat: num(p.fat), fiberMin: num(p.fiber_min), fiberMax: num(p.fiber_max) },
+        };
+      });
+      setProfiles(pmap);
+      const profileIds = Object.values(pmap).map((p) => p.id);
+      if (!profileIds.length) throw new Error("No health profiles exist for this household.");
+
+      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes] = await Promise.all([
+        supabase.from("weight_entries").select("*").eq("household_id", hid).order("entry_date"),
+        supabase.from("food_entries").select("*").eq("household_id", hid).order("entry_date"),
+        supabase.from("activity_entries").select("*").eq("household_id", hid).order("entry_date"),
+        supabase.from("step_entries").select("*").eq("household_id", hid).order("entry_date"),
+        supabase.from("water_entries").select("*").eq("household_id", hid).order("entry_date"),
+      ]);
+      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes]) if (r.error) throw r.error;
+      const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
+      for (const w of weightsRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].weights.push({ id: w.id, date: w.entry_date, weight: num(w.weight) }); }
+      for (const f of foodsRes.data || []) { const n = nameById[f.profile_id]; if (next[n]) next[n].foods.push({ id: f.id, date: f.entry_date, name: f.name, calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), meal: f.meal, notes: f.notes || "" }); }
+      for (const a of activitiesRes.data || []) { const n = nameById[a.profile_id]; if (next[n]) next[n].activities.push({ id: a.id, date: a.entry_date, name: a.name, caloriesBurned: num(a.calories_burned) }); }
+      for (const s of stepsRes.data || []) { const n = nameById[s.profile_id]; if (next[n]) next[n].steps.push({ id: s.id, date: s.entry_date, count: Number(s.step_count) }); }
+      for (const w of waterRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
+      setData(next);
+    } catch (e) {
+      setSaveError(e.message || "Could not load your household data.");
+    } finally { setLoading(false); }
+  }
+
+  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady]);
 
   useEffect(() => {
     if (loading) return;
@@ -147,94 +225,77 @@ export default function Tracker() {
     setGoalInput(u.goalWeight || "");
     setTBmr(u.targets.bmr); setTCal(u.targets.calories); setTProtein(u.targets.protein);
     setTCarbs(u.targets.carbs); setTFat(u.targets.fat); setTFiberMin(u.targets.fiberMin); setTFiberMax(u.targets.fiberMax);
-  }, [activeUser, loading]);
+  }, [activeUser, loading, data]);
 
-  async function persist(user, nextUserData) {
-    setData((prev) => ({ ...prev, [user]: nextUserData }));
-    try {
-      localStorage.setItem(`data:${user}`, JSON.stringify(nextUserData));
-      setSaveError(null);
-    } catch (e) {
-      setSaveError("Save failed. Your entry is showing but might not stick around.");
-    }
+  function profileFor(name) { return profiles[name]; }
+  async function runWrite(work) {
+    setSaveError(null);
+    try { await work(); await loadAll(); return true; }
+    catch (e) { setSaveError(e.message || "Save failed. Try again."); return false; }
   }
 
-  async function estimateMacros() {
-    setEstimateError("AI estimating is temporarily disabled while we move the tracker to its new home. Saved Foods is next.");
+  function estimateMacros() {
+    setEstimateError("AI estimating is temporarily disabled while we finish the Supabase move. Saved Foods is next.");
     setEstimateNote("");
   }
 
-  function addWeight() {
+  async function addWeight() {
     const val = parseFloat(weightInput);
     if (!weightInput || isNaN(val) || val <= 0) { setWeightError("Enter a real weight first."); return; }
     setWeightError("");
-    const userData = data[activeUser];
-    const filtered = userData.weights.filter((w) => w.date !== weightDate);
-    const nextWeights = [...filtered, { id: uid(), date: weightDate, weight: val }].sort((a, b) => a.date.localeCompare(b.date));
-    persist(activeUser, { ...userData, weights: nextWeights });
-    setWeightInput("");
+    const p = profileFor(activeUser); if (!p) return;
+    const ok = await runWrite(async () => {
+      const { error } = await supabase.from("weight_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: weightDate, weight: val }, { onConflict: "profile_id,entry_date" });
+      if (error) throw error;
+    });
+    if (ok) setWeightInput("");
   }
-  function deleteWeight(id) {
-    const userData = data[activeUser];
-    persist(activeUser, { ...userData, weights: userData.weights.filter((w) => w.id !== id) });
-  }
+  async function deleteWeight(id) { await runWrite(async () => { const { error } = await supabase.from("weight_entries").delete().eq("id", id); if (error) throw error; }); }
 
-  function addFood() {
+  async function addFood() {
     if (!foodName.trim()) { setFoodError("Give it a name."); return; }
     const cals = parseFloat(foodCals) || 0, protein = parseFloat(foodProtein) || 0;
     const carbs = parseFloat(foodCarbs) || 0, fat = parseFloat(foodFat) || 0, fiber = parseFloat(foodFiber) || 0;
     if (!foodCals && !foodProtein && !foodCarbs && !foodFat) { setFoodError("Add at least calories or a macro."); return; }
-    setFoodError("");
-    const userData = data[activeUser];
-    const entry = { id: uid(), date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() };
-    persist(activeUser, { ...userData, foods: [...userData.foods, entry] });
-    setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes("");
-    setEstimateText(""); setEstimateNote("");
+    setFoodError(""); const p = profileFor(activeUser); if (!p) return;
+    const ok = await runWrite(async () => {
+      const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
+      if (error) throw error;
+    });
+    if (ok) { setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes(""); setEstimateText(""); setEstimateNote(""); }
   }
-  function deleteFood(id) {
-    const userData = data[activeUser];
-    persist(activeUser, { ...userData, foods: userData.foods.filter((f) => f.id !== id) });
-  }
+  async function deleteFood(id) { await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
 
-  function saveSteps() {
-    const val = parseInt(stepsInput, 10);
-    if (!stepsInput || isNaN(val) || val < 0) return;
-    const userData = data[activeUser];
-    const filtered = userData.steps.filter((s) => s.date !== stepsDate);
-    persist(activeUser, { ...userData, steps: [...filtered, { id: uid(), date: stepsDate, count: val }] });
-    setStepsInput("");
+  async function saveSteps() {
+    const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) return;
+    const p = profileFor(activeUser); if (!p) return;
+    const ok = await runWrite(async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
+    if (ok) setStepsInput("");
   }
-  function addWater(amount) {
-    const val = amount != null ? amount : parseFloat(waterOz);
-    if (!val || isNaN(val) || val <= 0) return;
-    const userData = data[activeUser];
-    persist(activeUser, { ...userData, water: [...userData.water, { id: uid(), date: waterDate, ounces: val }] });
-    setWaterOz("");
+  async function addWater(amount) {
+    const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) return;
+    const p = profileFor(activeUser); if (!p) return;
+    const ok = await runWrite(async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
+    if (ok) setWaterOz("");
   }
-  function addActivity() {
-    if (!actName.trim()) return;
-    const cals = parseFloat(actCals) || 0;
-    if (!cals) return;
-    const userData = data[activeUser];
-    persist(activeUser, { ...userData, activities: [...userData.activities, { id: uid(), date: actDate, name: actName.trim(), caloriesBurned: cals }] });
-    setActName(""); setActCals("");
+  async function addActivity() {
+    if (!actName.trim()) return; const cals = parseFloat(actCals) || 0; if (!cals) return;
+    const p = profileFor(activeUser); if (!p) return;
+    const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
+    if (ok) { setActName(""); setActCals(""); }
   }
-  function deleteActivity(id) {
-    const userData = data[activeUser];
-    persist(activeUser, { ...userData, activities: userData.activities.filter((a) => a.id !== id) });
-  }
+  async function deleteActivity(id) { await runWrite(async () => { const { error } = await supabase.from("activity_entries").delete().eq("id", id); if (error) throw error; }); }
 
-  function saveGoal() {
-    const val = parseFloat(goalInput);
-    persist(activeUser, { ...data[activeUser], goalWeight: isNaN(val) ? null : val });
+  async function saveGoal() {
+    const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) return;
+    await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val }).eq("id", p.id); if (error) throw error; });
   }
-  function saveTargets() {
-    const targets = {
-      bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0,
-      carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0,
-      fiberMin: parseFloat(tFiberMin) || 0, fiberMax: parseFloat(tFiberMax) || 0,
-    };
-    persist(activeUser, { ...data[activeUser], targets });
+  async function saveTargets() {
+    const p = profileFor(activeUser); if (!p) return;
+    await runWrite(async () => {
+      const { error } = await supabase.from("profiles").update({ bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0, carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0, fiber_min: parseFloat(tFiberMin) || 0, fiber_max: parseFloat(tFiberMax) || 0 }).eq("id", p.id);
+      if (error) throw error;
+    });
   }
 
   const chartData = useMemo(() => {
@@ -294,8 +355,12 @@ export default function Tracker() {
 
   const weeksLeft = weeksUntil(GOAL_DATE);
 
+  if (!authReady) {
+    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>checking your session...</div>;
+  }
+  if (!session) return <Login />;
   if (loading) {
-    return <div style={{ background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the ledger...</div>;
+    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the household ledger...</div>;
   }
 
   const gi = goalInfo(activeUser);
@@ -327,7 +392,8 @@ export default function Tracker() {
             <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 21, lineHeight: 1.15 }}>
               Shane &amp; Alli's<br />Health Tracker
             </div>
-            <div style={{ display: "flex", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3 }}>
               {USERS.map((u) => (
                 <button key={u} onClick={() => setActiveUser(u)} style={{
                   border: "none", padding: "9px 16px", borderRadius: 8,
@@ -336,6 +402,8 @@ export default function Tracker() {
                   color: activeUser === u ? USER_TEXT_ON[u] : TEXT_MUTED,
                 }}>{u}</button>
               ))}
+              </div>
+              <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 7, display: "grid", placeItems: "center" }}><LogOut style={{ width: 18, height: 18 }} /></button>
             </div>
           </div>
           <div style={{ fontSize: 12, color: TEXT_MUTED }}>{weeksLeft} weeks until the Dec 31 goal date</div>
