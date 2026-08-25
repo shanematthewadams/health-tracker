@@ -313,7 +313,6 @@ export default function Tracker() {
   const [profileColors, setProfileColors] = useState({});
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
-  const [fastDebug, setFastDebug] = useState("idle");
   const [clockNow, setClockNow] = useState(Date.now());
   const [fastEditorOpen, setFastEditorOpen] = useState(false);
   const [fastStartDate, setFastStartDate] = useState(todayStr());
@@ -466,7 +465,6 @@ export default function Tracker() {
         if (name) fastMap[name] = f;
       });
       setActiveFasts(fastMap);
-      setFastDebug(`load ok · ${fastsRes?.data?.length || 0} active fast(s) visible`);
     } catch (e) {
       setSaveError(e.message || "Could not load your household data.");
     } finally { setLoading(false); }
@@ -514,21 +512,18 @@ export default function Tracker() {
   }
 
   async function startFast() {
-    setFastDebug(`start tapped · activeCanEdit=${activeCanEdit} · fastBusy=${fastBusy} · activeUser=${activeUser}`);
     if (!activeCanEdit || fastBusy) {
       setSaveError(`Fasting unavailable: activeCanEdit=${activeCanEdit}, fastBusy=${fastBusy}`);
       return;
     }
     const p = profileFor(activeUser);
-    if (!p) { setFastDebug("profile lookup failed"); setSaveError("Your profile could not be found."); return; }
-    setFastDebug(`profile found · ${p.id}`);
+    if (!p) { setSaveError("Your profile could not be found."); return; }
 
     const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
 
     setFastBusy(true); setSaveError(null);
-    setFastDebug(`sending insert · ${started.toISOString()}`);
     const { data: created, error } = await supabase
       .from("fasting_entries")
       .insert({
@@ -540,10 +535,8 @@ export default function Tracker() {
       .single();
 
     if (error) {
-      setFastDebug(`insert error · ${error.message}`);
       setSaveError(`Could not start fast: ${error.message}`);
     } else {
-      setFastDebug(`insert success · ${created?.id || "no id returned"}`);
       setActiveFasts((prev) => ({ ...prev, [activeUser]: created }));
       setFastEditorOpen(false);
       setClockNow(Date.now());
@@ -1064,19 +1057,6 @@ export default function Tracker() {
                   <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
                 </div>
                 {isMine && (
-                  <div style={{ ...cardStyle, background: "#FFF4D8", borderColor: "#D8B865", padding: "0.9rem 1rem" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#765B18", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 }}>Fasting diagnostic</div>
-                    <div style={{ fontSize: 12, color: "#5A4B2A", lineHeight: 1.45 }}>
-                      {fastDebug}<br/>
-                      ownedProfileId: {ownedProfileId || "none"}<br/>
-                      active profile id: {profileFor(activeUser)?.id || "none"}<br/>
-                      activeCanEdit: {String(activeCanEdit)}<br/>
-                      active fast: {activeFasts[activeUser]?.id || "none"}
-                    </div>
-                  </div>
-                )}
-
-                {isMine && (
                   <div style={{ ...cardStyle, background: activeFasts[activeUser] ? "#F1EBDD" : "#FFF8EE", borderColor: activeFasts[activeUser] ? "#D8CCB8" : "#E6D6C1", padding: "1.05rem 1.2rem" }}>
                     {activeFasts[activeUser] ? (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -1107,6 +1087,55 @@ export default function Tracker() {
                   </div>
                 )}
 
+                {isMine && fastEditorOpen && (
+                  <div style={{ ...cardStyle, marginTop: "-0.35rem", padding: "1.1rem 1.2rem" }}>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+                      {activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}
+                    </div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>
+                      It defaults to right now. Backdating is completely fine.
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                      <div>
+                        <div style={fieldLabel}>Date</div>
+                        <input
+                          type="date"
+                          max={todayStr()}
+                          value={fastStartDate}
+                          onChange={(e) => setFastStartDate(e.target.value)}
+                          style={inputStyle}
+                        />
+                      </div>
+                      <div>
+                        <div style={fieldLabel}>Time</div>
+                        <input
+                          type="time"
+                          value={fastStartTime}
+                          onChange={(e) => setFastStartTime(e.target.value)}
+                          style={inputStyle}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <button
+                        onClick={() => setFastEditorOpen(false)}
+                        disabled={fastBusy}
+                        style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={activeFasts[activeUser] ? updateFastStart : startFast}
+                        disabled={fastBusy}
+                        style={bigButton(profileColor(activeUser), profileText(activeUser))}
+                      >
+                        {fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {!hasAnything && (
                   <div style={{ ...cardStyle, padding: "1.45rem", background: "#FFF8EE", borderColor: "#E6D6C1" }}>
