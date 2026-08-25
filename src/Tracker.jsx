@@ -112,8 +112,8 @@ function AuthScreen() {
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 34, lineHeight: 1, marginBottom: 8 }}>Common Ground</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Health goals are personal. Progress doesn't have to be.</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div><div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Your health is personal, but you don't have to do it alone.</div>
         <div style={{ display: "flex", background: SURFACE_2, borderRadius: 9, padding: 3, marginBottom: 20 }}>
           {["signin","signup"].map((m) => <button type="button" key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }} style={{ flex: 1, border: "none", borderRadius: 7, padding: 9, background: mode === m ? SURFACE : "transparent", color: mode === m ? TEXT : TEXT_MUTED, fontWeight: 700 }}>{m === "signin" ? "Sign in" : "Create account"}</button>)}
         </div>
@@ -153,15 +153,15 @@ function Onboarding({ onComplete }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to Common Ground</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Your account is ready. Now tell us where you belong.</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to WITH</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
         {!mode ? <>
-          <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Create a household</button>
-          <button onClick={() => setMode("join")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Join a household</button>
+          <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Start a group</button>
+          <button onClick={() => setMode("join")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Join your people</button>
         </> : (
           <form onSubmit={mode === "create" ? createHousehold : joinHousehold}>
             {mode === "create" ? <>
-              <div style={fieldLabel}>Household name</div>
+              <div style={fieldLabel}>Group name</div>
               <input required placeholder="e.g. Shane & Alli" value={householdName} onChange={(e) => setHouseholdName(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
             </> : <>
               <div style={fieldLabel}>Invite code</div>
@@ -170,10 +170,41 @@ function Onboarding({ onComplete }) {
             <div style={fieldLabel}>Your profile name</div>
             <input required placeholder="e.g. Shane" value={profileName} onChange={(e) => setProfileName(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
             {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-            <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Create household" : "Join household"}</button>
+            <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Start group" : "Join group"}</button>
             <button type="button" onClick={() => { setMode(null); setError(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 8 }}>Back</button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ClaimProfile({ profiles, onClaim }) {
+  const [selected, setSelected] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const available = Object.values(profiles).filter((p) => !p.user_id);
+
+  async function claim() {
+    if (!selected) return;
+    setBusy(true); setError("");
+    const { error } = await supabase.rpc("claim_profile", { profile_id_input: selected });
+    if (error) setError(error.message); else await onClaim();
+    setBusy(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
+      <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 17, marginBottom: 16 }}>We’re in this together.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 18 }}>Which profile is yours?</div>
+        <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }}>
+          <option value="">Choose your profile</option>
+          {available.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        <button disabled={!selected || busy} onClick={claim} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: !selected || busy ? .6 : 1 }}>{busy ? "Connecting…" : "This is me"}</button>
       </div>
     </div>
   );
@@ -186,6 +217,7 @@ export default function Tracker() {
   const [householdName, setHouseholdName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [activeUser, setActiveUser] = useState("Alli");
   const [tab, setTab] = useState("today");
@@ -282,7 +314,10 @@ export default function Tracker() {
         };
       });
       setProfiles(pmap);
-      if (!pmap[activeUser] && Object.keys(pmap).length) setActiveUser(Object.keys(pmap)[0]);
+      const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
+      setOwnedProfileId(owned?.id || null);
+      if (owned) setActiveUser(owned.name);
+      else if (!pmap[activeUser] && Object.keys(pmap).length) setActiveUser(Object.keys(pmap)[0]);
       const profileIds = Object.values(pmap).map((p) => p.id);
       if (!profileIds.length) throw new Error("No health profiles exist for this household.");
 
@@ -327,6 +362,8 @@ export default function Tracker() {
     if (profileNames.length && !profiles[activeUser]) setActiveUser(profileNames[0]);
   }, [profiles, activeUser]);
   function profileFor(name) { return profiles[name]; }
+  function canEdit(name) { return profiles[name]?.user_id === session?.user?.id; }
+  const activeCanEdit = canEdit(activeUser);
   async function runWrite(work) {
     setSaveError(null);
     try { await work(); await loadAll(); return true; }
@@ -334,6 +371,7 @@ export default function Tracker() {
   }
 
   async function addWeight() {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = parseFloat(weightInput);
     if (!weightInput || isNaN(val) || val <= 0) { setWeightError("Enter a real weight first."); return; }
     setWeightError("");
@@ -344,7 +382,8 @@ export default function Tracker() {
     });
     if (ok) setWeightInput("");
   }
-  async function deleteWeight(id) { await runWrite(async () => { const { error } = await supabase.from("weight_entries").delete().eq("id", id); if (error) throw error; }); }
+  async function deleteWeight(id) {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("weight_entries").delete().eq("id", id); if (error) throw error; }); }
 
   function clearFoodForm() {
     setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes("");
@@ -437,6 +476,7 @@ export default function Tracker() {
   }
 
   async function addFood() {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     if (!foodName.trim()) { setFoodError("Give it a name."); return; }
     const cals = parseFloat(foodCals) || 0, protein = parseFloat(foodProtein) || 0;
     const carbs = parseFloat(foodCarbs) || 0, fat = parseFloat(foodFat) || 0, fiber = parseFloat(foodFiber) || 0;
@@ -461,33 +501,40 @@ export default function Tracker() {
     });
     if (ok) clearFoodForm();
   }
-  async function deleteFood(id) { await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
+  async function deleteFood(id) {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
 
   async function saveSteps() {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) return;
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
     if (ok) setStepsInput("");
   }
   async function addWater(amount) {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) return;
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
     if (ok) setWaterOz("");
   }
   async function addActivity() {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     if (!actName.trim()) return; const cals = parseFloat(actCals) || 0; if (!cals) return;
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
     if (ok) { setActName(""); setActCals(""); }
   }
-  async function deleteActivity(id) { await runWrite(async () => { const { error } = await supabase.from("activity_entries").delete().eq("id", id); if (error) throw error; }); }
+  async function deleteActivity(id) {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("activity_entries").delete().eq("id", id); if (error) throw error; }); }
 
   async function saveGoal() {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) return;
     await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val }).eq("id", p.id); if (error) throw error; });
   }
   async function saveTargets() {
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const p = profileFor(activeUser); if (!p) return;
     await runWrite(async () => {
       const { error } = await supabase.from("profiles").update({ bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0, carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0, fiber_min: parseFloat(tFiberMin) || 0, fiber_max: parseFloat(tFiberMax) || 0 }).eq("id", p.id);
@@ -589,8 +636,9 @@ export default function Tracker() {
   }
   if (!session) return <AuthScreen />;
   if (needsOnboarding) return <Onboarding onComplete={loadAll} />;
+  if (!loading && session && !ownedProfileId && Object.values(profiles).some((p) => !p.user_id)) return <ClaimProfile profiles={profiles} onClaim={loadAll} />;
   if (loading) {
-    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the household ledger...</div>;
+    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the shared space...</div>;
   }
 
   const gi = goalInfo(activeUser);
@@ -620,7 +668,7 @@ export default function Tracker() {
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.9rem 1rem 0.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 21, lineHeight: 1.15 }}>
-              Common Ground
+              WITH
               <div style={{ fontFamily: "'Karla', sans-serif", fontStyle: "normal", fontWeight: 500, fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>{householdName}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -639,7 +687,7 @@ export default function Tracker() {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>{weeksLeft} weeks until the Dec 31 goal date</div>
-            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title="Copy household invite code" style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}><Users style={{ width: 13, height: 13 }} /> Invite {inviteCode}</button>}
+            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}><Users style={{ width: 13, height: 13 }} /> Invite someone</button>}
           </div>
         </div>
       </div>
@@ -647,6 +695,11 @@ export default function Tracker() {
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "1rem 1rem", paddingBottom: NAV_H + 32 }}>
         {saveError && (
           <div style={{ background: "#3A2420", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
+        )}
+        {!activeCanEdit && (
+          <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT_MUTED, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 12 }}>
+            You’re viewing {activeUser}’s health information. Only {activeUser} can make changes.
+          </div>
         )}
 
         {tab === "today" && (
@@ -727,7 +780,7 @@ export default function Tracker() {
               <div style={fieldLabel}>Date</div>
               <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
               {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-              <button onClick={addWeight} style={bigButton(userColor(activeUser), userText(activeUser))}>Log weight</button>
+              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Log weight</button>
               {data[activeUser].weights.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
@@ -827,7 +880,7 @@ export default function Tracker() {
               {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
                 <button onClick={saveSavedFoodOnly} style={bigButton(userColor(activeUser), userText(activeUser))}>Save changes</button>
-              </div> : <button onClick={addFood} style={bigButton(userColor(activeUser), userText(activeUser))}>{selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
+              </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>{selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
             </div>
 
             <div style={cardStyle}>
@@ -838,7 +891,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={addActivity} style={bigButton(userColor(activeUser), userText(activeUser))}>Log activity</button>
+              <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Log activity</button>
             </div>
 
             <div style={cardStyle}>
@@ -847,7 +900,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveSteps} style={bigButton(userColor(activeUser), userText(activeUser))}>Save steps</button>
+              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Save steps</button>
             </div>
 
             <div style={cardStyle}>
@@ -861,7 +914,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={() => addWater()} style={bigButton(userColor(activeUser), userText(activeUser))}>Add water</button>
+              <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Add water</button>
             </div>
           </>
         )}
@@ -931,7 +984,7 @@ export default function Tracker() {
               <div style={headingStyle}>Goal — {activeUser}</div>
               <div style={fieldLabel}>Goal weight (lb)</div>
               <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveGoal} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), marginBottom: gi ? 16 : 0 }}>Save goal</button>
+              <button onClick={saveGoal} disabled={!activeCanEdit} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), marginBottom: gi ? 16 : 0 }}>Save goal</button>
               {gi && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <div style={{ background: SURFACE_2, borderRadius: 10, padding: "0.75rem 1rem" }}>
@@ -960,7 +1013,7 @@ export default function Tracker() {
                 <div><div style={fieldLabel}>Fiber min (g)</div><input type="number" value={tFiberMin} onChange={(e) => setTFiberMin(e.target.value)} style={inputStyle} /></div>
                 <div><div style={fieldLabel}>Fiber max (g)</div><input type="number" value={tFiberMax} onChange={(e) => setTFiberMax(e.target.value)} style={inputStyle} /></div>
               </div>
-              <button onClick={saveTargets} style={bigButton(userColor(activeUser), userText(activeUser))}>Save targets</button>
+              <button onClick={saveTargets} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Save targets</button>
             </div>
           </>
         )}
