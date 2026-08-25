@@ -14,7 +14,6 @@ function userColor(name, dim=false) {
   return palette[n];
 }
 function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
-const GOAL_DATE = "2026-12-31";
 
 const BG = "#14171A";
 const SURFACE = "#212425";
@@ -30,13 +29,18 @@ function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
+function fmtGoalDate(d) {
+  if (!d) return "";
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
 function defaultTargets(u) {
   if (u === "Alli") return { bmr: 1340, calories: 1700, protein: 115, carbs: 185, fat: 55, fiberMin: 30, fiberMax: 40 };
   if (u === "Shane") return { bmr: 1960, calories: 2500, protein: 165, carbs: 300, fat: 70, fiberMin: 35, fiberMax: 45 };
   return { bmr: 0, calories: 0, protein: 0, carbs: 0, fat: 0, fiberMin: 0, fiberMax: 0 };
 }
 function emptyData(u) {
-  return { weights: [], foods: [], activities: [], steps: [], water: [], goalWeight: null, targets: defaultTargets(u) };
+  return { weights: [], foods: [], activities: [], steps: [], water: [], goalWeight: null, goalDate: null, targets: defaultTargets(u) };
 }
 function weeksUntil(dateStr) {
   const target = new Date(dateStr + "T00:00:00");
@@ -96,14 +100,20 @@ function AuthScreen() {
   async function submit(e) {
     e.preventDefault();
     setBusy(true); setError(""); setMessage("");
-    if (mode === "signin") {
+    if (mode === "forgot") {
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (authError) setError(authError.message);
+      else setMessage("Check your email for a password reset link.");
+    } else if (mode === "signin") {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) setError(authError.message);
     } else {
       const { data, error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) setError(authError.message);
       else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
-      else setMessage("Account created. Setting up your household…");
+      else setMessage("Account created. Setting up your group…");
     }
     setBusy(false);
   }
@@ -112,18 +122,69 @@ function AuthScreen() {
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div><div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Your health is personal, but you don't have to do it alone.</div>
-        <div style={{ display: "flex", background: SURFACE_2, borderRadius: 9, padding: 3, marginBottom: 20 }}>
-          {["signin","signup"].map((m) => <button type="button" key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }} style={{ flex: 1, border: "none", borderRadius: 7, padding: 9, background: mode === m ? SURFACE : "transparent", color: mode === m ? TEXT : TEXT_MUTED, fontWeight: 700 }}>{m === "signin" ? "Sign in" : "Create account"}</button>)}
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
+          {mode === "forgot" ? "We’ll send you a link to choose a new password." : "Your health is personal, but you don't have to do it alone."}
         </div>
+
+        {mode !== "forgot" && (
+          <div style={{ display: "flex", background: SURFACE_2, borderRadius: 9, padding: 3, marginBottom: 20 }}>
+            {["signin","signup"].map((m) => <button type="button" key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }} style={{ flex: 1, border: "none", borderRadius: 7, padding: 9, background: mode === m ? SURFACE : "transparent", color: mode === m ? TEXT : TEXT_MUTED, fontWeight: 700 }}>{m === "signin" ? "Sign in" : "Create account"}</button>)}
+          </div>
+        )}
+
         <div style={fieldLabel}>Email</div>
         <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-        <div style={fieldLabel}>Password</div>
-        <input type="password" minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+
+        {mode !== "forgot" && <>
+          <div style={fieldLabel}>Password</div>
+          <input type="password" minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+        </>}
+
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
         {message && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginBottom: 10 }}>{message}</div>}
-        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>{busy ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}</button>
+
+        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>
+          {busy ? "Working…" : mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : "Create account"}
+        </button>
+
+        {mode === "signin" && <button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Forgot password?</button>}
+        {mode === "forgot" && <button type="button" onClick={() => { setMode("signin"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Back to sign in</button>}
+      </form>
+    </div>
+  );
+}
+
+function ResetPasswordScreen({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function updatePassword(e) {
+    e.preventDefault();
+    setError("");
+    if (password.length < 6) { setError("Use at least 6 characters."); return; }
+    if (password !== confirm) { setError("Those passwords don't match."); return; }
+    setBusy(true);
+    const { error: authError } = await supabase.auth.updateUser({ password });
+    if (authError) setError(authError.message);
+    else onDone();
+    setBusy(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
+      <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 20 }}>Choose a new password.</div>
+        <div style={fieldLabel}>New password</div>
+        <input type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <div style={fieldLabel}>Confirm password</div>
+        <input type="password" minLength={6} autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Save new password"}</button>
       </form>
     </div>
   );
@@ -213,6 +274,7 @@ function ClaimProfile({ profiles, onClaim }) {
 export default function Tracker() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [householdId, setHouseholdId] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -260,6 +322,7 @@ export default function Tracker() {
   const [actDate, setActDate] = useState(todayStr());
 
   const [goalInput, setGoalInput] = useState("");
+  const [goalDateInput, setGoalDateInput] = useState("");
   const [tBmr, setTBmr] = useState("");
   const [tCal, setTCal] = useState("");
   const [tProtein, setTProtein] = useState("");
@@ -273,8 +336,9 @@ export default function Tracker() {
       setSession(session);
       setAuthReady(true);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       setAuthReady(true);
     });
     return () => subscription.unsubscribe();
@@ -310,6 +374,7 @@ export default function Tracker() {
         next[p.name] = {
           ...emptyData(p.name),
           goalWeight: p.goal_weight == null ? null : num(p.goal_weight),
+          goalDate: p.goal_date || null,
           targets: { bmr: num(p.bmr), calories: num(p.calories), protein: num(p.protein), carbs: num(p.carbs), fat: num(p.fat), fiberMin: num(p.fiber_min), fiberMax: num(p.fiber_max) },
         };
       });
@@ -353,6 +418,7 @@ export default function Tracker() {
     if (loading) return;
     const u = data[activeUser];
     setGoalInput(u.goalWeight || "");
+    setGoalDateInput(u.goalDate || "");
     setTBmr(u.targets.bmr); setTCal(u.targets.calories); setTProtein(u.targets.protein);
     setTCarbs(u.targets.carbs); setTFat(u.targets.fat); setTFiberMin(u.targets.fiberMin); setTFiberMax(u.targets.fiberMax);
   }, [activeUser, loading, data]);
@@ -531,7 +597,7 @@ export default function Tracker() {
   async function saveGoal() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) return;
-    await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val }).eq("id", p.id); if (error) throw error; });
+    await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null }).eq("id", p.id); if (error) throw error; });
   }
   async function saveTargets() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
@@ -629,11 +695,13 @@ export default function Tracker() {
     return { start, latest, goal, pctLost: start !== 0 ? ((start - latest) / start) * 100 : 0, toGoal: goal != null ? latest - goal : null };
   }
 
-  const weeksLeft = weeksUntil(GOAL_DATE);
+  const activeGoalDate = data[activeUser]?.goalDate || null;
+  const weeksLeft = activeGoalDate ? weeksUntil(activeGoalDate) : null;
 
   if (!authReady) {
     return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>checking your session...</div>;
   }
+  if (passwordRecovery && session) return <ResetPasswordScreen onDone={() => setPasswordRecovery(false)} />;
   if (!session) return <AuthScreen />;
   if (needsOnboarding) return <Onboarding onComplete={loadAll} />;
   if (!loading && session && !ownedProfileId && Object.values(profiles).some((p) => !p.user_id)) return <ClaimProfile profiles={profiles} onClaim={loadAll} />;
@@ -686,7 +754,9 @@ export default function Tracker() {
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <div style={{ fontSize: 12, color: TEXT_MUTED }}>{weeksLeft} weeks until the Dec 31 goal date</div>
+            <div style={{ fontSize: 12, color: TEXT_MUTED }}>
+              {activeGoalDate ? `${weeksLeft} ${weeksLeft === 1 ? "week" : "weeks"} until ${fmtGoalDate(activeGoalDate)}` : "No goal date set"}
+            </div>
             {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}><Users style={{ width: 13, height: 13 }} /> Invite someone</button>}
           </div>
         </div>
@@ -984,6 +1054,8 @@ export default function Tracker() {
               <div style={headingStyle}>Goal — {activeUser}</div>
               <div style={fieldLabel}>Goal weight (lb)</div>
               <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+              <div style={fieldLabel}>Goal date</div>
+              <input type="date" value={goalDateInput} onChange={(e) => setGoalDateInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
               <button onClick={saveGoal} disabled={!activeCanEdit} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), marginBottom: gi ? 16 : 0 }}>Save goal</button>
               {gi && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
