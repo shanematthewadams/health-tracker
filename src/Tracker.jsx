@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users, UserCircle } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users, UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight } from "lucide-react";
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
@@ -343,6 +343,7 @@ export default function Tracker() {
   const [actDate, setActDate] = useState(todayStr());
 
   const [goalInput, setGoalInput] = useState("");
+  const [editingGoals, setEditingGoals] = useState(false);
   const [goalDateInput, setGoalDateInput] = useState("");
   const [tBmr, setTBmr] = useState("");
   const [tCal, setTCal] = useState("");
@@ -514,6 +515,11 @@ export default function Tracker() {
     setLogTab(kind);
     localStorage.setItem("with-log-tab", kind);
     setTab("log");
+  }
+
+  function openGoalsEdit() {
+    setEditingGoals(true);
+    setTab("goals");
   }
 
   async function addWeight() {
@@ -797,7 +803,7 @@ export default function Tracker() {
     { id: "log", label: "Log", icon: PlusCircle },
     { id: "trends", label: "Trends", icon: TrendingUp },
     { id: "goals", label: "Goals", icon: Target },
-    { id: "profile", label: "Profile", icon: UserCircle },
+    { id: "profile", label: "Profile", icon: UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight },
   ];
 
   return (
@@ -997,9 +1003,22 @@ export default function Tracker() {
 
         {tab === "log" && (
           <>
+            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
+            </div>
             <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "2px 1px 10px", marginBottom: 6, WebkitOverflowScrolling: "touch" }}>
-              {[["food","Food"],["weight","Weight"],["activity","Activity"],["water","Water"],["steps","Steps"]].map(([id,label]) => (
-                <button key={id} onClick={() => { setLogTab(id); localStorage.setItem("with-log-tab", id); }} style={{ flexShrink: 0, border: `1px solid ${logTab === id ? userColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>{label}</button>
+              {[
+                ["food","Food",Utensils],
+                ["weight","Weight",Scale],
+                ["activity","Activity",Dumbbell],
+                ["water","Water",Droplet],
+                ["steps","Steps",Footprints],
+              ].map(([id,label,Icon]) => (
+                <button key={id} onClick={() => { setLogTab(id); localStorage.setItem("with-log-tab", id); }} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? userColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
+                  <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
+                  {label}
+                </button>
               ))}
             </div>
             {logTab === "food" && <>
@@ -1160,6 +1179,10 @@ export default function Tracker() {
 
         {tab === "trends" && (
           <>
+            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>See how things are changing over time.</div>
+            </div>
             <div style={cardStyle}>
               <div style={headingStyle}>Weight trend</div>
               <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>solid = actual, dashed = 7-day avg</div>
@@ -1182,7 +1205,7 @@ export default function Tracker() {
                 })}
               </div>
               {chartData.length === 0 ? (
-                <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "2rem 0", textAlign: "center" }}>No weigh-ins yet.</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "2rem 0", textAlign: "center" }}>Your trend will take shape as you add weigh-ins.</div>
               ) : (
                 <div style={{ width: "100%", height: 200 }}>
                   <ResponsiveContainer>
@@ -1219,47 +1242,113 @@ export default function Tracker() {
 
         {tab === "goals" && (
           <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Goal — {activeUser}</div>
-              <div style={fieldLabel}>Goal weight (lb)</div>
-              <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <div style={fieldLabel}>Goal date</div>
-              <input type="date" value={goalDateInput} onChange={(e) => setGoalDateInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveGoal} disabled={!activeCanEdit} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), marginBottom: gi ? 16 : 0 }}>Save goal</button>
-              {gi && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div style={{ background: SURFACE_2, borderRadius: 10, padding: "0.75rem 1rem" }}>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>bodyweight lost</div>
-                    <div className="num" style={{ fontSize: 19 }}>{gi.pctLost.toFixed(1)}%</div>
+            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What you’re working toward.</div>
+            </div>
+
+            {(!data[activeUser].goalWeight && !data[activeUser].goalDate && !data[activeUser].targets.calories) ? (
+              <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1" }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
+                {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
+              </div>
+            ) : !editingGoals ? (
+              <>
+                <div style={cardStyle}>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>Your goal</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600 }}>
+                      {gi ? `${gi.latest} → ${gi.goal ?? "—"} lb` : `${data[activeUser].goalWeight ?? "—"} lb`}
+                    </div>
+                    {data[activeUser].goalDate && <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{fmtGoalDate(data[activeUser].goalDate)}</div>}
                   </div>
-                  {gi.toGoal != null && (
-                    <div style={{ background: SURFACE_2, borderRadius: 10, padding: "0.75rem 1rem" }}>
-                      <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>to go</div>
-                      <div className="num" style={{ fontSize: 19 }}>{gi.toGoal > 0 ? `${gi.toGoal.toFixed(1)} lb` : "hit it"}</div>
+
+                  {gi && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+                      <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
+                        <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Bodyweight lost</div>
+                        <div style={{ fontSize: 21, fontWeight: 700 }}>{(gi.start - gi.latest).toFixed(1)} lb</div>
+                      </div>
+                      <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
+                        <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>To go</div>
+                        <div style={{ fontSize: 21, fontWeight: 700 }}>{gi.toGoal != null ? (gi.toGoal > 0 ? `${gi.toGoal.toFixed(1)} lb` : "You’re there") : "—"}</div>
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
+
+                <div style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={headingStyle}>Daily targets</div>
+                    {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: userColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>Edit</button>}
+                  </div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Calories</span><strong>{data[activeUser].targets.calories || "—"}</strong></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Protein</span><strong>{data[activeUser].targets.protein || "—"}g</strong></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Carbs</span><strong>{data[activeUser].targets.carbs || "—"}g</strong></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Fat</span><strong>{data[activeUser].targets.fat || "—"}g</strong></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Fiber</span><strong>{data[activeUser].targets.fiberMin || "—"}–{data[activeUser].targets.fiberMax || "—"}g</strong></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: TEXT_MUTED }}>BMR</span><strong>{data[activeUser].targets.bmr || "—"}</strong></div>
+                  </div>
+                  {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginTop: 16 }}>Edit goals & targets</button>}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={cardStyle}>
+                  <div style={headingStyle}>Edit goals & targets</div>
+                  <div style={fieldLabel}>Goal weight (lb)</div>
+                  <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+                  <div style={fieldLabel}>Goal date</div>
+                  <input type="date" value={goalDateInput} onChange={(e) => setGoalDateInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    <div><div style={fieldLabel}>BMR</div><input type="number" value={tBmr} onChange={(e) => setTBmr(e.target.value)} style={inputStyle} /></div>
+                    <div><div style={fieldLabel}>Calories</div><input type="number" value={tCal} onChange={(e) => setTCal(e.target.value)} style={inputStyle} /></div>
+                    <div><div style={fieldLabel}>Protein (g)</div><input type="number" value={tProtein} onChange={(e) => setTProtein(e.target.value)} style={inputStyle} /></div>
+                    <div><div style={fieldLabel}>Carbs (g)</div><input type="number" value={tCarbs} onChange={(e) => setTCarbs(e.target.value)} style={inputStyle} /></div>
+                    <div><div style={fieldLabel}>Fat (g)</div><input type="number" value={tFat} onChange={(e) => setTFat(e.target.value)} style={inputStyle} /></div>
+                    <div></div>
+                    <div><div style={fieldLabel}>Fiber min (g)</div><input type="number" value={tFiberMin} onChange={(e) => setTFiberMin(e.target.value)} style={inputStyle} /></div>
+                    <div><div style={fieldLabel}>Fiber max (g)</div><input type="number" value={tFiberMax} onChange={(e) => setTFiberMax(e.target.value)} style={inputStyle} /></div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <button onClick={() => setEditingGoals(false)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
+                    <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Save changes</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {tab === "profile" && (
+          <>
+            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Profile</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Your account, your goals, your people.</div>
             </div>
 
             <div style={cardStyle}>
-              <div style={headingStyle}>Daily targets — {activeUser}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <div><div style={fieldLabel}>BMR</div><input type="number" value={tBmr} onChange={(e) => setTBmr(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Calories</div><input type="number" value={tCal} onChange={(e) => setTCal(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Protein (g)</div><input type="number" value={tProtein} onChange={(e) => setTProtein(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Carbs (g)</div><input type="number" value={tCarbs} onChange={(e) => setTCarbs(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Fat (g)</div><input type="number" value={tFat} onChange={(e) => setTFat(e.target.value)} style={inputStyle} /></div>
-                <div></div>
-                <div><div style={fieldLabel}>Fiber min (g)</div><input type="number" value={tFiberMin} onChange={(e) => setTFiberMin(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Fiber max (g)</div><input type="number" value={tFiberMax} onChange={(e) => setTFiberMax(e.target.value)} style={inputStyle} /></div>
-              </div>
-              <button onClick={saveTargets} disabled={!activeCanEdit} style={bigButton(userColor(activeUser), userText(activeUser))}>Save targets</button>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{profileNameInput || activeUser}</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{session?.user?.email}</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 2 }}>{householdName}</div>
             </div>
-          </>
-        )}
-        {tab === "profile" && (
-          <>
+
+            <div style={cardStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, marginBottom: 3 }}>Health goals & targets</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 12 }}>
+                    {data[activeUser]?.goalWeight ? `${data[activeUser].goalWeight} lb${data[activeUser].goalDate ? ` by ${fmtGoalDate(data[activeUser].goalDate)}` : ""}` : "Not set yet"}
+                  </div>
+                </div>
+                <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: userColor(activeUser, true), display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>Manage <ChevronRight style={{ width: 14, height: 14 }} /></button>
+              </div>
+            </div>
+
             <div style={cardStyle}>
               <div style={headingStyle}>Your profile</div>
               <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>This is how your name appears to the people you’re with.</div>
