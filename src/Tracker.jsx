@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, Sparkles, LogOut } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
@@ -119,15 +119,19 @@ export default function Tracker() {
   const [data, setData] = useState({ Alli: emptyData("Alli"), Shane: emptyData("Shane") });
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState(null);
+  const [savedFoods, setSavedFoods] = useState([]);
+  const [globalFoods, setGlobalFoods] = useState([]);
+  const [savedSearch, setSavedSearch] = useState("");
+  const [selectedSavedFoodId, setSelectedSavedFoodId] = useState(null);
+  const [foodQuantity, setFoodQuantity] = useState("1");
+  const [foodServingLabel, setFoodServingLabel] = useState("1 serving");
+  const [saveAsSaved, setSaveAsSaved] = useState(false);
+  const [editingSavedId, setEditingSavedId] = useState(null);
+  const [showManageSaved, setShowManageSaved] = useState(false);
 
   const [weightInput, setWeightInput] = useState("");
   const [weightDate, setWeightDate] = useState(todayStr());
   const [weightError, setWeightError] = useState("");
-
-  const [estimateText, setEstimateText] = useState("");
-  const [estimating] = useState(false);
-  const [estimateError, setEstimateError] = useState("");
-  const [estimateNote, setEstimateNote] = useState("");
 
   const [foodName, setFoodName] = useState("");
   const [foodCals, setFoodCals] = useState("");
@@ -197,20 +201,24 @@ export default function Tracker() {
       const profileIds = Object.values(pmap).map((p) => p.id);
       if (!profileIds.length) throw new Error("No health profiles exist for this household.");
 
-      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes] = await Promise.all([
+      const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes] = await Promise.all([
         supabase.from("weight_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("food_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("activity_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("step_entries").select("*").eq("household_id", hid).order("entry_date"),
         supabase.from("water_entries").select("*").eq("household_id", hid).order("entry_date"),
+        supabase.from("saved_foods").select("*").eq("household_id", hid).order("name"),
+        supabase.from("global_foods").select("*").order("name"),
       ]);
-      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes]) if (r.error) throw r.error;
+      for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes]) if (r.error) throw r.error;
       const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
       for (const w of weightsRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].weights.push({ id: w.id, date: w.entry_date, weight: num(w.weight) }); }
       for (const f of foodsRes.data || []) { const n = nameById[f.profile_id]; if (next[n]) next[n].foods.push({ id: f.id, date: f.entry_date, name: f.name, calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), meal: f.meal, notes: f.notes || "" }); }
       for (const a of activitiesRes.data || []) { const n = nameById[a.profile_id]; if (next[n]) next[n].activities.push({ id: a.id, date: a.entry_date, name: a.name, caloriesBurned: num(a.calories_burned) }); }
       for (const s of stepsRes.data || []) { const n = nameById[s.profile_id]; if (next[n]) next[n].steps.push({ id: s.id, date: s.entry_date, count: Number(s.step_count) }); }
       for (const w of waterRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
+      setSavedFoods((savedFoodsRes.data || []).map((f) => ({ ...f, source: "household", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), use_count: Number(f.use_count || 0) })));
+      setGlobalFoods((globalFoodsRes.data || []).map((f) => ({ ...f, source: "global", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber) })));
       setData(next);
     } catch (e) {
       setSaveError(e.message || "Could not load your household data.");
@@ -234,11 +242,6 @@ export default function Tracker() {
     catch (e) { setSaveError(e.message || "Save failed. Try again."); return false; }
   }
 
-  function estimateMacros() {
-    setEstimateError("AI estimating is temporarily disabled while we finish the Supabase move. Saved Foods is next.");
-    setEstimateNote("");
-  }
-
   async function addWeight() {
     const val = parseFloat(weightInput);
     if (!weightInput || isNaN(val) || val <= 0) { setWeightError("Enter a real weight first."); return; }
@@ -252,6 +255,65 @@ export default function Tracker() {
   }
   async function deleteWeight(id) { await runWrite(async () => { const { error } = await supabase.from("weight_entries").delete().eq("id", id); if (error) throw error; }); }
 
+  function clearFoodForm() {
+    setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes("");
+    setFoodQuantity("1"); setFoodServingLabel("1 serving"); setSaveAsSaved(false); setSelectedSavedFoodId(null); setEditingSavedId(null);
+  }
+
+  function chooseSavedFood(food) {
+    setSelectedSavedFoodId(`${food.source || "household"}:${food.id}`);
+    setEditingSavedId(null);
+    setFoodQuantity("1");
+    setFoodName(food.name);
+    setFoodCals(String(Math.round(food.calories * 10) / 10));
+    setFoodProtein(String(Math.round(food.protein * 10) / 10));
+    setFoodCarbs(String(Math.round(food.carbs * 10) / 10));
+    setFoodFat(String(Math.round(food.fat * 10) / 10));
+    setFoodFiber(String(Math.round(food.fiber * 10) / 10));
+    setFoodMeal(food.default_meal || foodMeal);
+    setFoodNotes(food.notes || "");
+    setFoodServingLabel(food.serving_label || "1 serving");
+    setSaveAsSaved(false);
+    setSavedSearch("");
+  }
+
+  function changeQuantity(value) {
+    setFoodQuantity(value);
+    const [source, id] = String(selectedSavedFoodId || "").split(":");
+    const collection = source === "global" ? globalFoods : savedFoods;
+    const food = collection.find((f) => f.id === id);
+    const q = parseFloat(value);
+    if (!food || !Number.isFinite(q) || q <= 0) return;
+    setFoodCals(String(Math.round(food.calories * q * 10) / 10));
+    setFoodProtein(String(Math.round(food.protein * q * 10) / 10));
+    setFoodCarbs(String(Math.round(food.carbs * q * 10) / 10));
+    setFoodFat(String(Math.round(food.fat * q * 10) / 10));
+    setFoodFiber(String(Math.round(food.fiber * q * 10) / 10));
+  }
+
+  function editSavedFood(food) {
+    setEditingSavedId(food.id);
+    setSelectedSavedFoodId(null);
+    setFoodName(food.name); setFoodCals(String(food.calories)); setFoodProtein(String(food.protein)); setFoodCarbs(String(food.carbs)); setFoodFat(String(food.fat)); setFoodFiber(String(food.fiber));
+    setFoodMeal(food.default_meal || "Breakfast"); setFoodNotes(food.notes || ""); setFoodServingLabel(food.serving_label || "1 serving"); setFoodQuantity("1"); setSaveAsSaved(true);
+    setShowManageSaved(false);
+  }
+
+  async function saveSavedFoodOnly() {
+    if (!foodName.trim()) { setFoodError("Give it a name."); return; }
+    const payload = { household_id: householdId, name: foodName.trim(), calories: parseFloat(foodCals) || 0, protein: parseFloat(foodProtein) || 0, carbs: parseFloat(foodCarbs) || 0, fat: parseFloat(foodFat) || 0, fiber: parseFloat(foodFiber) || 0, default_meal: foodMeal, notes: foodNotes.trim() || null, serving_label: foodServingLabel.trim() || "1 serving" };
+    const ok = await runWrite(async () => {
+      const q = editingSavedId ? supabase.from("saved_foods").update(payload).eq("id", editingSavedId) : supabase.from("saved_foods").insert(payload);
+      const { error } = await q; if (error) throw error;
+    });
+    if (ok) clearFoodForm();
+  }
+
+  async function deleteSavedFood(id) {
+    await runWrite(async () => { const { error } = await supabase.from("saved_foods").delete().eq("id", id); if (error) throw error; });
+    if (selectedSavedFoodId === `household:${id}` || editingSavedId === id) clearFoodForm();
+  }
+
   async function addFood() {
     if (!foodName.trim()) { setFoodError("Give it a name."); return; }
     const cals = parseFloat(foodCals) || 0, protein = parseFloat(foodProtein) || 0;
@@ -259,10 +321,21 @@ export default function Tracker() {
     if (!foodCals && !foodProtein && !foodCarbs && !foodFat) { setFoodError("Add at least calories or a macro."); return; }
     setFoodError(""); const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => {
-      const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
+      let savedId = null;
+      const [selectedSource, selectedId] = String(selectedSavedFoodId || "").split(":");
+      if (saveAsSaved && !selectedSavedFoodId) {
+        const { data: sf, error: sfError } = await supabase.from("saved_foods").insert({ household_id: householdId, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, default_meal: foodMeal, notes: foodNotes.trim() || null, serving_label: foodServingLabel.trim() || "1 serving", use_count: 1, last_used_at: new Date().toISOString() }).select("id").single();
+        if (sfError) throw sfError; savedId = sf.id;
+      } else if (selectedSavedFoodId && selectedSource === "household") {
+        savedId = selectedId;
+        const food = savedFoods.find((f) => f.id === selectedId);
+        const { error: useError } = await supabase.from("saved_foods").update({ use_count: (food?.use_count || 0) + 1, last_used_at: new Date().toISOString() }).eq("id", selectedId);
+        if (useError) throw useError;
+      }
+      const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
       if (error) throw error;
     });
-    if (ok) { setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes(""); setEstimateText(""); setEstimateNote(""); }
+    if (ok) clearFoodForm();
   }
   async function deleteFood(id) { await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
 
@@ -297,6 +370,25 @@ export default function Tracker() {
       if (error) throw error;
     });
   }
+
+  const filteredSavedFoods = useMemo(() => {
+    const q = savedSearch.trim().toLowerCase();
+    const list = q ? savedFoods.filter((f) => f.name.toLowerCase().includes(q)) : savedFoods;
+    return list.slice().sort((a, b) => {
+      if (q) return a.name.localeCompare(b.name);
+      const ad = a.last_used_at ? new Date(a.last_used_at).getTime() : 0;
+      const bd = b.last_used_at ? new Date(b.last_used_at).getTime() : 0;
+      if (bd !== ad) return bd - ad;
+      if ((b.use_count || 0) !== (a.use_count || 0)) return (b.use_count || 0) - (a.use_count || 0);
+      return a.name.localeCompare(b.name);
+    });
+  }, [savedFoods, savedSearch]);
+
+  const filteredGlobalFoods = useMemo(() => {
+    const q = savedSearch.trim().toLowerCase();
+    const list = q ? globalFoods.filter((f) => f.name.toLowerCase().includes(q)) : globalFoods;
+    return list.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }, [globalFoods, savedSearch]);
 
   const chartData = useMemo(() => {
     const dateSet = new Set();
@@ -508,26 +600,62 @@ export default function Tracker() {
             </div>
 
             <div style={cardStyle}>
-              <div style={headingStyle}>Food</div>
-
-              <div style={{ background: SURFACE_2, border: `1px dashed ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  <Sparkles style={{ width: 13, height: 13 }} /> Not sure the numbers? Describe it
-                </div>
-                <textarea
-                  placeholder="e.g. 2 fried eggs, slice of sourdough toast with butter, black coffee"
-                  value={estimateText} onChange={(e) => setEstimateText(e.target.value)}
-                  rows={2} style={{ ...inputStyle, marginBottom: 8 }}
-                />
-                <button onClick={estimateMacros} disabled={estimating} style={{ ...bigButton(SURFACE, TEXT), border: `1px solid ${BORDER}`, opacity: estimating ? 0.6 : 1 }}>
-                  {estimating ? "Estimating…" : "Estimate macros"}
-                </button>
-                {estimateError && <div style={{ color: WARN, fontSize: 12, marginTop: 8 }}>{estimateError}</div>}
-                {estimateNote && <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 8 }}>{estimateNote}</div>}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ ...headingStyle, marginBottom: 0 }}>Food</div>
+                {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "done" : `manage mine (${savedFoods.length})`}</button>}
               </div>
 
+              {(savedFoods.length > 0 || globalFoods.length > 0) && (
+                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Find a food</div>
+                  <input type="text" placeholder="Search your foods + shared library" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+                  {!showManageSaved && <div style={{ display: "grid", gap: 10 }}>
+                    {filteredSavedFoods.length > 0 && <div>
+                      <div style={{ fontSize: 10, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Your household</div>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {filteredSavedFoods.slice(0, savedSearch ? 8 : 5).map((f) => (
+                          <button key={`household-${f.id}`} onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `household:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `household:${f.id}` ? USER_COLOR[activeUser] : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
+                            <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>}
+                    {filteredGlobalFoods.length > 0 && <div>
+                      <div style={{ fontSize: 10, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Shared library</div>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {filteredGlobalFoods.slice(0, savedSearch ? 8 : 5).map((f) => (
+                          <button key={`global-${f.id}`} onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `global:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `global:${f.id}` ? USER_COLOR[activeUser] : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
+                            <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>}
+                    {filteredSavedFoods.length === 0 && filteredGlobalFoods.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12 }}>No foods match that search.</div>}
+                  </div>}
+                  {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+                    {filteredSavedFoods.map((f) => <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: `1px solid ${BORDER}`, padding: "8px 0" }}>
+                      <div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{f.name}</div><div className="num" style={{ fontSize: 11, color: TEXT_MUTED }}>{f.serving_label || "1 serving"} · {Math.round(f.calories)} cal</div></div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button aria-label={`Edit ${f.name}`} onClick={() => editSavedFood(f)} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 6 }}><Pencil style={{ width: 15, height: 15 }} /></button>
+                        <button aria-label={`Delete ${f.name}`} onClick={() => deleteSavedFood(f.id)} style={{ background: "none", border: "none", color: WARN, padding: 6 }}><Trash2 style={{ width: 15, height: 15 }} /></button>
+                      </div>
+                    </div>)}
+                  </div>}
+                </div>
+              )}
+
+              {selectedSavedFoodId && <>
+                <div style={fieldLabel}>Quantity</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                  <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
+                  <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{foodServingLabel} each</div>
+                </div>
+              </>}
+
               <div style={fieldLabel}>Food name</div>
-              <input type="text" placeholder="Food name" value={foodName} onChange={(e) => setFoodName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              <input type="text" placeholder="Food name" value={foodName} onChange={(e) => { setFoodName(e.target.value); if (selectedSavedFoodId) setSelectedSavedFoodId(null); }} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Meal</div>
               <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }}>
                 <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option>
@@ -542,10 +670,23 @@ export default function Tracker() {
               </div>
               <div style={fieldLabel}>Fiber (g)</div>
               <input type="number" inputMode="numeric" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              {!selectedSavedFoodId && <>
+                <div style={fieldLabel}>Serving description</div>
+                <input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+              </>}
               <div style={fieldLabel}>Notes (optional)</div>
-              <input type="text" placeholder="Restaurant, cheat day, whatever" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+              <input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+
+              {!selectedSavedFoodId && !editingSavedId && <label style={{ display: "flex", alignItems: "center", gap: 9, color: TEXT_MUTED, fontSize: 13, marginBottom: 12, cursor: "pointer" }}>
+                <input type="checkbox" checked={saveAsSaved} onChange={(e) => setSaveAsSaved(e.target.checked)} style={{ width: 18, height: 18 }} />
+                <BookmarkPlus style={{ width: 15, height: 15 }} /> Save this to household foods
+              </label>}
+
               {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
-              <button onClick={addFood} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Log food</button>
+              {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
+                <button onClick={saveSavedFoodOnly} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>Save changes</button>
+              </div> : <button onClick={addFood} style={bigButton(USER_COLOR[activeUser], USER_TEXT_ON[activeUser])}>{selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
             </div>
 
             <div style={cardStyle}>
