@@ -4,9 +4,9 @@ import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut,
 import { supabase } from "./supabase";
 
 const USERS = ["Alli", "Shane"];
-const USER_COLOR = { Shane: "#FF8C4B", Alli: "#C9A8FF" };
-const USER_COLOR_DIM = { Shane: "#B3652F", Alli: "#8F76B3" };
-const USER_TEXT_ON = { Shane: "#4A1D00", Alli: "#2E1065" };
+const USER_COLOR = { Shane: "#D9825B", Alli: "#8F7AAE" };
+const USER_COLOR_DIM = { Shane: "#B96E4B", Alli: "#776590" };
+const USER_TEXT_ON = { Shane: "#3C2418", Alli: "#2F2639" };
 function userColor(name, dim=false) {
   if (USER_COLOR[name]) return dim ? USER_COLOR_DIM[name] : USER_COLOR[name];
   const palette = dim ? ["#6FA39A","#A1845C","#7F88B8","#A46E83"] : ["#9ED8CE","#D8B77E","#AEB7EA","#D69AAF"];
@@ -15,13 +15,13 @@ function userColor(name, dim=false) {
 }
 function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
 
-const BG = "#14171A";
-const SURFACE = "#212425";
-const SURFACE_2 = "#2A2E2F";
-const BORDER = "#383C3D";
-const TEXT = "#EDEFEF";
-const TEXT_MUTED = "#8B9296";
-const WARN = "#FF6B4A";
+const BG = "#F6F1E8";
+const SURFACE = "#FFFCF7";
+const SURFACE_2 = "#EFE7DA";
+const BORDER = "#DDD2C2";
+const TEXT = "#24302C";
+const TEXT_MUTED = "#716D64";
+const WARN = "#B6533C";
 const NAV_H = 64;
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -58,16 +58,26 @@ function rollingAvgSeries(weightsSorted, windowSize) {
   return out;
 }
 function num(v) { return v == null ? 0 : Number(v); }
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+function fullTodayLabel() {
+  return new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
 
 const inputStyle = {
-  background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT,
-  borderRadius: 8, padding: "12px 14px", fontSize: 16, width: "100%",
+  background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT,
+  borderRadius: 12, padding: "12px 14px", fontSize: 16, width: "100%",
+  boxShadow: "0 1px 0 rgba(45,35,25,.03)",
 };
-const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "1.25rem", marginBottom: "1rem" };
+const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 18, padding: "1.25rem", marginBottom: "1rem", boxShadow: "0 6px 24px rgba(65,48,30,.045)" };
 const headingStyle = { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 20, letterSpacing: "0", marginBottom: "0.9rem" };
 const fieldLabel = { fontSize: 12, color: TEXT_MUTED, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
 const bigButton = (color, textColor) => ({
-  background: color, color: textColor, border: "none", borderRadius: 10,
+  background: color, color: textColor, border: "none", borderRadius: 12,
   padding: "13px 18px", fontWeight: 700, fontSize: 15, width: "100%",
   fontFamily: "'Fraunces', serif", fontStyle: "italic", letterSpacing: "0",
 });
@@ -827,70 +837,143 @@ export default function Tracker() {
 
         {tab === "today" && (
           <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Today — {activeUser}</div>
-              {(() => {
-                const targets = data[activeUser].targets;
-                return (
-                  <div>
-                    <ProgressRow label="Calories in" value={ts.calories} target={targets.calories} unit="" color={userColor(activeUser)} />
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: TEXT_MUTED, margin: "2px 0 14px" }}>
-                      <Zap style={{ width: 13, height: 13 }} /> {Math.round(ts.burned)} burned · net {Math.round(ts.net)} cal
+            {(() => {
+              const u = data[activeUser];
+              const targets = u.targets;
+              const todaysFoods = u.foods.filter((f) => f.date === today);
+              const todaysActivities = u.activities.filter((a) => a.date === today);
+              const todaysWeight = u.weights.filter((w) => w.date === today);
+              const hasAnything = todaysFoods.length > 0 || todaysActivities.length > 0 || ts.water > 0 || ts.steps != null || todaysWeight.length > 0;
+              const isMine = activeCanEdit;
+              const otherPeople = profileNames.filter((n) => n !== activeUser);
+              const MEAL_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
+              const groups = {};
+              todaysFoods.forEach((f) => { const key = f.meal || "Other"; if (!groups[key]) groups[key] = []; groups[key].push(f); });
+              const orderedKeys = [...MEAL_ORDER.filter((m) => groups[m]), ...Object.keys(groups).filter((k) => !MEAL_ORDER.includes(k))];
+
+              const quick = [
+                ["Food", "log"],
+                ["Weight", "log"],
+                ["Activity", "log"],
+                ["Water", "log"],
+                ["Steps", "log"],
+              ];
+
+              return <>
+                <div style={{ padding: "0.35rem 0.15rem 1rem" }}>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, lineHeight: 1.08, color: TEXT }}>
+                    {isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`}
+                  </div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
+                </div>
+
+                {!hasAnything && (
+                  <div style={{ ...cardStyle, padding: "1.45rem", background: "#FFF8EE", borderColor: "#E6D6C1" }}>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>
+                      {isMine ? "Nothing here yet." : "Nothing shared yet."}
                     </div>
-                    <ProgressRow label="Protein" value={ts.protein} target={targets.protein} unit="g" color={userColor(activeUser, true)} />
-                    <ProgressRow label="Carbs" value={ts.carbs} target={targets.carbs} unit="g" color={userColor(activeUser, true)} />
-                    <ProgressRow label="Fat" value={ts.fat} target={targets.fat} unit="g" color={userColor(activeUser, true)} />
-                    <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 14 }}>
-                      Fiber: <span className="num" style={{ color: TEXT }}>{Math.round(ts.fiber)}g</span> / {targets.fiberMin}–{targets.fiberMax}g
+                    <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: isMine ? 16 : 0 }}>
+                      {isMine ? "Add something whenever you’re ready. A little information is still useful information." : `${activeUser} hasn’t added anything today.`}
                     </div>
-                    <div style={{ display: "flex", gap: 20, fontSize: 14, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }} className="num"><Footprints style={{ width: 15, height: 15 }} />{ts.steps != null ? ts.steps.toLocaleString() : "—"}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }} className="num"><Droplet style={{ width: 15, height: 15 }} />{Math.round(ts.water)} oz</span>
+                    {isMine && <button onClick={() => setTab("log")} style={{ ...bigButton(userColor(activeUser), userText(activeUser)), width: "auto", paddingInline: 20 }}>Add something</button>}
+                  </div>
+                )}
+
+                {isMine && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, margin: "0 2px 8px", textTransform: "uppercase", letterSpacing: ".06em" }}>Quick add</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
+                      {quick.map(([label]) => (
+                        <button key={label} onClick={() => setTab("log")} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "11px 4px", fontSize: 11, fontWeight: 700, boxShadow: "0 3px 12px rgba(65,48,30,.035)" }}>+ {label}</button>
+                      ))}
                     </div>
                   </div>
-                );
-              })()}
-            </div>
+                )}
 
-            <div style={cardStyle}>
-              <div style={headingStyle}>{activeUser}'s food today</div>
-              {(() => {
-                const todaysFoods = data[activeUser].foods.filter((f) => f.date === today);
-                if (todaysFoods.length === 0) return <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Nothing logged yet today.</div>;
-                const MEAL_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
-                const groups = {};
-                todaysFoods.forEach((f) => { const key = f.meal || "Unlabeled"; if (!groups[key]) groups[key] = []; groups[key].push(f); });
-                const orderedKeys = [...MEAL_ORDER.filter((m) => groups[m]), ...Object.keys(groups).filter((k) => !MEAL_ORDER.includes(k))];
-                return orderedKeys.map((meal) => (
-                  <div key={meal} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>{meal}</div>
-                    {groups[meal].map((f) => (
-                      <div key={f.id} style={{ padding: "9px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                          <span>{f.name}</span>
-                          <button onClick={() => deleteFood(f.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, flexShrink: 0 }}>remove</button>
+                {hasAnything && (
+                  <div style={{ ...cardStyle, padding: "1.35rem" }}>
+                    <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Today at a glance</div>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 }}>
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600 }}>Calories</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round(ts.calories)} <span style={{ color: TEXT_MUTED, fontSize: 13, fontWeight: 500 }}>/ {targets.calories}</span></div>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 99, background: SURFACE_2, overflow: "hidden", marginBottom: 16 }}>
+                      <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: userColor(activeUser), borderRadius: 99 }} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "9px 16px", marginBottom: 15 }}>
+                      {[
+                        ["Protein", ts.protein, targets.protein, "g"],
+                        ["Carbs", ts.carbs, targets.carbs, "g"],
+                        ["Fat", ts.fat, targets.fat, "g"],
+                        ["Fiber", ts.fiber, `${targets.fiberMin}–${targets.fiberMax}`, "g"],
+                      ].map(([label,val,target,unit]) => (
+                        <div key={label} style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8 }}>
+                          <div style={{ color: TEXT_MUTED, fontSize: 11 }}>{label}</div>
+                          <div style={{ fontSize: 15, fontWeight: 700 }}>{Math.round(val)}{unit} <span style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 500 }}>/ {target}{unit}</span></div>
                         </div>
-                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>{Math.round(f.calories)} cal · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)}</div>
-                        {f.notes && <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>{f.notes}</div>}
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 18, paddingTop: 12, borderTop: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: 13 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Zap style={{ width: 15 }} />{Math.round(ts.burned)} cal activity</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Footprints style={{ width: 15 }} />{ts.steps != null ? ts.steps.toLocaleString() : "No steps"}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Droplet style={{ width: 15 }} />{Math.round(ts.water)} oz</span>
+                    </div>
+                  </div>
+                )}
+
+                <div style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={headingStyle}>Today so far</div>
+                    {isMine && <button onClick={() => setTab("log")} style={{ background: "none", border: "none", color: userColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add</button>}
+                  </div>
+
+                  {todaysFoods.length === 0 && todaysActivities.length === 0 && ts.water === 0 && ts.steps == null && todaysWeight.length === 0 ? (
+                    <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Nothing logged yet.</div>
+                  ) : <>
+                    {orderedKeys.map((meal) => (
+                      <div key={meal} style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 5 }}>{meal}</div>
+                        {groups[meal].map((f) => (
+                          <div key={f.id} style={{ padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                              <span style={{ fontWeight: 600 }}>{f.name}</span>
+                              <span style={{ color: TEXT_MUTED }}>{Math.round(f.calories)} cal</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ))}
-                  </div>
-                ));
-              })()}
-            </div>
+                    {todaysActivities.length > 0 && <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 5 }}>Activity</div>
+                      {todaysActivities.map((a) => <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ fontWeight: 600 }}>{a.name}</span><span style={{ color: TEXT_MUTED }}>{Math.round(a.caloriesBurned)} cal</span></div>)}
+                    </div>}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, paddingTop: 4 }}>
+                      {todaysWeight.length > 0 && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Weight {todaysWeight[todaysWeight.length-1].weight} lb</span>}
+                      {ts.water > 0 && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Water {Math.round(ts.water)} oz</span>}
+                      {ts.steps != null && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Steps {ts.steps.toLocaleString()}</span>}
+                    </div>
+                  </>}
+                </div>
 
-            {data[activeUser].activities.filter((a) => a.date === today).length > 0 && (
-              <div style={cardStyle}>
-                <div style={headingStyle}>{activeUser}'s activity today</div>
-                {data[activeUser].activities.filter((a) => a.date === today).map((a) => (
-                  <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
-                    <span>{a.name}</span>
-                    <span className="num" style={{ color: TEXT_MUTED }}>{Math.round(a.caloriesBurned)} cal</span>
-                    <button onClick={() => deleteActivity(a.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button>
+                {otherPeople.length > 0 && (
+                  <div style={cardStyle}>
+                    <div style={headingStyle}>People you’re with</div>
+                    {otherPeople.map((name) => {
+                      const o = todayStats[name];
+                      const od = data[name];
+                      const hasOther = od.foods.some((f) => f.date === today) || od.activities.some((a) => a.date === today) || o?.water > 0 || o?.steps != null || od.weights.some((w) => w.date === today);
+                      return <button key={name} onClick={() => setActiveUser(name)} style={{ width: "100%", textAlign: "left", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "12px 14px", color: TEXT, marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600 }}>{name}</span>
+                          <span style={{ color: TEXT_MUTED, fontSize: 12 }}>View day →</span>
+                        </div>
+                        <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4 }}>{hasOther ? `${Math.round(o.calories)} cal logged${o.steps != null ? ` · ${o.steps.toLocaleString()} steps` : ""}${o.water > 0 ? ` · ${Math.round(o.water)} oz water` : ""}` : "Nothing shared today yet."}</div>
+                      </button>;
+                    })}
                   </div>
-                ))}
-              </div>
-            )}
+                )}
+              </>;
+            })()}
           </>
         )}
 
