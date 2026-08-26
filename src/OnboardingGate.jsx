@@ -64,7 +64,7 @@ function ScreenShell({ children }) {
         fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; } button { cursor: pointer; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; } button { cursor: pointer; }`}</style>
       <div
         style={{
           background: SURFACE,
@@ -85,7 +85,7 @@ function ScreenShell({ children }) {
 function BrandIntro({ eyebrow }) {
   return (
     <>
-      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 32, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 32, lineHeight: 1, marginBottom: 6 }}>With</div>
       {eyebrow && <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 20 }}>{eyebrow}</div>}
     </>
   );
