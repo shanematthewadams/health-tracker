@@ -30,12 +30,12 @@ function userColor(name, dim=false) {
 }
 function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
 
-const BG = "#FCFCFB";
-const SURFACE = "#FFFFFF";
-const SURFACE_2 = "#F4F6F8";
-const BORDER = "#D8DDE5";
-const TEXT = "#1C2430";
-const TEXT_MUTED = "#68717D";
+const BG = "#FEFDF9";
+const SURFACE = "#FFFDF9";
+const SURFACE_2 = "#F7F3EC";
+const BORDER = "#E6E1D8";
+const TEXT = "#252422";
+const TEXT_MUTED = "#746F68";
 const WARN = "#C83D34";
 const NAV_H = 64;
 
@@ -1070,7 +1070,7 @@ export default function Tracker() {
         textarea { resize: vertical; }
       `}</style>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, paddingTop: "env(safe-area-inset-top)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.8rem 1rem 0.7rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 9 }}>
             <div style={{ minWidth: 0 }}>
@@ -1363,7 +1363,7 @@ export default function Tracker() {
       )}
 
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, background: SURFACE, borderTop: `1px solid ${BORDER}`,
+        position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255,253,249,.96)", borderTop: `1px solid ${BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10,
       }}>
         <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", height: NAV_H }}>
