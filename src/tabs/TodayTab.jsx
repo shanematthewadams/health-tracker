@@ -130,7 +130,7 @@ export default function TodayTab({
   return (
     <div style={{ background: "#FCFCFB" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 800, fontSize: 29, lineHeight: 1.08, color: PEN.ink }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 31, lineHeight: 1.08, color: PEN.ink }}>
           {isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`}
         </div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 6 }}>{fullTodayLabel()}</div>
