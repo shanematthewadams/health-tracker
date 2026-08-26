@@ -1,0 +1,85 @@
+name: One-time Today tab refactor
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - .github/workflows/refactor-today.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      - name: Replace inline Today tab
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/Tracker.jsx")
+          source = path.read_text()
+
+          import_line = 'import TodayTab from "./tabs/TodayTab.jsx";\n'
+          supabase_import = 'import { supabase } from "./supabase";\n'
+          if import_line not in source:
+              source = source.replace(supabase_import, supabase_import + import_line, 1)
+
+          start_marker = '        {tab === "today" && ('
+          end_marker = '\n\n        {tab === "log" && ('
+          start = source.find(start_marker)
+          end = source.find(end_marker, start)
+          if start == -1 or end == -1:
+              raise SystemExit("Could not locate the Today tab block safely.")
+
+          replacement = '''        {tab === "today" && (
+          <TodayTab
+            activeUser={activeUser}
+            activeCanEdit={activeCanEdit}
+            data={data}
+            profileNames={profileNames}
+            today={today}
+            todayStats={todayStats}
+            activeFasts={activeFasts}
+            fastPromptDismissedToday={fastPromptDismissedToday}
+            fastEditorOpen={fastEditorOpen}
+            fastBusy={fastBusy}
+            fastStartDate={fastStartDate}
+            fastStartTime={fastStartTime}
+            setFastStartDate={setFastStartDate}
+            setFastStartTime={setFastStartTime}
+            setFastEditorOpen={setFastEditorOpen}
+            dismissFastPromptToday={dismissFastPromptToday}
+            openFastEditor={openFastEditor}
+            startFast={startFast}
+            updateFastStart={updateFastStart}
+            endFast={endFast}
+            fastElapsed={fastElapsed}
+            openLog={openLog}
+            setActiveUser={setActiveUser}
+            profileColor={profileColor}
+            profileText={profileText}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+          />
+        )}'''
+
+          source = source[:start] + replacement + source[end:]
+          path.write_text(source)
+
+          # This workflow is intentionally disposable. Remove it in the same commit.
+          Path(".github/workflows/refactor-today.yml").unlink()
+
+      - name: Commit refactor
+        run: |
+          git config user.name "With Refactor"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/Tracker.jsx .github/workflows/refactor-today.yml
+          git commit -m "Extract Today tab from Tracker"
+          git push origin staging
