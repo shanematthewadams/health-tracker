@@ -201,7 +201,7 @@ export default function TodayTab({
             <div style={{ minWidth: 0 }}>
               <div style={sectionLabel}>{activeFasts[activeUser] ? "Fasting" : "A note for today"}</div>
               <div style={straightRule(PEN.orange)} />
-              <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink, marginTop: 10 }}>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, color: PEN.ink, marginTop: 10 }}>
                 {activeFasts[activeUser] ? "You’re fasting" : "Fasting today?"}
               </div>
               <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>
@@ -229,7 +229,7 @@ export default function TodayTab({
 
       {isMine && fastEditorOpen && (
         <div style={{ background: "#FFFFFF", border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
             <div><div style={fieldLabel}>Date</div><input type="date" max={today} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={inputStyle} /></div>
@@ -276,7 +276,7 @@ export default function TodayTab({
 
       {!hasAnything ? (
         <section style={{ padding: "20px 0 24px", borderTop: `1px solid ${PEN.rule}` }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: PEN.ink }}>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: PEN.ink }}>
             {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
           </div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginTop: 6, maxWidth: 390 }}>
