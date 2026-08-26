@@ -1,4 +1,5 @@
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, Share2, Check } from "lucide-react";
 
 export default function ProfileTab({
   activeUser,
@@ -43,6 +44,37 @@ export default function ProfileTab({
   successColor,
   styles,
 }) {
+  const [shareStatus, setShareStatus] = useState("");
+
+  async function shareWith() {
+    const url = window.location.origin;
+    const shareData = {
+      title: "With",
+      text: "I’ve been using With to keep track of my health in a simple, private way. Thought you might like it too.",
+      url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setShareStatus("Link copied");
+      window.setTimeout(() => setShareStatus(""), 2200);
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareStatus("Link copied");
+        window.setTimeout(() => setShareStatus(""), 2200);
+      } catch {
+        setShareStatus("Couldn’t copy the link");
+        window.setTimeout(() => setShareStatus(""), 2600);
+      }
+    }
+  }
+
   const {
     SURFACE,
     SURFACE_2,
@@ -158,6 +190,20 @@ export default function ProfileTab({
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {profileNames.map((name) => <span key={name} style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "6px 9px", fontSize: 12 }}>{name}</span>)}
         </div>
+      </div>
+
+      <div style={cardStyle}>
+        <div style={headingStyle}>Share With</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>
+          Know someone who might like With? Share the app with them. They’ll create their own account and can start their own With.
+        </div>
+        <button
+          onClick={shareWith}
+          style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          {shareStatus === "Link copied" ? <Check style={{ width: 16, height: 16 }} /> : <Share2 style={{ width: 16, height: 16 }} />}
+          {shareStatus || "Share With"}
+        </button>
       </div>
 
       <div style={cardStyle}>
