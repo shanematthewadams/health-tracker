@@ -318,6 +318,7 @@ export default function Tracker() {
   const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [profileColors, setProfileColors] = useState({});
+  const [intentions, setIntentions] = useState({});
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
   const [fastPromptDismissedDate, setFastPromptDismissedDate] = useState(null);
@@ -404,6 +405,7 @@ export default function Tracker() {
         setInviteCode("");
         setProfiles({});
         setProfileColors({});
+        setIntentions({});
         setActiveFasts({});
         setOwnedProfileId(null);
         setNeedsOnboarding(false);
@@ -454,6 +456,7 @@ export default function Tracker() {
       });
       setProfiles(pmap);
       setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
+      setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr() ? (p.current_intention || "") : ""])));
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
       if (owned) {
@@ -529,6 +532,28 @@ export default function Tracker() {
       await loadAll();
     }
     setAccountBusy(false);
+  }
+
+  async function saveIntention(text) {
+    if (!activeCanEdit) {
+      setSaveError("Only the owner of this profile can edit its intention.");
+      return false;
+    }
+    const p = profileFor(activeUser);
+    if (!p) return false;
+    const next = String(text || "").trim().slice(0, 280);
+    setSaveError(null);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ current_intention: next || null, intention_date: todayStr() })
+      .eq("id", p.id);
+    if (error) {
+      setSaveError(`Could not save intention: ${error.message}`);
+      return false;
+    }
+    setIntentions((prev) => ({ ...prev, [activeUser]: next }));
+    showSuccess(next ? "Intention saved" : "Intention cleared", "intention");
+    return true;
   }
 
   const fastPromptDismissedToday = fastPromptDismissedDate === todayStr();
@@ -1130,6 +1155,8 @@ export default function Tracker() {
             setActiveUser={setActiveUser}
             profileColor={profileColor}
             profileText={profileText}
+            intentions={intentions}
+            saveIntention={saveIntention}
             styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
           />
         )}
