@@ -306,6 +306,9 @@ export default function Tracker() {
   const [accountBusy, setAccountBusy] = useState(false);
   const [householdId, setHouseholdId] = useState(null);
   const [householdName, setHouseholdName] = useState("");
+  const [householdRole, setHouseholdRole] = useState(null);
+  const [renamingWith, setRenamingWith] = useState(false);
+  const [withNameInput, setWithNameInput] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [ownedProfileId, setOwnedProfileId] = useState(null);
@@ -398,9 +401,10 @@ export default function Tracker() {
     setLoading(true); setSaveError(null);
     try {
       const { data: memberships, error: memberError } = await supabase
-        .from("household_members").select("household_id").eq("user_id", session.user.id).limit(1);
+        .from("household_members").select("household_id, role").eq("user_id", session.user.id).limit(1);
       if (memberError) throw memberError;
       const hid = memberships?.[0]?.household_id;
+      setHouseholdRole(memberships?.[0]?.role || null);
       if (!hid) {
         setNeedsOnboarding(true);
         setHouseholdId(null);
@@ -411,6 +415,7 @@ export default function Tracker() {
       setHouseholdId(hid);
       const { data: householdRow } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
       setHouseholdName(householdRow?.name || "Your household");
+      setWithNameInput(householdRow?.name || "Your household");
       setInviteCode(householdRow?.invite_code || "");
 
       const { data: profileRows, error: profileError } = await supabase
@@ -624,6 +629,21 @@ export default function Tracker() {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+  }
+
+  async function renameWith() {
+    const nextName = withNameInput.trim();
+    if (!nextName) { setAccountError("Your With needs a name."); return; }
+    if (nextName.length > 40) { setAccountError("Keep your With name to 40 characters or fewer."); return; }
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.rpc("rename_household", { new_name: nextName });
+    if (error) setAccountError(error.message);
+    else {
+      setHouseholdName(nextName);
+      setRenamingWith(false);
+      setAccountMessage("Your With has been renamed.");
+    }
+    setAccountBusy(false);
   }
 
   async function saveProfileName() {
@@ -1006,31 +1026,39 @@ export default function Tracker() {
       `}</style>
 
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.9rem 1rem 0.75rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 21, lineHeight: 1.15 }}>
-              WITH
-              <div style={{ fontFamily: "'Karla', sans-serif", fontStyle: "normal", fontWeight: 500, fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>{householdName}</div>
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.8rem 1rem 0.7rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 9 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 22, lineHeight: 1 }}>WITH</div>
+              <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{householdName}</div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ display: "flex", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3 }}>
-              {profileNames.map((u) => (
-                <button key={u} onClick={() => { setActiveUser(u); setFastEditorOpen(false); }} style={{
-                  border: "none", padding: "9px 16px", borderRadius: 8,
-                  fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 15,
+            <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}><LogOut style={{ width: 18, height: 18 }} /></button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(1, profileNames.length)}, minmax(0, 1fr))`, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 3, marginBottom: 8, gap: 3 }}>
+            {profileNames.map((u) => (
+              <button
+                key={u}
+                title={u}
+                onClick={() => { setActiveUser(u); setFastEditorOpen(false); }}
+                style={{
+                  minWidth: 0, border: "none", padding: "9px 8px", borderRadius: 9,
+                  fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14,
                   background: activeUser === u ? profileColor(u) : "transparent",
                   color: activeUser === u ? profileText(u) : TEXT_MUTED,
-                }}>{u}</button>
-              ))}
-              </div>
-              <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 7, display: "grid", placeItems: "center" }}><LogOut style={{ width: 18, height: 18 }} /></button>
-            </div>
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}
+              >
+                {u}
+              </button>
+            ))}
           </div>
+
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <div style={{ fontSize: 12, color: TEXT_MUTED }}>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {activeGoalDate ? `${weeksLeft} ${weeksLeft === 1 ? "week" : "weeks"} until ${fmtGoalDate(activeGoalDate)}` : "No goal date set"}
             </div>
-            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}><Users style={{ width: 13, height: 13 }} /> Invite someone</button>}
+            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}><Users style={{ width: 13, height: 13 }} /> Invite</button>}
           </div>
         </div>
       </div>
@@ -1276,6 +1304,40 @@ export default function Tracker() {
                 </button>
               ))}
             </div>
+
+            {(() => {
+              const todayFoods = data[activeUser].foods.filter((f) => f.date === today);
+              const todayActivities = data[activeUser].activities.filter((a) => a.date === today);
+              const todayWeight = data[activeUser].weights.find((w) => w.date === today);
+              const activityCals = todayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
+
+              const context = {
+                food: todayFoods.length
+                  ? `${todayFoods.length} ${todayFoods.length === 1 ? "food" : "foods"} · ${Math.round(ts.calories)} calories logged`
+                  : "No food logged today.",
+                weight: todayWeight
+                  ? `${todayWeight.weight} lb logged today. Saving another weight for today will update it.`
+                  : "No weight logged today.",
+                activity: todayActivities.length
+                  ? `${todayActivities.length} ${todayActivities.length === 1 ? "activity" : "activities"} · ${Math.round(activityCals)} calories burned`
+                  : "No activity logged today.",
+                water: ts.water > 0
+                  ? `${Math.round(ts.water)} oz logged today.`
+                  : "No water logged today.",
+                steps: ts.steps != null
+                  ? `${ts.steps.toLocaleString()} steps logged today. Saving another total for today will update it.`
+                  : "No steps logged today.",
+              }[logTab];
+
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F3EDE2", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
+                  <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span>
+                  <span>·</span>
+                  <span>{context}</span>
+                </div>
+              );
+            })()}
+
             {logTab === "food" && <>
             {activeFasts[activeUser] ? (
               <div style={{ ...cardStyle, background: "#F1EBDD", borderColor: "#D8CCB8", padding: "0.95rem 1.1rem" }}>
@@ -1415,7 +1477,7 @@ export default function Tracker() {
               <div style={fieldLabel}>Date</div>
               <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
               {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : "Log weight"}</button>
+              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
               {data[activeUser].weights.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
@@ -1465,7 +1527,7 @@ export default function Tracker() {
               <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
               <div style={fieldLabel}>Date</div>
               <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : "Save steps"}</button>
+              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
             </div>
 
             </>}
@@ -1677,8 +1739,24 @@ export default function Tracker() {
             </div>
 
             <div style={cardStyle}>
-              <div style={headingStyle}>Your With</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{householdName}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <div style={{ ...headingStyle, marginBottom: 0 }}>Your With</div>
+                {householdRole === "owner" && !renamingWith && <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); setAccountError(""); }} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontSize: 12, fontWeight: 700 }}>Rename</button>}
+              </div>
+
+              {renamingWith ? (
+                <div style={{ marginTop: 12, marginBottom: 12 }}>
+                  <div style={fieldLabel}>With name</div>
+                  <input type="text" maxLength={40} value={withNameInput} onChange={(e) => setWithNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <button onClick={() => { setRenamingWith(false); setWithNameInput(householdName); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
+                    <button onClick={renameWith} disabled={accountBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{accountBusy ? "Saving…" : "Save name"}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 8, marginBottom: 4 }}>{householdName}</div>
+              )}
+
               <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>{profileNames.length} {profileNames.length === 1 ? "person" : "people"} you’re with</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {profileNames.map((name) => <span key={name} style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "6px 9px", fontSize: 12 }}>{name}</span>)}
