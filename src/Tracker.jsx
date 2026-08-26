@@ -30,13 +30,13 @@ function userColor(name, dim=false) {
 }
 function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
 
-const BG = "#F6F1E8";
-const SURFACE = "#FFFCF7";
-const SURFACE_2 = "#EFE7DA";
-const BORDER = "#DDD2C2";
-const TEXT = "#24302C";
-const TEXT_MUTED = "#716D64";
-const WARN = "#B6533C";
+const BG = "#FCFCFB";
+const SURFACE = "#FFFFFF";
+const SURFACE_2 = "#F4F6F8";
+const BORDER = "#D8DDE5";
+const TEXT = "#1C2430";
+const TEXT_MUTED = "#68717D";
+const WARN = "#C83D34";
 const NAV_H = 64;
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -85,16 +85,16 @@ function fullTodayLabel() {
 
 const inputStyle = {
   background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT,
-  borderRadius: 12, padding: "12px 14px", fontSize: 16, width: "100%",
+  borderRadius: 8, padding: "12px 14px", fontSize: 16, width: "100%",
   boxShadow: "0 1px 0 rgba(45,35,25,.03)",
 };
-const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 18, padding: "1.25rem", marginBottom: "1rem", boxShadow: "0 6px 24px rgba(65,48,30,.045)" };
-const headingStyle = { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 20, letterSpacing: "0", marginBottom: "0.9rem" };
+const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "1.25rem", marginBottom: "1rem", boxShadow: "0 2px 8px rgba(28,36,48,.045)" };
+const headingStyle = { fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em", marginBottom: "0.9rem" };
 const fieldLabel = { fontSize: 12, color: TEXT_MUTED, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
 const bigButton = (color, textColor) => ({
-  background: color, color: textColor, border: "none", borderRadius: 12,
-  padding: "13px 18px", fontWeight: 700, fontSize: 15, width: "100%",
-  fontFamily: "'Fraunces', serif", fontStyle: "italic", letterSpacing: "0",
+  background: color, color: textColor, border: "none", borderRadius: 8,
+  padding: "13px 18px", fontWeight: 800, fontSize: 15, width: "100%",
+  fontFamily: "'DM Sans', -apple-system, sans-serif", letterSpacing: "-0.01em",
 });
 
 function ProgressRow({ label, value, target, unit, color }) {
@@ -147,8 +147,8 @@ function AuthScreen() {
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:ital,wght@1,500;1,600;1,700&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
           {mode === "forgot" ? "We’ll send you a link to choose a new password." : "Your health is personal, but you don't have to do it alone."}
         </div>
@@ -202,8 +202,8 @@ function ResetPasswordScreen({ onDone }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 20 }}>Choose a new password.</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 20 }}>Choose a new password.</div>
         <div style={fieldLabel}>New password</div>
         <input type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         <div style={fieldLabel}>Confirm password</div>
@@ -239,7 +239,7 @@ function Onboarding({ onComplete }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to WITH</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
         {!mode ? <>
           <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Start a group</button>
@@ -282,8 +282,8 @@ function ClaimProfile({ profiles, onClaim }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>WITH</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 17, marginBottom: 16 }}>We’re in this together.</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 17, marginBottom: 16 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 18 }}>Which profile is yours?</div>
         <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }}>
           <option value="">Choose your profile</option>
@@ -1074,7 +1074,7 @@ export default function Tracker() {
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.8rem 1rem 0.7rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 9 }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 22, lineHeight: 1 }}>WITH</div>
+              <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 22, lineHeight: 1 }}>WITH</div>
               <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{householdName}</div>
             </div>
             <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}><LogOut style={{ width: 18, height: 18 }} /></button>
@@ -1095,8 +1095,8 @@ export default function Tracker() {
                   background: "transparent",
                   color: activeUser === u ? TEXT : TEXT_MUTED,
                   padding: "5px 4px 6px",
-                  fontFamily: "'Fraunces', serif",
-                  fontStyle: "italic",
+                  fontFamily: "'DM Sans', -apple-system, sans-serif",
+                  
                   fontWeight: activeUser === u ? 700 : 500,
                   fontSize: 13,
                   overflow: "hidden",
@@ -1120,7 +1120,7 @@ export default function Tracker() {
 
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "1rem 1rem", paddingBottom: NAV_H + 32 }}>
         {saveError && (
-          <div style={{ background: "#3A2420", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
+          <div style={{ background: "#FFF1F0", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
         )}
         {tab !== "profile" && !activeCanEdit && (
           <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT_MUTED, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 12 }}>
@@ -1357,7 +1357,7 @@ export default function Tracker() {
       </div>
 
       {toast && (
-        <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(45,35,25,.18)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(28,36,48,.16)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
           ✓ {toast}
         </div>
       )}
@@ -1376,7 +1376,7 @@ export default function Tracker() {
                 color: active ? profileColor(activeUser) : TEXT_MUTED,
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
-                <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'Fraunces', serif", fontStyle: "italic" }}>{label}</span>
+                <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "italic" }}>{label}</span>
               </button>
             );
           })}
