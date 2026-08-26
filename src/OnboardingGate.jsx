@@ -305,7 +305,7 @@ export default function OnboardingGate({ children }) {
 
   if (checking && session) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'Karla', sans-serif", fontSize: 13 }}>
+      <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
         getting your With ready…
       </div>
     );
