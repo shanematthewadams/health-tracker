@@ -37,13 +37,13 @@ export default function GoalsTab({
   return (
     <>
       <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What you’re working toward.</div>
       </div>
 
       {!hasGoals ? (
-        <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1" }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
+        <div style={{ ...cardStyle, background: "#F8FAFC", borderColor: "#D8DDE5" }}>
+          <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
           {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
         </div>
@@ -52,7 +52,7 @@ export default function GoalsTab({
           <div style={cardStyle}>
             <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>Your goal</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600 }}>
+              <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 26, fontWeight: 600 }}>
                 {gi ? `${gi.latest} → ${gi.goal ?? "—"} lb` : `${user.goalWeight ?? "—"} lb`}
               </div>
               {user.goalDate && <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{fmtGoalDate(user.goalDate)}</div>}
