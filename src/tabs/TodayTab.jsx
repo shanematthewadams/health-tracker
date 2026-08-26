@@ -130,7 +130,7 @@ export default function TodayTab({
   return (
     <div style={{ background: "#FCFCFB" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
-        <div style={{ fontFamily: "'Karla', -apple-system, sans-serif", fontWeight: 800, fontSize: 29, lineHeight: 1.08, color: PEN.ink }}>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 800, fontSize: 29, lineHeight: 1.08, color: PEN.ink }}>
           {isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`}
         </div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 6 }}>{fullTodayLabel()}</div>
@@ -183,7 +183,7 @@ export default function TodayTab({
         ) : (
           <div style={{
             marginTop: 12,
-            fontFamily: intention ? "'Fraunces', serif" : "'Karla', -apple-system, sans-serif",
+            fontFamily: intention ? "'Shadows Into Light', cursive" : "'DM Sans', -apple-system, sans-serif",
             fontStyle: intention ? "italic" : "normal",
             fontWeight: intention ? 500 : 600,
             fontSize: intention ? 21 : 15,
@@ -251,14 +251,15 @@ export default function TodayTab({
                 key={label}
                 onClick={() => openLog(kind)}
                 style={{
-                  background: "transparent",
+                  background: "#FFFFFF",
                   color: PEN.ink,
-                  border: "none",
-                  borderTop: `3px solid ${color}`,
-                  borderRadius: 0,
-                  padding: "10px 2px 4px",
+                  border: `1px solid ${PEN.rule}`,
+                  borderTop: `4px solid ${color}`,
+                  borderRadius: 9,
+                  padding: "11px 3px 9px",
+                  boxShadow: "0 2px 5px rgba(28,36,48,.06)",
                   fontSize: 11,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
