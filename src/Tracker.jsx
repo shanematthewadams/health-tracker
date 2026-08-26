@@ -389,6 +389,22 @@ export default function Tracker() {
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "SIGNED_IN" && nextSession?.user) {
+        setLoading(true);
+        setSaveError(null);
+      }
+      if (event === "SIGNED_OUT") {
+        setHouseholdId(null);
+        setHouseholdName("");
+        setHouseholdRole(null);
+        setInviteCode("");
+        setProfiles({});
+        setProfileColors({});
+        setActiveFasts({});
+        setOwnedProfileId(null);
+        setNeedsOnboarding(false);
+        setLoading(false);
+      }
       setSession(nextSession);
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       setAuthReady(true);
@@ -1035,18 +1051,28 @@ export default function Tracker() {
             <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}><LogOut style={{ width: 18, height: 18 }} /></button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(1, profileNames.length)}, minmax(0, 1fr))`, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 3, marginBottom: 8, gap: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", marginBottom: 8, paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
             {profileNames.map((u) => (
               <button
                 key={u}
                 title={u}
                 onClick={() => { setActiveUser(u); setFastEditorOpen(false); }}
                 style={{
-                  minWidth: 0, border: "none", padding: "9px 8px", borderRadius: 9,
-                  fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14,
-                  background: activeUser === u ? profileColor(u) : "transparent",
-                  color: activeUser === u ? profileText(u) : TEXT_MUTED,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  flex: "0 1 auto",
+                  minWidth: 0,
+                  maxWidth: profileNames.length <= 2 ? "48%" : 160,
+                  border: "none",
+                  borderBottom: activeUser === u ? `2px solid ${profileColor(u)}` : "2px solid transparent",
+                  background: "transparent",
+                  color: activeUser === u ? TEXT : TEXT_MUTED,
+                  padding: "5px 4px 6px",
+                  fontFamily: "'Fraunces', serif",
+                  fontStyle: "italic",
+                  fontWeight: activeUser === u ? 700 : 500,
+                  fontSize: 13,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {u}
