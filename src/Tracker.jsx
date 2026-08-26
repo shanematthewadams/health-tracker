@@ -5,6 +5,7 @@ import TodayTab from "./tabs/TodayTab.jsx";
 import LogTab from "./tabs/LogTab.jsx";
 import TrendsTab from "./tabs/TrendsTab.jsx";
 import GoalsTab from "./tabs/GoalsTab.jsx";
+import ProfileTab from "./tabs/ProfileTab.jsx";
 
 const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
@@ -1281,100 +1282,49 @@ export default function Tracker() {
         )}
 
         {tab === "profile" && (
-          <>
-            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Profile</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Your account, your goals, your people.</div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{profileNameInput || activeUser}</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{session?.user?.email}</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 2 }}>{householdName}</div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                <div>
-                  <div style={{ fontWeight: 700, marginBottom: 3 }}>Health goals & targets</div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 12 }}>
-                    {data[activeUser]?.goalWeight ? `${data[activeUser].goalWeight} lb${data[activeUser].goalDate ? ` by ${fmtGoalDate(data[activeUser].goalDate)}` : ""}` : "Not set yet"}
-                  </div>
-                </div>
-                <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: profileColor(activeUser, true), display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>Manage <ChevronRight style={{ width: 14, height: 14 }} /></button>
-              </div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={headingStyle}>Your profile</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>This is how your name appears to the people you’re with.</div>
-              <div style={fieldLabel}>Profile name</div>
-              <input type="text" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} />
-              <div style={fieldLabel}>Your color</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-                {PROFILE_COLORS.map((c) => {
-                  const selected = (profileColors[profileNameInput || activeUser] || profileColor(profileNameInput || activeUser)) === c.value;
-                  return <button key={c.value} type="button" title={c.name} aria-label={`Choose ${c.name}`} onClick={() => saveProfileColor(c.value)} style={{ width: 36, height: 36, borderRadius: "50%", background: c.value, border: selected ? `3px solid ${TEXT}` : `2px solid ${SURFACE}`, boxShadow: selected ? `0 0 0 2px ${BORDER}` : `0 0 0 1px ${BORDER}`, padding: 0 }} />;
-                })}
-              </div>
-              <button onClick={saveProfileName} disabled={accountBusy} style={bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane)}>Save profile</button>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={headingStyle}>Account</div>
-              <div style={fieldLabel}>Email</div>
-              <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <button onClick={saveEmail} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginBottom: 18 }}>Update email</button>
-
-              <div style={fieldLabel}>New password</div>
-              <input type="password" minLength={6} value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Confirm new password</div>
-              <input type="password" minLength={6} value={confirmPasswordInput} onChange={(e) => setConfirmPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <button onClick={savePassword} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Change password</button>
-
-              {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 12 }}>{accountError}</div>}
-              {accountMessage && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginTop: 12 }}>{accountMessage}</div>}
-            </div>
-
-            <div style={cardStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <div style={{ ...headingStyle, marginBottom: 0 }}>Your With</div>
-                {householdRole === "owner" && !renamingWith && <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); setAccountError(""); }} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontSize: 12, fontWeight: 700 }}>Rename</button>}
-              </div>
-
-              {renamingWith ? (
-                <div style={{ marginTop: 12, marginBottom: 12 }}>
-                  <div style={fieldLabel}>With name</div>
-                  <input type="text" maxLength={40} value={withNameInput} onChange={(e) => setWithNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <button onClick={() => { setRenamingWith(false); setWithNameInput(householdName); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                    <button onClick={renameWith} disabled={accountBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{accountBusy ? "Saving…" : "Save name"}</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 8, marginBottom: 4 }}>{householdName}</div>
-              )}
-
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>{profileNames.length} {profileNames.length === 1 ? "person" : "people"} you’re with</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {profileNames.map((name) => <span key={name} style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "6px 9px", fontSize: 12 }}>{name}</span>)}
-              </div>
-            </div>
-
-            <div style={cardStyle}>
-              <button onClick={() => supabase.auth.signOut()} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Sign out</button>
-            </div>
-
-            <div style={{ ...cardStyle, borderColor: "#6E3531" }}>
-              <div style={{ ...headingStyle, color: WARN }}>Delete account</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>
-                This permanently removes your login, your profile, and your personal health entries. It does not delete other people or their data.
-              </div>
-              <div style={fieldLabel}>Type DELETE to confirm</div>
-              <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <button onClick={deleteAccount} disabled={accountBusy || deleteConfirm !== "DELETE"} style={{ ...bigButton("#6E3531", "#FFE8E4"), opacity: deleteConfirm === "DELETE" ? 1 : .55 }}>Delete my account</button>
-            </div>
-          </>
+          <ProfileTab
+            activeUser={activeUser}
+            data={data}
+            session={session}
+            householdName={householdName}
+            householdRole={householdRole}
+            profileNames={profileNames}
+            profileNameInput={profileNameInput}
+            setProfileNameInput={setProfileNameInput}
+            profileColors={profileColors}
+            profileColor={profileColor}
+            profileText={profileText}
+            profileColorOptions={PROFILE_COLORS}
+            saveProfileColor={saveProfileColor}
+            saveProfileName={saveProfileName}
+            openGoalsEdit={openGoalsEdit}
+            fmtGoalDate={fmtGoalDate}
+            emailInput={emailInput}
+            setEmailInput={setEmailInput}
+            saveEmail={saveEmail}
+            newPasswordInput={newPasswordInput}
+            setNewPasswordInput={setNewPasswordInput}
+            confirmPasswordInput={confirmPasswordInput}
+            setConfirmPasswordInput={setConfirmPasswordInput}
+            savePassword={savePassword}
+            accountBusy={accountBusy}
+            accountError={accountError}
+            accountMessage={accountMessage}
+            renamingWith={renamingWith}
+            setRenamingWith={setRenamingWith}
+            withNameInput={withNameInput}
+            setWithNameInput={setWithNameInput}
+            renameWith={renameWith}
+            clearAccountError={() => setAccountError("")}
+            signOut={() => supabase.auth.signOut()}
+            deleteConfirm={deleteConfirm}
+            setDeleteConfirm={setDeleteConfirm}
+            deleteAccount={deleteAccount}
+            profileSaveColor={USER_COLOR.Shane}
+            profileSaveText={USER_TEXT_ON.Shane}
+            successColor={USER_COLOR.Alli}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+          />
         )}
 
       </div>
