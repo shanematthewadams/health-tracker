@@ -9,19 +9,19 @@ import ProfileTab from "./tabs/ProfileTab.jsx";
 
 const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
-  { name: "Terracotta", value: "#D9825B", dim: "#B96E4B", text: "#3C2418" },
-  { name: "Lavender", value: "#8F7AAE", dim: "#776590", text: "#2F2639" },
-  { name: "Sage", value: "#7E9A7B", dim: "#667E64", text: "#1F2D20" },
-  { name: "Dusty blue", value: "#6F8FA8", dim: "#5D788D", text: "#1E2A33" },
-  { name: "Ochre", value: "#C4934A", dim: "#A5793C", text: "#332716" },
-  { name: "Rose", value: "#B97878", dim: "#996363", text: "#332020" },
-  { name: "Teal", value: "#5E918B", dim: "#4D7772", text: "#18302D" },
-  { name: "Plum", value: "#8A6680", dim: "#715369", text: "#2E202B" },
+  { name: "Orange", value: "#F06A24", dim: "#C94F12", text: "#FFFFFF" },
+  { name: "Violet", value: "#7047EB", dim: "#5631C8", text: "#FFFFFF" },
+  { name: "Green", value: "#168A5B", dim: "#0E7048", text: "#FFFFFF" },
+  { name: "Blue", value: "#246BFE", dim: "#1754D5", text: "#FFFFFF" },
+  { name: "Red", value: "#E23D35", dim: "#BD2924", text: "#FFFFFF" },
+  { name: "Pink", value: "#D93C86", dim: "#B72A6C", text: "#FFFFFF" },
+  { name: "Teal", value: "#008C95", dim: "#00727A", text: "#FFFFFF" },
+  { name: "Indigo", value: "#4658C9", dim: "#3545A8", text: "#FFFFFF" },
 ];
 
-const USER_COLOR = { Shane: "#D9825B", Alli: "#8F7AAE" };
-const USER_COLOR_DIM = { Shane: "#B96E4B", Alli: "#776590" };
-const USER_TEXT_ON = { Shane: "#3C2418", Alli: "#2F2639" };
+const USER_COLOR = { Shane: "#F06A24", Alli: "#7047EB" };
+const USER_COLOR_DIM = { Shane: "#C94F12", Alli: "#5631C8" };
+const USER_TEXT_ON = { Shane: "#FFFFFF", Alli: "#FFFFFF" };
 function userColor(name, dim=false) {
   if (USER_COLOR[name]) return dim ? USER_COLOR_DIM[name] : USER_COLOR[name];
   const palette = dim ? ["#6FA39A","#A1845C","#7F88B8","#A46E83"] : ["#9ED8CE","#D8B77E","#AEB7EA","#D69AAF"];
@@ -89,7 +89,7 @@ const inputStyle = {
   boxShadow: "0 1px 0 rgba(45,35,25,.03)",
 };
 const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "1.25rem", marginBottom: "1rem", boxShadow: "0 2px 8px rgba(28,36,48,.045)" };
-const headingStyle = { fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em", marginBottom: "0.9rem" };
+const headingStyle = { fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 21, letterSpacing: "-0.015em", lineHeight: 1.08, marginBottom: "0.9rem" };
 const fieldLabel = { fontSize: 12, color: TEXT_MUTED, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
 const bigButton = (color, textColor) => ({
   background: color, color: textColor, border: "none", borderRadius: 8,
