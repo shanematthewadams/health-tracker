@@ -44,7 +44,20 @@ export default function LogTab(props) {
     steps: ts.steps != null ? `${ts.steps.toLocaleString()} steps logged today. Saving another total for today will update it.` : "No steps logged today.",
   }[logTab];
 
+  const currentLogDate = {
+    food: foodDate,
+    weight: weightDate,
+    activity: actDate,
+    water: waterDate,
+    steps: stepsDate,
+  }[logTab] || today;
+
   const changeLogTab = (id) => {
+    if (id === "food") setFoodDate(currentLogDate);
+    if (id === "weight") setWeightDate(currentLogDate);
+    if (id === "activity") setActDate(currentLogDate);
+    if (id === "water") setWaterDate(currentLogDate);
+    if (id === "steps") setStepsDate(currentLogDate);
     setLogTab(id);
     localStorage.setItem("with-log-tab", id);
   };
