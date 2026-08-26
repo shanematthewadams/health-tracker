@@ -762,9 +762,14 @@ export default function Tracker() {
     window.__withButtonTimer = window.setTimeout(() => setButtonSuccess(null), 1400);
   }
 
-  function openLog(kind = logTab) {
+  function openLog(kind = logTab, date = todayStr()) {
     setLogTab(kind);
     localStorage.setItem("with-log-tab", kind);
+    if (kind === "food") setFoodDate(date);
+    if (kind === "weight") setWeightDate(date);
+    if (kind === "activity") setActDate(date);
+    if (kind === "water") setWaterDate(date);
+    if (kind === "steps") setStepsDate(date);
     setTab("log");
   }
 
@@ -1152,6 +1157,7 @@ export default function Tracker() {
             endFast={endFast}
             fastElapsed={fastElapsed}
             openLog={openLog}
+            deleteFood={deleteFood}
             setActiveUser={setActiveUser}
             profileColor={profileColor}
             profileText={profileText}
