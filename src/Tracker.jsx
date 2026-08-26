@@ -145,9 +145,9 @@ function AuthScreen() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>With</div>
         <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
           {mode === "forgot" ? "We’ll send you a link to choose a new password." : "Your health is personal, but you don't have to do it alone."}
@@ -202,7 +202,7 @@ function ResetPasswordScreen({ onDone }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>With</div>
         <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 20 }}>Choose a new password.</div>
         <div style={fieldLabel}>New password</div>
         <input type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
@@ -239,7 +239,7 @@ function Onboarding({ onComplete }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to With</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
         {!mode ? <>
           <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Start a group</button>
@@ -282,7 +282,7 @@ function ClaimProfile({ profiles, onClaim }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>WITH</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>With</div>
         <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 17, marginBottom: 16 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 18 }}>Which profile is yours?</div>
         <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }}>
@@ -1060,7 +1060,7 @@ export default function Tracker() {
   return (
     <div style={{ background: BG, color: TEXT, minHeight: "100vh", fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Shadows+Into+Light&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; }
         input, select, textarea, button { font-family: inherit; }
@@ -1074,7 +1074,7 @@ export default function Tracker() {
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.8rem 1rem 0.7rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 9 }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 22, lineHeight: 1 }}>WITH</div>
+              <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 22, lineHeight: 1 }}>With</div>
               <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{householdName}</div>
             </div>
             <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}><LogOut style={{ width: 18, height: 18 }} /></button>
@@ -1376,7 +1376,7 @@ export default function Tracker() {
                 color: active ? profileColor(activeUser) : TEXT_MUTED,
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
-                <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "italic" }}>{label}</span>
+                <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal" }}>{label}</span>
               </button>
             );
           })}
