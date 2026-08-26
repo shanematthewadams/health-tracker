@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil } from "lucide-react";
+import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
 
 function greeting() {
   const h = new Date().getHours();
@@ -8,8 +8,15 @@ function greeting() {
   return "Good evening";
 }
 
-function fullTodayLabel() {
-  return new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+function fullDateLabel(dateStr) {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
+
+function shiftDate(dateStr, delta) {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + delta);
+  return d.toISOString().slice(0, 10);
 }
 
 const PEN = {
@@ -45,6 +52,7 @@ export default function TodayTab({
   endFast,
   fastElapsed,
   openLog,
+  deleteFood,
   profileColor,
   profileText,
   intentions,
@@ -53,24 +61,54 @@ export default function TodayTab({
 }) {
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, fieldLabel, inputStyle, bigButton } = styles;
   const u = data[activeUser];
-  const ts = todayStats[activeUser];
   const targets = u.targets;
-  const todaysFoods = u.foods.filter((f) => f.date === today);
-  const todaysActivities = u.activities.filter((a) => a.date === today);
-  const todaysWeight = u.weights.filter((w) => w.date === today);
-  const latestTodayWeight = todaysWeight.length ? todaysWeight[todaysWeight.length - 1].weight : null;
-  const prevWeightEntry = u.weights.filter((w) => w.date < today).slice().sort((a, b) => b.date.localeCompare(a.date))[0] || null;
-  const totalActivityCals = todaysActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
-  const hasAnything = todaysFoods.length > 0 || todaysActivities.length > 0 || ts.water > 0 || ts.steps != null || todaysWeight.length > 0;
   const isMine = activeCanEdit;
   const intention = intentions?.[activeUser] || "";
   const [editingIntention, setEditingIntention] = useState(false);
   const [intentionDraft, setIntentionDraft] = useState(intention);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [foodDetailOpen, setFoodDetailOpen] = useState(false);
+  const isToday = selectedDate === today;
+
+  const dayFoods = u.foods.filter((f) => f.date === selectedDate);
+  const dayActivities = u.activities.filter((a) => a.date === selectedDate);
+  const dayWeight = u.weights.filter((w) => w.date === selectedDate);
+  const latestDayWeight = dayWeight.length ? dayWeight[dayWeight.length - 1].weight : null;
+  const prevWeightEntry = u.weights.filter((w) => w.date < selectedDate).slice().sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+  const totalActivityCals = dayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
+  const dayWater = u.water.filter((w) => w.date === selectedDate).reduce((sum, w) => sum + w.ounces, 0);
+  const dayStepsEntry = u.steps.find((s) => s.date === selectedDate);
+  const consumed = dayFoods.reduce((acc, f) => ({
+    calories: acc.calories + f.calories,
+    protein: acc.protein + f.protein,
+    carbs: acc.carbs + f.carbs,
+    fat: acc.fat + f.fat,
+    fiber: acc.fiber + (f.fiber || 0),
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  const ts = {
+    ...consumed,
+    burned: totalActivityCals,
+    net: consumed.calories - totalActivityCals,
+    water: dayWater,
+    steps: dayStepsEntry ? dayStepsEntry.count : null,
+  };
+  const hasAnything = dayFoods.length > 0 || dayActivities.length > 0 || ts.water > 0 || ts.steps != null || dayWeight.length > 0;
+
+  const mealOrder = ["Breakfast", "Lunch", "Dinner", "Snack"];
+  const foodGroups = dayFoods.reduce((groups, food) => {
+    const meal = food.meal || "Other";
+    if (!groups[meal]) groups[meal] = [];
+    groups[meal].push(food);
+    return groups;
+  }, {});
+  const orderedMeals = [...mealOrder.filter((meal) => foodGroups[meal]), ...Object.keys(foodGroups).filter((meal) => !mealOrder.includes(meal))];
 
   useEffect(() => {
     setIntentionDraft(intention);
     setEditingIntention(false);
-  }, [activeUser, intention]);
+    setSelectedDate(today);
+    setFoodDetailOpen(false);
+  }, [activeUser, intention, today]);
 
   const quick = [
     ["Food", "food", Utensils, PEN.blue],
@@ -86,8 +124,8 @@ export default function TodayTab({
       label: "Activity",
       icon: Dumbbell,
       color: PEN.green,
-      show: todaysActivities.length > 0,
-      value: todaysActivities.length === 1 ? todaysActivities[0].name : `${todaysActivities.length} activities`,
+      show: dayActivities.length > 0,
+      value: dayActivities.length === 1 ? dayActivities[0].name : `${dayActivities.length} activities`,
       sub: `${Math.round(totalActivityCals)} cal burned`,
     },
     { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: `${Math.round(ts.water)} oz`, sub: "Logged today" },
@@ -97,10 +135,10 @@ export default function TodayTab({
       label: "Weight",
       icon: Scale,
       color: PEN.red,
-      show: latestTodayWeight != null,
-      value: latestTodayWeight != null ? `${latestTodayWeight} lb` : "",
-      sub: latestTodayWeight != null && prevWeightEntry
-        ? `${latestTodayWeight < prevWeightEntry.weight ? "↓" : latestTodayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestTodayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
+      show: latestDayWeight != null,
+      value: latestDayWeight != null ? `${latestDayWeight} lb` : "",
+      sub: latestDayWeight != null && prevWeightEntry
+        ? `${latestDayWeight < prevWeightEntry.weight ? "↓" : latestDayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestDayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
         : "Logged today",
     },
   ];
@@ -131,12 +169,30 @@ export default function TodayTab({
     <div style={{ background: "#FEFDF9" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 31, lineHeight: 1.08, color: PEN.ink }}>
-          {isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`}
+          {isToday ? (isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`) : activeUser}
         </div>
-        <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 6 }}>{fullTodayLabel()}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
+          <button
+            onClick={() => { setSelectedDate(shiftDate(selectedDate, -1)); setFoodDetailOpen(false); }}
+            aria-label="Previous day"
+            style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: "3px 2px", display: "grid", placeItems: "center" }}
+          >
+            <ChevronLeft style={{ width: 14, height: 14 }} strokeWidth={1.8} />
+          </button>
+          <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{fullDateLabel(selectedDate)}</div>
+          {!isToday && (
+            <button
+              onClick={() => { setSelectedDate(shiftDate(selectedDate, 1)); setFoodDetailOpen(false); }}
+              aria-label="Next day"
+              style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: "3px 2px", display: "grid", placeItems: "center" }}
+            >
+              <ChevronRight style={{ width: 14, height: 14 }} strokeWidth={1.8} />
+            </button>
+          )}
+        </div>
       </div>
 
-      <section style={{ marginBottom: 28, paddingBottom: 22 }}>
+      {isToday && <section style={{ marginBottom: 28, paddingBottom: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
@@ -193,9 +249,9 @@ export default function TodayTab({
             {intention || (isMine ? "Set one small thought to carry with you today." : `${activeUser} hasn’t set an intention yet.`)}
           </div>
         )}
-      </section>
+      </section>}
 
-      {isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
+      {isToday && isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
         <section style={{ marginBottom: 28, paddingBottom: 22 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ minWidth: 0 }}>
@@ -227,7 +283,7 @@ export default function TodayTab({
         </section>
       )}
 
-      {isMine && fastEditorOpen && (
+      {isToday && isMine && fastEditorOpen && (
         <div style={{ background: "#FFFDF9", border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
@@ -249,7 +305,7 @@ export default function TodayTab({
             {quick.map(([label, kind, Icon, color]) => (
               <button
                 key={label}
-                onClick={() => openLog(kind)}
+                onClick={() => openLog(kind, selectedDate)}
                 style={{
                   background: "#FFFDF9",
                   color: PEN.ink,
@@ -290,13 +346,13 @@ export default function TodayTab({
       ) : (
         <>
           <section style={{ marginBottom: 24 }}>
-            <div style={sectionLabel}>Today so far</div>
+            <div style={sectionLabel}>{isToday ? "Today so far" : "Day at a glance"}</div>
             <div style={straightRule(PEN.blue)} />
             <div style={{ marginTop: 10 }}>
               {metricRows.filter((m) => m.show).map(({ id, label, icon: Icon, color, value, sub }) => (
                 <button
                   key={id}
-                  onClick={() => openLog(id)}
+                  onClick={() => openLog(id, selectedDate)}
                   style={{
                     width: "100%",
                     textAlign: "left",
@@ -325,7 +381,7 @@ export default function TodayTab({
 
           <section style={{ marginBottom: 10 }}>
             <button
-              onClick={() => openLog("food")}
+              onClick={() => setFoodDetailOpen(true)}
               style={{ width: "100%", textAlign: "left", background: "transparent", color: TEXT, border: "none", padding: 0 }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -333,10 +389,10 @@ export default function TodayTab({
                   <div style={sectionLabel}>Food</div>
                   <div style={straightRule(PEN.blue)} />
                 </div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12 }}>{todaysFoods.length} {todaysFoods.length === 1 ? "item" : "items"} logged →</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12 }}>{dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged →</div>
               </div>
 
-              {activeFasts[activeUser] && todaysFoods.length === 0 ? (
+              {activeFasts[activeUser] && dayFoods.length === 0 ? (
                 <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 12 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
               ) : (
                 <>
@@ -367,6 +423,93 @@ export default function TodayTab({
             </button>
           </section>
         </>
+      )}
+
+      {foodDetailOpen && (
+        <div
+          onClick={() => setFoodDetailOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(37,36,34,.28)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "78vh",
+              overflowY: "auto",
+              background: "#FFFDF9",
+              borderRadius: "18px 18px 0 0",
+              padding: "18px 18px calc(18px + env(safe-area-inset-bottom))",
+              boxShadow: "0 -12px 40px rgba(37,36,34,.16)",
+            }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 99, background: PEN.rule, margin: "0 auto 15px" }} />
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+              <div>
+                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, color: PEN.ink }}>Food</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>{fullDateLabel(selectedDate)}</div>
+              </div>
+              <button
+                onClick={() => setFoodDetailOpen(false)}
+                aria-label="Close food details"
+                style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}
+              >
+                <X style={{ width: 19, height: 19 }} />
+              </button>
+            </div>
+
+            {dayFoods.length === 0 ? (
+              <div style={{ color: TEXT_MUTED, fontSize: 14, padding: "8px 0 18px" }}>No food logged for this day.</div>
+            ) : (
+              <div>
+                {orderedMeals.map((meal) => (
+                  <div key={meal} style={{ marginBottom: 18 }}>
+                    <div style={{ ...sectionLabel, marginBottom: 6 }}>{meal}</div>
+                    {foodGroups[meal].map((food) => (
+                      <div key={food.id} style={{ borderBottom: `1px solid ${PEN.rule}`, padding: "10px 0" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: 800, fontSize: 14, color: PEN.ink }}>{food.name}</div>
+                            <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4, lineHeight: 1.45 }}>
+                              {Math.round(food.calories)} cal · P {Math.round(food.protein)}g · C {Math.round(food.carbs)}g · F {Math.round(food.fat)}g · Fiber {Math.round(food.fiber || 0)}g
+                            </div>
+                            {food.notes && <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4 }}>{food.notes}</div>}
+                          </div>
+                          {isMine && (
+                            <button
+                              onClick={async () => { await deleteFood(food.id); }}
+                              aria-label={`Delete ${food.name}`}
+                              style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}
+                            >
+                              <Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isMine && (
+              <button
+                onClick={() => { setFoodDetailOpen(false); openLog("food", selectedDate); }}
+                style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), marginTop: 4, borderRadius: 8 }}
+              >
+                + Add food
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
