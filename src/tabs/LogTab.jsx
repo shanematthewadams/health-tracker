@@ -52,7 +52,7 @@ export default function LogTab(props) {
   return (
     <>
       <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
 
@@ -64,27 +64,27 @@ export default function LogTab(props) {
           ["water", "Water", Droplet],
           ["steps", "Steps", Footprints],
         ].map(([id, label, Icon]) => (
-          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
+          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#F8FAFC" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
             <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
             {label}
           </button>
         ))}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F3EDE2", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F4F6F8", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
         <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
       </div>
 
       {logTab === "food" && <>
         {activeFasts[activeUser] ? (
-          <div style={{ ...cardStyle, background: "#F1EBDD", borderColor: "#D8CCB8", padding: "0.95rem 1.1rem" }}>
+          <div style={{ ...cardStyle, background: "#F4F6F8", borderColor: "#D8DDE5", padding: "0.95rem 1.1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div></div>
               {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
             </div>
           </div>
         ) : activeCanEdit && !fastPromptDismissedToday ? (
-          <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1", padding: "0.95rem 1.1rem" }}>
+          <div style={{ ...cardStyle, background: "#F8FAFC", borderColor: "#D8DDE5", padding: "0.95rem 1.1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div></div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -97,7 +97,7 @@ export default function LogTab(props) {
 
         {activeCanEdit && fastEditorOpen && (
           <div style={{ ...cardStyle, padding: "1.05rem 1.1rem" }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
+            <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
             <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>It defaults to right now. Backdating is completely fine.</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
               <div><div style={fieldLabel}>Date</div><input type="date" max={todayStr()} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={inputStyle} /></div>
