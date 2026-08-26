@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
-const BG = "#F6F1E8";
-const SURFACE = "#FFFCF7";
-const SURFACE_2 = "#EFE7DA";
-const BORDER = "#DDD2C2";
-const TEXT = "#24302C";
-const TEXT_MUTED = "#716D64";
-const WARN = "#B6533C";
+const BG = "#FCFCFB";
+const SURFACE = "#FFFFFF";
+const SURFACE_2 = "#F4F6F8";
+const BORDER = "#D8DDE5";
+const TEXT = "#1C2430";
+const TEXT_MUTED = "#68717D";
+const WARN = "#C83D34";
 const ACCENT = "#D9825B";
 const ACCENT_TEXT = "#3C2418";
 
@@ -15,7 +15,7 @@ const inputStyle = {
   background: SURFACE,
   border: `1px solid ${BORDER}`,
   color: TEXT,
-  borderRadius: 12,
+  borderRadius: 8,
   padding: "12px 14px",
   fontSize: 16,
   width: "100%",
@@ -35,13 +35,13 @@ const primaryButton = {
   background: ACCENT,
   color: ACCENT_TEXT,
   border: "none",
-  borderRadius: 12,
+  borderRadius: 8,
   padding: "13px 18px",
   fontWeight: 700,
   fontSize: 15,
   width: "100%",
-  fontFamily: "'Fraunces', serif",
-  fontStyle: "italic",
+  fontFamily: "'DM Sans', -apple-system, sans-serif",
+  
 };
 
 const secondaryButton = {
@@ -61,19 +61,19 @@ function ScreenShell({ children }) {
         display: "grid",
         placeItems: "center",
         padding: 20,
-        fontFamily: "'Karla', -apple-system, sans-serif",
+        fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; } button { cursor: pointer; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; } button { cursor: pointer; }`}</style>
       <div
         style={{
           background: SURFACE,
           border: `1px solid ${BORDER}`,
-          borderRadius: 18,
+          borderRadius: 10,
           padding: "1.4rem",
           width: "100%",
           maxWidth: 440,
-          boxShadow: "0 6px 24px rgba(65,48,30,.045)",
+          boxShadow: "0 2px 8px rgba(28,36,48,.045)",
         }}
       >
         {children}
@@ -85,7 +85,7 @@ function ScreenShell({ children }) {
 function BrandIntro({ eyebrow }) {
   return (
     <>
-      <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 32, lineHeight: 1, marginBottom: 6 }}>WITH</div>
+      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 32, lineHeight: 1, marginBottom: 6 }}>WITH</div>
       {eyebrow && <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 20 }}>{eyebrow}</div>}
     </>
   );
@@ -160,7 +160,7 @@ function OnboardingScreen({ onComplete }) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>Who are you with?</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>Who are you with?</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 22 }}>
           With is a private place to track your own health alongside people you trust. Your goals and health information stay yours.
         </div>
@@ -175,7 +175,7 @@ function OnboardingScreen({ onComplete }) {
   return (
     <ScreenShell>
       <BrandIntro eyebrow={isCreate ? "Start with yourself. Add your people when you’re ready." : "Your goals are still yours. You’ll just have company."} />
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 27, fontWeight: 600, lineHeight: 1.08, marginBottom: 8 }}>
+      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 27, fontWeight: 600, lineHeight: 1.08, marginBottom: 8 }}>
         {isCreate ? "Create your With" : "Join a With"}
       </div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
@@ -315,7 +315,7 @@ export default function OnboardingGate({ children }) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, marginBottom: 10 }}>We couldn’t load your With.</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 24, fontWeight: 600, marginBottom: 10 }}>We couldn’t load your With.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Nothing has been changed. Try signing out and back in.</div>
         <div style={{ color: WARN, fontSize: 12, marginBottom: 14 }}>{checkError}</div>
         <button type="button" onClick={() => supabase.auth.signOut()} style={secondaryButton}>Sign out</button>
