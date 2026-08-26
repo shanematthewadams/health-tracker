@@ -145,7 +145,7 @@ function AuthScreen() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:ital,wght@1,500;1,600;1,700&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
         <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
         <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
@@ -1060,7 +1060,7 @@ export default function Tracker() {
   return (
     <div style={{ background: BG, color: TEXT, minHeight: "100vh", fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:ital,wght@1,500;1,600;1,700&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Shadows+Into+Light&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; }
         input, select, textarea, button { font-family: inherit; }
