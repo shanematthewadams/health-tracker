@@ -1060,7 +1060,7 @@ export default function Tracker() {
               <button
                 key={u}
                 title={u}
-                onClick={() => { setActiveUser(u); setFastEditorOpen(false); }}
+                onClick={() => { setActiveUser(u); setFastEditorOpen(false); if (tab === "profile") setTab("today"); }}
                 style={{
                   flex: "0 1 auto",
                   minWidth: 0,
@@ -1097,7 +1097,7 @@ export default function Tracker() {
         {saveError && (
           <div style={{ background: "#3A2420", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
         )}
-        {!activeCanEdit && (
+        {tab !== "profile" && !activeCanEdit && (
           <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT_MUTED, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 12 }}>
             You’re viewing {activeUser}’s health information. Only {activeUser} can make changes.
           </div>
