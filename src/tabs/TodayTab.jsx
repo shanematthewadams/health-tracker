@@ -18,9 +18,9 @@ const PEN = {
   green: "#16865C",
   red: "#D53A32",
   orange: "#E86F1C",
-  ink: "#1C2430",
-  soft: "#F4F6F8",
-  rule: "#D8DDE5",
+  ink: "#252422",
+  soft: "#F7F3EC",
+  rule: "#E6E1D8",
 };
 
 export default function TodayTab({
@@ -128,7 +128,7 @@ export default function TodayTab({
   });
 
   return (
-    <div style={{ background: "#FCFCFB" }}>
+    <div style={{ background: "#FEFDF9" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 31, lineHeight: 1.08, color: PEN.ink }}>
           {isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`}
@@ -136,7 +136,7 @@ export default function TodayTab({
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 6 }}>{fullTodayLabel()}</div>
       </div>
 
-      <section style={{ marginBottom: 22, paddingBottom: 20, borderBottom: `1px solid ${PEN.rule}` }}>
+      <section style={{ marginBottom: 28, paddingBottom: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
@@ -166,7 +166,7 @@ export default function TodayTab({
                 ...inputStyle,
                 minHeight: 88,
                 resize: "vertical",
-                background: "#FFFFFF",
+                background: "#FFFDF9",
                 borderRadius: 8,
                 lineHeight: 1.45,
               }}
@@ -196,7 +196,7 @@ export default function TodayTab({
       </section>
 
       {isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
-        <section style={{ marginBottom: 22, paddingBottom: 20, borderBottom: `1px solid ${PEN.rule}` }}>
+        <section style={{ marginBottom: 28, paddingBottom: 22 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ minWidth: 0 }}>
               <div style={sectionLabel}>{activeFasts[activeUser] ? "Fasting" : "A note for today"}</div>
@@ -214,12 +214,12 @@ export default function TodayTab({
               {activeFasts[activeUser] ? (
                 <>
                   <button onClick={() => openFastEditor(activeFasts[activeUser])} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                  <button onClick={endFast} disabled={fastBusy} style={{ background: "#FFFFFF", color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{fastBusy ? "Ending…" : "End fast"}</button>
+                  <button onClick={endFast} disabled={fastBusy} style={{ background: "#FFFDF9", color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{fastBusy ? "Ending…" : "End fast"}</button>
                 </>
               ) : (
                 <>
                   <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Not today</button>
-                  <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: "#FFFFFF", color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
+                  <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: "#FFFDF9", color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
                 </>
               )}
             </div>
@@ -228,7 +228,7 @@ export default function TodayTab({
       )}
 
       {isMine && fastEditorOpen && (
-        <div style={{ background: "#FFFFFF", border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
+        <div style={{ background: "#FFFDF9", border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
@@ -243,7 +243,7 @@ export default function TodayTab({
       )}
 
       {isMine && (
-        <section style={{ marginBottom: 24 }}>
+        <section style={{ marginBottom: 30 }}>
           <div style={sectionLabel}>Quick add</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7, marginTop: 10 }}>
             {quick.map(([label, kind, Icon, color]) => (
@@ -251,13 +251,13 @@ export default function TodayTab({
                 key={label}
                 onClick={() => openLog(kind)}
                 style={{
-                  background: "#FFFFFF",
+                  background: "#FFFDF9",
                   color: PEN.ink,
                   border: `1px solid ${PEN.rule}`,
                   borderTop: `4px solid ${color}`,
                   borderRadius: 9,
                   padding: "11px 3px 9px",
-                  boxShadow: "0 2px 5px rgba(28,36,48,.06)",
+                  boxShadow: "0 2px 7px rgba(63,52,39,.055)",
                   fontSize: 11,
                   fontWeight: 800,
                   display: "flex",
@@ -275,7 +275,7 @@ export default function TodayTab({
       )}
 
       {!hasAnything ? (
-        <section style={{ padding: "20px 0 24px", borderTop: `1px solid ${PEN.rule}` }}>
+        <section style={{ padding: "24px 0 28px" }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: PEN.ink }}>
             {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
           </div>
