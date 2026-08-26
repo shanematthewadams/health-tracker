@@ -128,8 +128,8 @@ export default function TodayTab({
       value: dayActivities.length === 1 ? dayActivities[0].name : `${dayActivities.length} activities`,
       sub: `${Math.round(totalActivityCals)} cal burned`,
     },
-    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: `${Math.round(ts.water)} oz`, sub: "Logged today" },
-    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? ts.steps.toLocaleString() : "", sub: "Logged today" },
+    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: `${Math.round(ts.water)} oz`, sub: isToday ? "Logged today" : "Logged that day" },
+    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? ts.steps.toLocaleString() : "", sub: isToday ? "Logged today" : "Logged that day" },
     {
       id: "weight",
       label: "Weight",
@@ -139,7 +139,7 @@ export default function TodayTab({
       value: latestDayWeight != null ? `${latestDayWeight} lb` : "",
       sub: latestDayWeight != null && prevWeightEntry
         ? `${latestDayWeight < prevWeightEntry.weight ? "↓" : latestDayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestDayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
-        : "Logged today",
+        : isToday ? "Logged today" : "Logged that day",
     },
   ];
 
@@ -392,7 +392,7 @@ export default function TodayTab({
                 <div style={{ color: TEXT_MUTED, fontSize: 12 }}>{dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged →</div>
               </div>
 
-              {activeFasts[activeUser] && dayFoods.length === 0 ? (
+              {isToday && activeFasts[activeUser] && dayFoods.length === 0 ? (
                 <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 12 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
               ) : (
                 <>
