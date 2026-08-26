@@ -14,7 +14,7 @@ export default function TrendsTab({
   return (
     <>
       <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>See how things are changing over time.</div>
       </div>
 
