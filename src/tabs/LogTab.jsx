@@ -180,11 +180,11 @@ export default function LogTab(props) {
           <div style={fieldLabel}>Date</div><input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Protein (g)</div><input type="number" inputMode="numeric" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Carbs (g)</div><input type="number" inputMode="numeric" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Fat (g)</div><input type="number" inputMode="numeric" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
+            <div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
+            <div><div style={fieldLabel}>Carbs (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
+            <div><div style={fieldLabel}>Fat (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
           </div>
-          <div style={fieldLabel}>Fiber (g)</div><input type="number" inputMode="numeric" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+          <div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
           {!selectedSavedFoodId && <><div style={fieldLabel}>Serving description</div><input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
           <div style={fieldLabel}>Notes (optional)</div><input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
 
