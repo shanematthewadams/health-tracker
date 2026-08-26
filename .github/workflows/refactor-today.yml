@@ -20,8 +20,8 @@ jobs:
           fetch-depth: 0
 
       - name: Replace inline Today tab
-        shell: python
         run: |
+          python <<'PY'
           from pathlib import Path
 
           path = Path("src/Tracker.jsx")
@@ -72,9 +72,8 @@ jobs:
 
           source = source[:start] + replacement + source[end:]
           path.write_text(source)
-
-          # This workflow is intentionally disposable. Remove it in the same commit.
           Path(".github/workflows/refactor-today.yml").unlink()
+          PY
 
       - name: Commit refactor
         run: |
