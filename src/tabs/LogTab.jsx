@@ -52,7 +52,7 @@ export default function LogTab(props) {
   return (
     <>
       <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
 
