@@ -65,7 +65,7 @@ export default function ProfileTab({
       </div>
 
       <div style={cardStyle}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{profileNameInput || activeUser}</div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 4 }}>{profileNameInput || activeUser}</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{session?.user?.email}</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 2 }}>{householdName}</div>
       </div>
