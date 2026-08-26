@@ -12,3 +12,4 @@ if old2 not in s:
     raise SystemExit('view banner target not found')
 s = s.replace(old2, new2, 1)
 p.write_text(s)
+# one-time helper
