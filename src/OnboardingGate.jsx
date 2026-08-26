@@ -315,7 +315,7 @@ export default function OnboardingGate({ children }) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 24, fontWeight: 600, marginBottom: 10 }}>We couldn’t load your With.</div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 10 }}>We couldn’t load your With.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Nothing has been changed. Try signing out and back in.</div>
         <div style={{ color: WARN, fontSize: 12, marginBottom: 14 }}>{checkError}</div>
         <button type="button" onClick={() => supabase.auth.signOut()} style={secondaryButton}>Sign out</button>
