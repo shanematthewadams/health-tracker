@@ -64,27 +64,27 @@ export default function LogTab(props) {
           ["water", "Water", Droplet],
           ["steps", "Steps", Footprints],
         ].map(([id, label, Icon]) => (
-          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#F8FAFC" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
+          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#FBF7F0" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
             <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
             {label}
           </button>
         ))}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F4F6F8", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F7F3EC", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
         <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
       </div>
 
       {logTab === "food" && <>
         {activeFasts[activeUser] ? (
-          <div style={{ ...cardStyle, background: "#F4F6F8", borderColor: "#D8DDE5", padding: "0.95rem 1.1rem" }}>
+          <div style={{ ...cardStyle, background: "#FFFDF9", borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div></div>
               {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
             </div>
           </div>
         ) : activeCanEdit && !fastPromptDismissedToday ? (
-          <div style={{ ...cardStyle, background: "#F8FAFC", borderColor: "#D8DDE5", padding: "0.95rem 1.1rem" }}>
+          <div style={{ ...cardStyle, background: "#FFFDF9", borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div></div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -123,13 +123,13 @@ export default function LogTab(props) {
               {!showManageSaved && <>
                 <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
                   {[["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"]].map(([id, label]) => (
-                    <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? profileColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
+                    <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? profileColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 8, padding: "8px 11px", fontSize: 11, fontWeight: 700 }}>{label}</button>
                   ))}
                 </div>
                 <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
                   {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
                     <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
-                      <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? profileColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
+                      <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? profileColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "10px 11px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
                         <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
                         <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
