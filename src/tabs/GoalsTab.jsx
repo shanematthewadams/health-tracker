@@ -43,7 +43,7 @@ export default function GoalsTab({
 
       {!hasGoals ? (
         <div style={{ ...cardStyle, background: "#F8FAFC", borderColor: "#D8DDE5" }}>
-          <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
           {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
         </div>
