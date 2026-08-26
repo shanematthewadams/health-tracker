@@ -1053,20 +1053,56 @@ export default function Tracker() {
               const todaysFoods = u.foods.filter((f) => f.date === today);
               const todaysActivities = u.activities.filter((a) => a.date === today);
               const todaysWeight = u.weights.filter((w) => w.date === today);
+              const latestTodayWeight = todaysWeight.length ? todaysWeight[todaysWeight.length - 1].weight : null;
+              const prevWeightEntry = u.weights.filter((w) => w.date < today).slice().sort((a,b) => b.date.localeCompare(a.date))[0] || null;
+              const totalActivityCals = todaysActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
               const hasAnything = todaysFoods.length > 0 || todaysActivities.length > 0 || ts.water > 0 || ts.steps != null || todaysWeight.length > 0;
               const isMine = activeCanEdit;
               const otherPeople = profileNames.filter((n) => n !== activeUser);
-              const MEAL_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
-              const groups = {};
-              todaysFoods.forEach((f) => { const key = f.meal || "Other"; if (!groups[key]) groups[key] = []; groups[key].push(f); });
-              const orderedKeys = [...MEAL_ORDER.filter((m) => groups[m]), ...Object.keys(groups).filter((k) => !MEAL_ORDER.includes(k))];
 
               const quick = [
-                ["Food", "food"],
-                ["Weight", "weight"],
-                ["Activity", "activity"],
-                ["Water", "water"],
-                ["Steps", "steps"],
+                ["Food", "food", Utensils],
+                ["Weight", "weight", Scale],
+                ["Activity", "activity", Dumbbell],
+                ["Water", "water", Droplet],
+                ["Steps", "steps", Footprints],
+              ];
+
+              const summaryCards = [
+                {
+                  id: "activity",
+                  label: "Activity",
+                  icon: Dumbbell,
+                  show: todaysActivities.length > 0,
+                  value: todaysActivities.length === 1 ? todaysActivities[0].name : `${todaysActivities.length} activities`,
+                  sub: `${Math.round(totalActivityCals)} cal burned`,
+                },
+                {
+                  id: "water",
+                  label: "Water",
+                  icon: Droplet,
+                  show: ts.water > 0,
+                  value: `${Math.round(ts.water)} oz`,
+                  sub: "Logged today",
+                },
+                {
+                  id: "steps",
+                  label: "Steps",
+                  icon: Footprints,
+                  show: ts.steps != null,
+                  value: ts.steps != null ? ts.steps.toLocaleString() : "",
+                  sub: "Logged today",
+                },
+                {
+                  id: "weight",
+                  label: "Weight",
+                  icon: Scale,
+                  show: latestTodayWeight != null,
+                  value: latestTodayWeight != null ? `${latestTodayWeight} lb` : "",
+                  sub: latestTodayWeight != null && prevWeightEntry
+                    ? `${latestTodayWeight < prevWeightEntry.weight ? "↓" : latestTodayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestTodayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
+                    : "Logged today",
+                },
               ];
 
               return <>
@@ -1076,6 +1112,7 @@ export default function Tracker() {
                   </div>
                   <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
                 </div>
+
                 {isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
                   <div style={{ ...cardStyle, background: activeFasts[activeUser] ? "#F1EBDD" : "#FFF8EE", borderColor: activeFasts[activeUser] ? "#D8CCB8" : "#E6D6C1", padding: "1.05rem 1.2rem" }}>
                     {activeFasts[activeUser] ? (
@@ -1088,9 +1125,7 @@ export default function Tracker() {
                         </div>
                         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                           <button onClick={() => openFastEditor(activeFasts[activeUser])} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                          <button onClick={endFast} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                            {fastBusy ? "Ending…" : "End fast"}
-                          </button>
+                          <button onClick={endFast} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{fastBusy ? "Ending…" : "End fast"}</button>
                         </div>
                       </div>
                     ) : (
@@ -1100,12 +1135,8 @@ export default function Tracker() {
                           <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>WITH can adjust your Today prompts while you fast.</div>
                         </div>
                         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>
-                            Not today
-                          </button>
-                          <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                            Start fast
-                          </button>
+                          <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Not today</button>
+                          <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
                         </div>
                       </div>
                     )}
@@ -1114,50 +1145,15 @@ export default function Tracker() {
 
                 {isMine && fastEditorOpen && (
                   <div style={{ ...cardStyle, marginTop: "-0.35rem", padding: "1.1rem 1.2rem" }}>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
-                      {activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}
-                    </div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>
-                      It defaults to right now. Backdating is completely fine.
-                    </div>
-
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                      <div>
-                        <div style={fieldLabel}>Date</div>
-                        <input
-                          type="date"
-                          max={todayStr()}
-                          value={fastStartDate}
-                          onChange={(e) => setFastStartDate(e.target.value)}
-                          style={inputStyle}
-                        />
-                      </div>
-                      <div>
-                        <div style={fieldLabel}>Time</div>
-                        <input
-                          type="time"
-                          value={fastStartTime}
-                          onChange={(e) => setFastStartTime(e.target.value)}
-                          style={inputStyle}
-                        />
-                      </div>
+                      <div><div style={fieldLabel}>Date</div><input type="date" max={todayStr()} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={inputStyle} /></div>
+                      <div><div style={fieldLabel}>Time</div><input type="time" value={fastStartTime} onChange={(e) => setFastStartTime(e.target.value)} style={inputStyle} /></div>
                     </div>
-
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <button
-                        onClick={() => setFastEditorOpen(false)}
-                        disabled={fastBusy}
-                        style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={activeFasts[activeUser] ? updateFastStart : startFast}
-                        disabled={fastBusy}
-                        style={bigButton(profileColor(activeUser), profileText(activeUser))}
-                      >
-                        {fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}
-                      </button>
+                      <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
+                      <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
                     </div>
                   </div>
                 )}
@@ -1178,77 +1174,65 @@ export default function Tracker() {
                   <div style={{ marginBottom: "1rem" }}>
                     <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, margin: "0 2px 8px", textTransform: "uppercase", letterSpacing: ".06em" }}>Quick add</div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
-                      {quick.map(([label, kind]) => (
-                        <button key={label} onClick={() => openLog(kind)} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "11px 4px", fontSize: 11, fontWeight: 700, boxShadow: "0 3px 12px rgba(65,48,30,.035)" }}>+ {label}</button>
+                      {quick.map(([label, kind, Icon]) => (
+                        <button key={label} onClick={() => openLog(kind)} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "10px 4px", fontSize: 11, fontWeight: 700, boxShadow: "0 3px 12px rgba(65,48,30,.035)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
+                          <span>{label}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
 
                 {hasAnything && (
-                  <div style={{ ...cardStyle, padding: "1.35rem" }}>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Today at a glance</div>
-                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 }}>
-                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600 }}>Calories</div>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round(ts.calories)} <span style={{ color: TEXT_MUTED, fontSize: 13, fontWeight: 500 }}>/ {targets.calories}</span></div>
-                    </div>
-                    <div style={{ height: 8, borderRadius: 99, background: SURFACE_2, overflow: "hidden", marginBottom: 16 }}>
-                      <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: profileColor(activeUser), borderRadius: 99 }} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "9px 16px", marginBottom: 15 }}>
-                      {[
-                        ["Protein", ts.protein, targets.protein, "g"],
-                        ["Carbs", ts.carbs, targets.carbs, "g"],
-                        ["Fat", ts.fat, targets.fat, "g"],
-                        ["Fiber", ts.fiber, `${targets.fiberMin}–${targets.fiberMax}`, "g"],
-                      ].map(([label,val,target,unit]) => (
-                        <div key={label} style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8 }}>
-                          <div style={{ color: TEXT_MUTED, fontSize: 11 }}>{label}</div>
-                          <div style={{ fontSize: 15, fontWeight: 700 }}>{Math.round(val)}{unit} <span style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 500 }}>/ {target}{unit}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: 18, paddingTop: 12, borderTop: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: 13 }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Zap style={{ width: 15 }} />{Math.round(ts.burned)} cal activity</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Footprints style={{ width: 15 }} />{ts.steps != null ? ts.steps.toLocaleString() : "No steps"}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Droplet style={{ width: 15 }} />{Math.round(ts.water)} oz</span>
-                    </div>
-                  </div>
-                )}
+                  <>
+                    <div style={{ margin: "0 2px 8px", fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600 }}>Today so far</div>
 
-                <div style={cardStyle}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={headingStyle}>Today so far</div>
-                    {isMine && <button onClick={() => openLog("food")} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add food</button>}
-                  </div>
-
-                  {todaysFoods.length === 0 && todaysActivities.length === 0 && ts.water === 0 && ts.steps == null && todaysWeight.length === 0 ? (
-                    <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Nothing logged yet.</div>
-                  ) : <>
-                    {orderedKeys.map((meal) => (
-                      <div key={meal} style={{ marginBottom: 14 }}>
-                        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 5 }}>{meal}</div>
-                        {groups[meal].map((f) => (
-                          <div key={f.id} style={{ padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                              <span style={{ fontWeight: 600 }}>{f.name}</span>
-                              <span style={{ color: TEXT_MUTED }}>{Math.round(f.calories)} cal</span>
+                    {summaryCards.some((c) => c.show) && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                        {summaryCards.filter((c) => c.show).map(({ id, label, icon: Icon, value, sub }) => (
+                          <button key={id} onClick={() => openLog(id)} style={{ textAlign: "left", background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "13px 14px", boxShadow: "0 4px 18px rgba(65,48,30,.04)", minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 8 }}>
+                              <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
+                              {label}
                             </div>
-                          </div>
+                            <div style={{ fontSize: 17, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+                            <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 3, lineHeight: 1.3 }}>{sub}</div>
+                          </button>
                         ))}
                       </div>
-                    ))}
-                    {todaysActivities.length > 0 && <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 5 }}>Activity</div>
-                      {todaysActivities.map((a) => <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ fontWeight: 600 }}>{a.name}</span><span style={{ color: TEXT_MUTED }}>{Math.round(a.caloriesBurned)} cal</span></div>)}
-                    </div>}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, paddingTop: 4 }}>
-                      {todaysWeight.length > 0 && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Weight {todaysWeight[todaysWeight.length-1].weight} lb</span>}
-                      {ts.water > 0 && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Water {Math.round(ts.water)} oz</span>}
-                      {ts.steps != null && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Steps {ts.steps.toLocaleString()}</span>}
-                    </div>
-                  </>}
-                </div>
+                    )}
+
+                    <button onClick={() => openLog("food")} style={{ width: "100%", textAlign: "left", background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 18, padding: "1.2rem", marginBottom: "1rem", boxShadow: "0 6px 24px rgba(65,48,30,.045)" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Utensils style={{ width: 16, height: 16, color: profileColor(activeUser, true) }} strokeWidth={2} />
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>Food</div>
+                        </div>
+                        <div style={{ color: TEXT_MUTED, fontSize: 12 }}>{todaysFoods.length} {todaysFoods.length === 1 ? "item" : "items"} logged →</div>
+                      </div>
+
+                      {activeFasts[activeUser] && todaysFoods.length === 0 ? (
+                        <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
+                      ) : (
+                        <>
+                          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 5 }}>
+                            <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round(ts.calories)} <span style={{ color: TEXT_MUTED, fontSize: 12, fontWeight: 500 }}>/ {targets.calories} cal</span></div>
+                          </div>
+                          <div style={{ height: 8, borderRadius: 99, background: SURFACE_2, overflow: "hidden", marginBottom: 12 }}>
+                            <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: profileColor(activeUser), borderRadius: 99 }} />
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "7px 14px" }}>
+                            <div style={{ fontSize: 12 }}><span style={{ color: TEXT_MUTED }}>Protein</span> <strong>{Math.round(ts.protein)}g</strong></div>
+                            <div style={{ fontSize: 12 }}><span style={{ color: TEXT_MUTED }}>Carbs</span> <strong>{Math.round(ts.carbs)}g</strong></div>
+                            <div style={{ fontSize: 12 }}><span style={{ color: TEXT_MUTED }}>Fat</span> <strong>{Math.round(ts.fat)}g</strong></div>
+                            <div style={{ fontSize: 12 }}><span style={{ color: TEXT_MUTED }}>Fiber</span> <strong>{Math.round(ts.fiber)}g</strong></div>
+                          </div>
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
 
                 {otherPeople.length > 0 && (
                   <div style={cardStyle}>
