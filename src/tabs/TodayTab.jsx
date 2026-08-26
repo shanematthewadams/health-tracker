@@ -188,7 +188,7 @@ export default function TodayTab({
             fontWeight: intention ? 500 : 600,
             fontSize: intention ? 21 : 15,
             lineHeight: 1.4,
-            color: intention ? PEN.ink : TEXT_MUTED,
+            color: intention ? profileColor(activeUser) : TEXT_MUTED,
           }}>
             {intention || (isMine ? "Set one small thought to carry with you today." : `${activeUser} hasn’t set an intention yet.`)}
           </div>
