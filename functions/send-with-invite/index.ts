@@ -120,6 +120,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, id: resendData?.id || null });
   } catch (error) {
-    return json({ error: error?.message || "The invite email could not be sent." }, 400);
+    return json({ error: error instanceof Error ? error.message : "The invite email could not be sent." }, 400);
   }
 });
