@@ -1,3 +1,4 @@
+import { brand } from "../brand.jsx";
 import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints } from "lucide-react";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -77,7 +78,7 @@ export default function LogTab(props) {
           ["water", "Water", Droplet],
           ["steps", "Steps", Footprints],
         ].map(([id, label, Icon]) => (
-          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#FBF7F0" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
+          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? brand.teal : BORDER}`, background: logTab === id ? "#FBF7F0" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
             <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
             {label}
           </button>
@@ -90,14 +91,14 @@ export default function LogTab(props) {
 
       {logTab === "food" && <>
         {activeFasts[activeUser] ? (
-          <div style={{ ...cardStyle, background: "#FFFDF9", borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
+          <div style={{ ...cardStyle, background: brand.surface, borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div></div>
               {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
             </div>
           </div>
         ) : activeCanEdit && !fastPromptDismissedToday ? (
-          <div style={{ ...cardStyle, background: "#FFFDF9", borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
+          <div style={{ ...cardStyle, background: brand.surface, borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div></div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -118,7 +119,7 @@ export default function LogTab(props) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-              <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
+              <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={bigButton(brand.teal, brand.inkOn)}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
             </div>
           </div>
         )}
@@ -136,18 +137,18 @@ export default function LogTab(props) {
               {!showManageSaved && <>
                 <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
                   {[["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"]].map(([id, label]) => (
-                    <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? profileColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 8, padding: "8px 11px", fontSize: 11, fontWeight: 700 }}>{label}</button>
+                    <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? brand.teal : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 8, padding: "8px 11px", fontSize: 11, fontWeight: 700 }}>{label}</button>
                   ))}
                 </div>
                 <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
                   {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
                     <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
-                      <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? profileColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "10px 11px" }}>
+                      <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? brand.teal : BORDER}`, color: TEXT, borderRadius: 8, padding: "10px 11px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
                         <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
                         <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
                       </button>
-                      <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? profileColor(activeUser) : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} /></button>
+                      <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? brand.teal : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} /></button>
                     </div>
                   ))}
                   {visibleLibraryFoods.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{savedSearch ? "No foods match that search." : foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>}
@@ -192,8 +193,8 @@ export default function LogTab(props) {
           {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
           {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-            <button onClick={saveSavedFoodOnly} style={bigButton(profileColor(activeUser), profileText(activeUser))}>Save changes</button>
-          </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
+            <button onClick={saveSavedFoodOnly} style={bigButton(brand.teal, brand.inkOn)}>Save changes</button>
+          </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
         </div>
       </>}
 
@@ -202,7 +203,7 @@ export default function LogTab(props) {
         <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-        <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
+        <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
         {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
       </div>}
 
@@ -211,7 +212,7 @@ export default function LogTab(props) {
         <input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Calories burned</div><input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-        <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
+        <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
       </div>}
 
       {logTab === "water" && <div style={cardStyle}>
@@ -219,14 +220,14 @@ export default function LogTab(props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{[8,16,24].map((oz) => <button key={oz} onClick={() => addWater(oz)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>)}</div>
         <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-        <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
+        <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
       </div>}
 
       {logTab === "steps" && <div style={cardStyle}>
         <div style={headingStyle}>Steps</div><div style={fieldLabel}>Step count</div>
         <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-        <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
+        <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
       </div>}
     </>
   );
