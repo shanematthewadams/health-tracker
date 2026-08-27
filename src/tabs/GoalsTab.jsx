@@ -1,3 +1,4 @@
+import { brand } from "../brand.jsx";
 export default function GoalsTab({
   activeUser,
   activeCanEdit,
@@ -45,7 +46,7 @@ export default function GoalsTab({
         <div style={{ ...cardStyle, background: "#FBF7F0", borderColor: "#E6E1D8" }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
-          {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
+          {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>Set your goals</button>}
         </div>
       ) : !editingGoals ? (
         <>
@@ -76,7 +77,7 @@ export default function GoalsTab({
           <div style={cardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <div style={headingStyle}>Daily targets</div>
-              {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>Edit</button>}
+              {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 700, fontSize: 12 }}>Edit</button>}
             </div>
             <div style={{ display: "grid", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Calories</span><strong>{user.targets.calories || "—"}</strong></div>
@@ -110,7 +111,7 @@ export default function GoalsTab({
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button onClick={() => setEditingGoals(false)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-            <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>Save changes</button>
+            <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>Save changes</button>
           </div>
         </div>
       )}
