@@ -1402,12 +1402,10 @@ export default function Tracker() {
 
         {tab === "trends" && (
           <TrendsTab
-            profileNames={profileNames}
-            chartData={chartData}
-            streaks={streaks}
+            activeUser={activeUser}
+            data={data}
             goalInfo={goalInfo}
             profileColor={profileColor}
-            fmtDate={fmtDate}
             styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle }}
           />
         )}
