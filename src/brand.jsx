@@ -34,18 +34,19 @@ export function BrandLogo({ compact = false, style = {} }) {
       style={{
         display: "inline-block",
         width: compact ? 78 : 146,
-        color: brand.teal,
-        lineHeight: 0,
+        aspectRatio: "1170 / 519",
+        backgroundColor: brand.teal,
+        WebkitMaskImage: `url(${withLogo})`,
+        maskImage: `url(${withLogo})`,
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
         ...style,
       }}
-    >
-      <img
-        src={withLogo}
-        alt=""
-        aria-hidden="true"
-        style={{ display: "block", width: "100%", height: "auto" }}
-      />
-    </span>
+    />
   );
 }
 
