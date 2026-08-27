@@ -110,12 +110,12 @@ function ProgressRow({ label, value, target, unit, color }) {
   );
 }
 
-function AuthScreen({ initialMessage = "" }) {
+function AuthScreen() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState(initialMessage);
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(e) {
@@ -190,20 +190,8 @@ function ResetPasswordScreen({ onDone }) {
     if (password !== confirm) { setError("Those passwords don't match."); return; }
     setBusy(true);
     const { error: authError } = await supabase.auth.updateUser({ password });
-    if (authError) {
-      setError(authError.message);
-      setBusy(false);
-      return;
-    }
-
-    const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) {
-      setError("Your password was changed, but we couldn't sign you out. Please close this window and sign in again.");
-      setBusy(false);
-      return;
-    }
-
-    onDone();
+    if (authError) setError(authError.message);
+    else onDone();
     setBusy(false);
   }
 
@@ -308,7 +296,6 @@ export default function Tracker() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
-  const [authNotice, setAuthNotice] = useState("");
   const [profileNameInput, setProfileNameInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [newPasswordInput, setNewPasswordInput] = useState("");
@@ -394,23 +381,13 @@ export default function Tracker() {
   }, []);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const authError = searchParams.get("error_description") || hashParams.get("error_description");
-    if (authError) {
-      setAuthNotice("That password reset link is invalid or has expired. Request a new one.");
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
-      if (event === "PASSWORD_RECOVERY") {
-        setPasswordRecovery(true);
-        setAuthNotice("");
-      }
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       setAuthReady(true);
     });
     return () => subscription.unsubscribe();
@@ -996,8 +973,8 @@ export default function Tracker() {
   if (!authReady) {
     return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>checking your session...</div>;
   }
-  if (passwordRecovery && session) return <ResetPasswordScreen onDone={() => { setPasswordRecovery(false); setAuthNotice("Password updated. Sign in with your new password."); }} />;
-  if (!session) return <AuthScreen initialMessage={authNotice} />;
+  if (passwordRecovery && session) return <ResetPasswordScreen onDone={() => setPasswordRecovery(false)} />;
+  if (!session) return <AuthScreen />;
   if (needsOnboarding) return <Onboarding onComplete={loadAll} />;
   if (!loading && session && !ownedProfileId && Object.values(profiles).some((p) => !p.user_id)) return <ClaimProfile profiles={profiles} onClaim={loadAll} />;
   if (loading) {
