@@ -135,14 +135,15 @@ export default function LogTab(props) {
               <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Add food</div>
               <input type="text" placeholder="Search foods or type a new one" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
               {!showManageSaved && <>
+                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 8px 7px", marginTop: 8 }}>
                 <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
                   {[["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"]].map(([id, label]) => (
                     <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? brand.teal : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 8, padding: "8px 11px", fontSize: 11, fontWeight: 700 }}>{label}</button>
                   ))}
                 </div>
-                <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+                <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto", overflowX: "hidden", padding: "2px 6px 4px 2px", marginRight: -2 }}>
                   {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
-                    <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
+                    <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 42px", gap: 6, alignItems: "stretch", width: "100%" }}>
                       <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? brand.teal : BORDER}`, color: TEXT, borderRadius: 8, padding: "10px 11px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
                         <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · {Math.round(f.fat)}g fat · {Math.round(f.carbs)}g carbs · {Math.round(f.fiber)}g fiber · {Math.round(f.protein)}g protein</div>
@@ -197,10 +198,7 @@ export default function LogTab(props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
               <div style={fieldLabel}>Date</div>
-              {foodDate === today ? (
-                <button type="button" onClick={(e) => { const input = e.currentTarget.nextElementSibling; input?.showPicker?.(); input?.focus?.(); }} style={{ ...inputStyle, height: 46, textAlign: "left", fontWeight: 700, display: "flex", alignItems: "center" }}>Today</button>
-              ) : null}
-              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, height: 46, display: foodDate === today ? "none" : "block" }} />
+              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, height: 46 }} />
             </div>
             <div>
               <div style={fieldLabel}>Meal</div>
