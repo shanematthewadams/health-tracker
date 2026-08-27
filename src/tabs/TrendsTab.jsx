@@ -28,6 +28,14 @@ function average(values) {
   return present.reduce((sum, v) => sum + v, 0) / present.length;
 }
 
+function fastingTouchesDate(fast, dateStr) {
+  const dayStart = new Date(dateStr + "T00:00:00");
+  const dayEnd = new Date(dateStr + "T23:59:59.999");
+  const started = new Date(fast.startedAt);
+  const ended = fast.endedAt ? new Date(fast.endedAt) : new Date();
+  return started <= dayEnd && ended >= dayStart;
+}
+
 function MetricCard({ icon: Icon, label, value, sub, data, dataKey, color, suffix = "" }) {
   return (
     <div style={{ background: brand.surface, border: `1px solid ${brand.border}`, borderRadius: 14, padding: "14px 14px 12px" }}>
@@ -77,21 +85,24 @@ export default function TrendsTab({
     const water = user.water.filter((w) => w.date === date).reduce((sum, w) => sum + w.ounces, 0);
     const stepsEntry = user.steps.find((s) => s.date === date);
 
+    const fastingDay = (user.fasts || []).some((fast) => fastingTouchesDate(fast, date));
+
     return {
       date,
       label: shortDate(date),
       steps: stepsEntry?.count ?? null,
       water: water || null,
       activity: activities.length ? activities.reduce((sum, a) => sum + a.caloriesBurned, 0) : null,
-      calories: foods.length ? foods.reduce((sum, f) => sum + f.calories, 0) : null,
-      protein: foods.length ? foods.reduce((sum, f) => sum + f.protein, 0) : null,
+      calories: foods.length ? foods.reduce((sum, f) => sum + f.calories, 0) : fastingDay ? 0 : null,
+      protein: foods.length ? foods.reduce((sum, f) => sum + f.protein, 0) : fastingDay ? 0 : null,
     };
   });
 
   const stepAvg = average(recent.map((d) => d.steps));
   const waterAvg = average(recent.map((d) => d.water));
   const activeDays = recent.filter((d) => d.activity != null).length;
-  const activityCals = recent.reduce((sum, d) => sum + (d.activity || 0), 0);
+  const activeDaysPerWeek = activeDays / 2;
+  const activityAvg = average(recent.map((d) => d.activity));
   const calorieAvg = average(recent.map((d) => d.calories));
   const proteinAvg = average(recent.map((d) => d.protein));
 
@@ -171,8 +182,8 @@ export default function TrendsTab({
         <MetricCard
           icon={Dumbbell}
           label="Activity"
-          value={activeDays ? `${activeDays} days` : "—"}
-          sub={activeDays ? `${Math.round(activityCals)} cal burned total` : "No activity logged yet"}
+          value={activeDays ? `${activeDaysPerWeek.toFixed(1)} days/wk` : "—"}
+          sub={activityAvg == null ? "No activity logged yet" : `${Math.round(activityAvg)} cal avg on active days`}
           data={recent}
           dataKey="activity"
           color={metricColors.activity}
@@ -182,7 +193,7 @@ export default function TrendsTab({
           icon={Utensils}
           label="Nutrition"
           value={calorieAvg == null ? "—" : `${Math.round(calorieAvg)} cal`}
-          sub={proteinAvg == null ? "No food logged yet" : `${Math.round(proteinAvg)}g protein avg`}
+          sub={proteinAvg == null ? "No nutrition data yet" : `${Math.round(proteinAvg)}g protein avg · fasting included`}
           data={recent}
           dataKey="calories"
           color={metricColors.food}
@@ -191,7 +202,7 @@ export default function TrendsTab({
       </div>
 
       <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "0 2px 6px" }}>
-        Averages use days where that metric was logged, so missing data stays missing instead of pretending it was zero.
+        Steps and water use logged days. Nutrition includes intentional fasting days as zero intake, while unlogged non-fasting days stay missing.
       </div>
     </>
   );
