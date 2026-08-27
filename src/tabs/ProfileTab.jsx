@@ -7,6 +7,8 @@ export default function ProfileTab({
   session,
   householdName,
   householdRole,
+  inviteCode,
+  copyInviteCode,
   profileNames,
   profileNameInput,
   setProfileNameInput,
@@ -187,9 +189,21 @@ export default function ProfileTab({
         )}
 
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>{profileNames.length} {profileNames.length === 1 ? "person" : "people"} you’re with</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
           {profileNames.map((name) => <span key={name} style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "6px 9px", fontSize: 12 }}>{name}</span>)}
         </div>
+        {inviteCode && (
+          <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Invite someone to your With</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 10 }}>
+              Share this private code with someone you want to join this With. They’ll create their own account and their own health profile.
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>{inviteCode}</div>
+              <button type="button" onClick={copyInviteCode} style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", border: `1px solid ${BORDER}`, padding: "10px 14px" }}>Copy</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={cardStyle}>
