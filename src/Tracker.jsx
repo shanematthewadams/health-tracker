@@ -56,7 +56,7 @@ function defaultTargets(u) {
   return { bmr: 0, calories: 0, protein: 0, carbs: 0, fat: 0, fiberMin: 0, fiberMax: 0 };
 }
 function emptyData(u) {
-  return { weights: [], foods: [], activities: [], steps: [], water: [], goalWeight: null, goalDate: null, targets: defaultTargets(u) };
+  return { weights: [], foods: [], activities: [], steps: [], water: [], fasts: [], goalWeight: null, goalDate: null, targets: defaultTargets(u) };
 }
 function weeksUntil(dateStr) {
   const target = new Date(dateStr + "T00:00:00");
@@ -527,7 +527,7 @@ export default function Tracker() {
         supabase.from("saved_foods").select("*").eq("household_id", hid).order("name"),
         supabase.from("global_foods").select("*").order("name"),
         supabase.from("household_food_state").select("*").eq("household_id", hid),
-        supabase.from("fasting_entries").select("*").in("profile_id", profileIds).is("ended_at", null),
+        supabase.from("fasting_entries").select("*").in("profile_id", profileIds).order("started_at"),
       ]);
       for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes]) if (r.error) throw r.error;
       const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
@@ -536,12 +536,13 @@ export default function Tracker() {
       for (const a of activitiesRes.data || []) { const n = nameById[a.profile_id]; if (next[n]) next[n].activities.push({ id: a.id, date: a.entry_date, name: a.name, caloriesBurned: num(a.calories_burned) }); }
       for (const s of stepsRes.data || []) { const n = nameById[s.profile_id]; if (next[n]) next[n].steps.push({ id: s.id, date: s.entry_date, count: Number(s.step_count) }); }
       for (const w of waterRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
+      for (const fast of fastsRes.data || []) { const n = nameById[fast.profile_id]; if (next[n]) next[n].fasts.push({ id: fast.id, startedAt: fast.started_at, endedAt: fast.ended_at || null }); }
       setSavedFoods((savedFoodsRes.data || []).map((f) => ({ ...f, source: "household", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), use_count: Number(f.use_count || 0) })));
       setGlobalFoods((globalFoodsRes.data || []).map((f) => ({ ...f, source: "global", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber) })));
       setFoodStates(foodStatesRes.data || []);
       setData(next);
       const fastMap = {};
-      (fastsRes?.data || []).forEach((f) => {
+      (fastsRes?.data || []).filter((f) => !f.ended_at).forEach((f) => {
         const name = Object.keys(pmap).find((n) => pmap[n].id === f.profile_id);
         if (name) fastMap[name] = f;
       });
