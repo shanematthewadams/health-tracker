@@ -1491,7 +1491,7 @@ export default function Tracker() {
             deleteAccount={deleteAccount}
             profileSaveColor={brand.teal}
             profileSaveText={brand.inkOn}
-            successColor={USER_COLOR.Alli}
+            successColor={brand.teal}
             styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
           />
         )}
