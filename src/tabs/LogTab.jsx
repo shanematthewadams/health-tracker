@@ -72,19 +72,44 @@ export default function LogTab(props) {
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "2px 1px 10px", marginBottom: 6, WebkitOverflowScrolling: "touch" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 6, padding: "2px 1px 10px", marginBottom: 6 }}>
         {[
           ["food", "Food", Utensils],
           ["weight", "Weight", Scale],
           ["activity", "Activity", Dumbbell],
           ["water", "Water", Droplet],
           ["steps", "Steps", Footprints],
-        ].map(([id, label, Icon]) => (
-          <button key={id} onClick={() => changeLogTab(id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? brand.teal : BORDER}`, background: logTab === id ? "#FBF7F0" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
-            <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
-            {label}
-          </button>
-        ))}
+        ].map(([id, label, Icon]) => {
+          const active = logTab === id;
+          return (
+            <button
+              key={id}
+              aria-label={label}
+              title={label}
+              onClick={() => changeLogTab(id)}
+              style={{
+                minWidth: 0,
+                minHeight: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: active ? 6 : 0,
+                border: `1px solid ${active ? brand.teal : BORDER}`,
+                background: active ? brand.surfaceSoft : SURFACE,
+                color: active ? TEXT : TEXT_MUTED,
+                borderRadius: 999,
+                padding: active ? "9px 10px" : "9px 0",
+                fontSize: 12,
+                fontWeight: 700,
+                transition: "all .16s ease",
+                overflow: "hidden",
+              }}
+            >
+              <Icon style={{ width: 15, height: 15, flexShrink: 0 }} strokeWidth={2} />
+              {active && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F7F3EC", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
