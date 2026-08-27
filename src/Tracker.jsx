@@ -777,6 +777,18 @@ export default function Tracker() {
     setAccountBusy(false);
   }
 
+  async function copyInviteCode() {
+    if (!inviteCode) { setAccountError("Invite code isn’t available yet. Refresh and try again."); return; }
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setAccountError("");
+      setAccountMessage(`Invite code ${inviteCode} copied.`);
+      showSuccess("Invite code copied");
+    } catch {
+      setAccountError(`Invite code: ${inviteCode}. Copy it manually.`);
+    }
+  }
+
   function profileColor(name, dim=false) {
     const chosen = profileColors[name];
     if (chosen) {
@@ -1166,7 +1178,7 @@ export default function Tracker() {
             <div style={{ fontSize: 11, color: TEXT_MUTED, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {activeGoalDate ? `${weeksLeft} ${weeksLeft === 1 ? "week" : "weeks"} until ${fmtGoalDate(activeGoalDate)}` : "No goal date set"}
             </div>
-            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}><Users style={{ width: 13, height: 13 }} /> Invite</button>}
+            {inviteCode && <button onClick={copyInviteCode} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}><Users style={{ width: 13, height: 13 }} /> Invite</button>}
           </div>
         </div>
       </div>
@@ -1369,6 +1381,8 @@ export default function Tracker() {
             session={session}
             householdName={householdName}
             householdRole={householdRole}
+            inviteCode={inviteCode}
+            copyInviteCode={copyInviteCode}
             profileNames={profileNames}
             profileNameInput={profileNameInput}
             setProfileNameInput={setProfileNameInput}
