@@ -72,7 +72,7 @@ export default function LogTab(props) {
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 6, padding: "2px 1px 10px", marginBottom: 6 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 3, padding: "2px 0 8px", marginBottom: 6 }}>
         {[
           ["food", "Food", Utensils],
           ["weight", "Weight", Scale],
@@ -89,7 +89,7 @@ export default function LogTab(props) {
               onClick={() => changeLogTab(id)}
               style={{
                 minWidth: 0,
-                minHeight: 44,
+                minHeight: 38,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -98,14 +98,14 @@ export default function LogTab(props) {
                 background: active ? brand.surfaceSoft : SURFACE,
                 color: active ? TEXT : TEXT_MUTED,
                 borderRadius: 999,
-                padding: active ? "9px 10px" : "9px 0",
+                padding: active ? "7px 7px" : "7px 0",
                 fontSize: 12,
                 fontWeight: 700,
                 transition: "all .16s ease",
                 overflow: "hidden",
               }}
             >
-              <Icon style={{ width: 15, height: 15, flexShrink: 0 }} strokeWidth={2} />
+              <Icon style={{ width: 14, height: 14, flexShrink: 0 }} strokeWidth={2} />
               {active && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
             </button>
           );
