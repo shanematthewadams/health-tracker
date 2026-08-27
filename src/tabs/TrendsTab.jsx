@@ -97,75 +97,99 @@ function MetricCard({ icon: Icon, label, value, sub, data, dataKey, color, suffi
   );
 }
 
-function PersonTrends({ name, user, goalInfo, profileColor, styles, compact = false }) {
-  const { BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle } = styles;
-  const gi = goalInfo(name);
+function TrendSummary({ name, user, profileColor }) {
   const trend = buildTrendData(user);
-  const weightData = user.weights
-    .slice()
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((w) => ({ date: w.date, label: shortDate(w.date), weight: w.weight }));
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "70px repeat(4, minmax(0, 1fr))", alignItems: "center", gap: 7, padding: "10px 0", borderTop: `1px solid ${brand.border}` }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColor(name), flexShrink: 0 }} />
+          <strong style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</strong>
+        </div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div className="num" style={{ fontSize: 14, fontWeight: 800 }}>{trend.stepAvg == null ? "—" : Math.round(trend.stepAvg).toLocaleString()}</div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div className="num" style={{ fontSize: 14, fontWeight: 800 }}>{trend.waterAvg == null ? "—" : `${Math.round(trend.waterAvg)} oz`}</div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div className="num" style={{ fontSize: 14, fontWeight: 800 }}>{trend.activityAvg == null ? "—" : `${trend.activeDaysPerWeek.toFixed(1)}/wk`}</div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div className="num" style={{ fontSize: 14, fontWeight: 800 }}>{trend.calorieAvg == null ? "—" : Math.round(trend.calorieAvg).toLocaleString()}</div>
+        {trend.proteinAvg != null && <div style={{ color: brand.textMuted, fontSize: 9, marginTop: 2 }}>{Math.round(trend.proteinAvg)}g protein</div>}
+      </div>
+    </div>
+  );
+}
+
+function CombinedTrends({ names, data, goalInfo, profileColor, styles }) {
+  const { BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle } = styles;
+  const allDates = [...new Set(names.flatMap((name) => data[name].weights.map((w) => w.date)))].sort();
+  const weightRows = allDates.map((date) => {
+    const row = { date, label: shortDate(date) };
+    names.forEach((name) => {
+      const entry = data[name].weights.find((w) => w.date === date);
+      if (entry) row[name] = entry.weight;
+    });
+    return row;
+  });
+  const hasWeightTrend = names.some((name) => data[name].weights.length >= 2);
 
   return (
-    <section style={{ marginBottom: compact ? 22 : 0 }}>
-      {compact && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 9px" }}>
-          <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: "50%", background: profileColor(name) }} />
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600 }}>{name}</div>
-        </div>
-      )}
-
-      <div style={{ ...cardStyle, marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: compact ? 10 : 14 }}>
-          <div>
-            <div style={{ ...headingStyle, marginBottom: gi ? 10 : 0 }}>Weight</div>
-            {gi && (
-              <div style={{ color: TEXT_MUTED, fontSize: 11 }}>
-                {gi.start} lb start · {gi.latest} lb now{gi.goal != null ? ` · ${gi.goal} lb goal` : ""}
+    <>
+      <div style={{ ...cardStyle, marginBottom: 14 }}>
+        <div style={{ ...headingStyle, marginBottom: 10 }}>Weight</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "7px 13px", marginBottom: 12 }}>
+          {names.map((name) => {
+            const gi = goalInfo(name);
+            return (
+              <div key={name} style={{ display: "flex", alignItems: "center", gap: 5, color: TEXT_MUTED, fontSize: 10 }}>
+                <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColor(name) }} />
+                <strong style={{ color: TEXT }}>{name}</strong>
+                {gi ? `${gi.latest} lb${gi.progressPct != null ? ` · ${Math.round(gi.progressPct)}%` : ""}` : "No weigh-ins"}
               </div>
-            )}
-          </div>
-          {gi?.progressPct != null && (
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: compact ? 18 : 20, fontWeight: 800, color: profileColor(name) }}>{Math.round(gi.progressPct)}%</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 9 }}>goal complete</div>
-            </div>
-          )}
+            );
+          })}
         </div>
 
-        {weightData.length < 2 ? (
-          <div style={{ color: TEXT_MUTED, fontSize: 12, padding: compact ? "1.2rem 0" : "2rem 0", textAlign: "center" }}>
-            Weight trend will take shape with more weigh-ins.
+        {!hasWeightTrend ? (
+          <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "2rem 0", textAlign: "center" }}>
+            Weight trends will take shape with more weigh-ins.
           </div>
         ) : (
-          <div style={{ width: "100%", height: compact ? 135 : 220 }}>
+          <div style={{ width: "100%", height: 225 }}>
             <ResponsiveContainer>
-              <LineChart data={weightData} margin={{ top: 5, right: 8, left: -18, bottom: 0 }}>
+              <LineChart data={weightRows} margin={{ top: 5, right: 8, left: -18, bottom: 0 }}>
                 <CartesianGrid stroke={BORDER} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={{ stroke: BORDER }} tickLine={false} minTickGap={compact ? 42 : 28} />
+                <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={{ stroke: BORDER }} tickLine={false} minTickGap={28} />
                 <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={{ stroke: BORDER }} tickLine={false} domain={["dataMin - 2", "dataMax + 2"]} width={34} />
-                <Tooltip
-                  contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }}
-                  labelStyle={{ color: TEXT }}
-                  formatter={(v) => [`${v} lb`, "Weight"]}
-                />
-                <Line type="monotone" dataKey="weight" stroke={profileColor(name)} strokeWidth={2.5} dot={{ r: compact ? 2 : 2.5 }} activeDot={{ r: 4 }} connectNulls />
+                <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} labelStyle={{ color: TEXT }} formatter={(v, key) => [`${v} lb`, key]} />
+                {names.map((name) => (
+                  <Line key={name} type="monotone" dataKey={name} stroke={profileColor(name)} strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <MetricCard icon={Footprints} label="Steps" value={trend.stepAvg == null ? "—" : Math.round(trend.stepAvg).toLocaleString()} sub={trend.stepAvg == null ? "No data yet" : "avg on logged days"} data={trend.recent} dataKey="steps" color={metricColors.steps} compact={compact} />
-        <MetricCard icon={Droplet} label="Water" value={trend.waterAvg == null ? "—" : `${Math.round(trend.waterAvg)} oz`} sub={trend.waterAvg == null ? "No data yet" : "avg on logged days"} data={trend.recent} dataKey="water" color={metricColors.water} suffix=" oz" compact={compact} />
-        <MetricCard icon={Dumbbell} label="Activity" value={trend.activityAvg == null ? "—" : `${trend.activeDaysPerWeek.toFixed(1)} days/wk`} sub={trend.activityAvg == null ? "No data yet" : `${Math.round(trend.activityAvg)} cal avg`} data={trend.recent} dataKey="activity" color={metricColors.activity} suffix=" cal" compact={compact} />
-        <MetricCard icon={Utensils} label="Nutrition" value={trend.calorieAvg == null ? "—" : `${Math.round(trend.calorieAvg)} cal`} sub={trend.proteinAvg == null ? "No data yet" : `${Math.round(trend.proteinAvg)}g protein avg`} data={trend.recent} dataKey="calories" color={metricColors.food} suffix=" cal" compact={compact} />
+      <div style={{ ...cardStyle, padding: "14px 14px 12px" }}>
+        <div style={{ ...headingStyle, marginBottom: 4 }}>14-day averages</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 10, marginBottom: 10 }}>Patterns stay personal, but they can live in the same view.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "70px repeat(4, minmax(0, 1fr))", gap: 7, alignItems: "end", paddingBottom: 6 }}>
+          <div />
+          <div style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 9, fontWeight: 800 }}><Footprints style={{ width: 13, height: 13, color: metricColors.steps, display: "block", margin: "0 auto 3px" }} />Steps</div>
+          <div style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 9, fontWeight: 800 }}><Droplet style={{ width: 13, height: 13, color: metricColors.water, display: "block", margin: "0 auto 3px" }} />Water</div>
+          <div style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 9, fontWeight: 800 }}><Dumbbell style={{ width: 13, height: 13, color: metricColors.activity, display: "block", margin: "0 auto 3px" }} />Activity</div>
+          <div style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 9, fontWeight: 800 }}><Utensils style={{ width: 13, height: 13, color: metricColors.food, display: "block", margin: "0 auto 3px" }} />Nutrition</div>
+        </div>
+        {names.map((name) => <TrendSummary key={name} name={name} user={data[name]} profileColor={profileColor} />)}
       </div>
-    </section>
+    </>
   );
 }
-
 export default function TrendsTab({ activeUser, data, goalInfo, profileColor, styles }) {
   const { TEXT_MUTED } = styles;
   const profileNames = Object.keys(data);
@@ -224,26 +248,17 @@ export default function TrendsTab({ activeUser, data, goalInfo, profileColor, st
         ))}
       </div>
 
-      {view === "with" ? (
-        <>
-          {profileNames.map((name) => (
-            <PersonTrends key={name} name={name} user={data[name]} goalInfo={goalInfo} profileColor={profileColor} styles={styles} compact />
-          ))}
-          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "0 2px 6px" }}>
-            Each person’s trends stay individual. Steps and water use logged days; nutrition includes intentional fasting days as zero intake.
-          </div>
-        </>
-      ) : (
-        <>
-          <PersonTrends name={selectedName} user={data[selectedName]} goalInfo={goalInfo} profileColor={profileColor} styles={styles} />
-          <div style={{ marginTop: 12, marginBottom: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: brand.text }}>Last 14 days</div>
-            <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, marginTop: 3 }}>
-              Steps and water use logged days. Nutrition includes intentional fasting days as zero intake, while unlogged non-fasting days stay missing.
-            </div>
-          </div>
-        </>
-      )}
+      <CombinedTrends
+        names={view === "with" ? profileNames : [selectedName]}
+        data={data}
+        goalInfo={goalInfo}
+        profileColor={profileColor}
+        styles={styles}
+      />
+
+      <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "12px 2px 6px" }}>
+        Steps and water use logged days. Nutrition includes intentional fasting days as zero intake, while unlogged non-fasting days stay missing.
+      </div>
     </>
   );
 }
