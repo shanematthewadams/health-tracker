@@ -12,12 +12,12 @@ const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
   { name: "Orange", value: "#F06A24", dim: "#C94F12", text: "#FFFFFF" },
   { name: "Violet", value: "#7047EB", dim: "#5631C8", text: "#FFFFFF" },
-  { name: "Green", value: "#168A5B", dim: "#0E7048", text: "#FFFFFF" },
-  { name: "Blue", value: "#246BFE", dim: "#1754D5", text: "#FFFFFF" },
-  { name: "Red", value: "#E23D35", dim: "#BD2924", text: "#FFFFFF" },
-  { name: "Pink", value: "#D93C86", dim: "#B72A6C", text: "#FFFFFF" },
-  { name: "Teal", value: "#008C95", dim: "#00727A", text: "#FFFFFF" },
+  { name: "Deep Blue", value: "#4C6EF5", dim: "#3553D8", text: "#FFFFFF" },
+  { name: "Coral", value: "#E7685B", dim: "#C94E44", text: "#FFFFFF" },
+  { name: "Amber", value: "#D99524", dim: "#B87812", text: "#111111" },
+  { name: "Rose", value: "#D95B83", dim: "#BA4068", text: "#FFFFFF" },
   { name: "Indigo", value: "#4658C9", dim: "#3545A8", text: "#FFFFFF" },
+  { name: "Lilac", value: "#9B88D8", dim: "#806CC0", text: "#FFFFFF" },
 ];
 
 const USER_COLOR = { Shane: "#F06A24", Alli: "#7047EB" };
@@ -183,7 +183,7 @@ function AuthScreen({ initialMessage = "" }) {
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
         {message && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginBottom: 10 }}>{message}</div>}
 
-        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>
+        <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? 0.65 : 1 }}>
           {busy ? "Working…" : mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
 
@@ -235,7 +235,7 @@ function ResetPasswordScreen({ onDone }) {
         <div style={fieldLabel}>Confirm password</div>
         <input type="password" minLength={6} autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Save new password"}</button>
+        <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Save new password"}</button>
       </form>
     </div>
   );
@@ -269,7 +269,7 @@ function Onboarding({ onComplete }) {
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 28, lineHeight: 1.05, marginBottom: 8 }}>Welcome to With</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
         {!mode ? <>
-          <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Start a group</button>
+          <button onClick={() => setMode("create")} style={{ ...bigButton(brand.teal, brand.inkOn), marginBottom: 10 }}>Start a group</button>
           <button onClick={() => setMode("join")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Join your people</button>
         </> : (
           <form onSubmit={mode === "create" ? createHousehold : joinHousehold}>
@@ -283,7 +283,7 @@ function Onboarding({ onComplete }) {
             <div style={fieldLabel}>Your profile name</div>
             <input required placeholder="e.g. Shane" value={profileName} onChange={(e) => setProfileName(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
             {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-            <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Start group" : "Join group"}</button>
+            <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Start group" : "Join group"}</button>
             <button type="button" onClick={() => { setMode(null); setError(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 8 }}>Back</button>
           </form>
         )}
@@ -317,7 +317,7 @@ function ClaimProfile({ profiles, onClaim }) {
           {available.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        <button disabled={!selected || busy} onClick={claim} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: !selected || busy ? .6 : 1 }}>{busy ? "Connecting…" : "This is me"}</button>
+        <button disabled={!selected || busy} onClick={claim} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: !selected || busy ? .6 : 1 }}>{busy ? "Connecting…" : "This is me"}</button>
       </div>
     </div>
   );
@@ -1489,8 +1489,8 @@ export default function Tracker() {
             deleteConfirm={deleteConfirm}
             setDeleteConfirm={setDeleteConfirm}
             deleteAccount={deleteAccount}
-            profileSaveColor={USER_COLOR.Shane}
-            profileSaveText={USER_TEXT_ON.Shane}
+            profileSaveColor={brand.teal}
+            profileSaveText={brand.inkOn}
             successColor={USER_COLOR.Alli}
             styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
           />
@@ -1515,7 +1515,7 @@ export default function Tracker() {
               <button key={id} onClick={() => id === "log" ? openLog(logTab) : setTab(id)} style={{
                 flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 3,
-                color: active ? profileColor(activeUser) : TEXT_MUTED,
+                color: active ? brand.teal : TEXT_MUTED,
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
                 <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal" }}>{label}</span>
