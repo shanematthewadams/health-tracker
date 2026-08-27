@@ -9,7 +9,7 @@ const BORDER = brand.border;
 const TEXT = brand.text;
 const TEXT_MUTED = brand.textMuted;
 const WARN = brand.warn;
-const ACCENT = brand.ink;
+const ACCENT = brand.teal;
 const ACCENT_TEXT = brand.inkOn;
 
 const inputStyle = {
