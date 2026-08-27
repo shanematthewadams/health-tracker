@@ -1,3 +1,4 @@
+import { brand, metricColors } from "../brand.jsx";
 import { useEffect, useState } from "react";
 import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
 
@@ -20,14 +21,14 @@ function shiftDate(dateStr, delta) {
 }
 
 const PEN = {
-  blue: "#1F5EFF",
-  purple: "#6C3FE8",
-  green: "#16865C",
-  red: "#D53A32",
-  orange: "#E86F1C",
-  ink: "#252422",
-  soft: "#F7F3EC",
-  rule: "#E6E1D8",
+  blue: metricColors.food,
+  purple: metricColors.water,
+  green: metricColors.activity,
+  red: metricColors.weight,
+  orange: metricColors.steps,
+  ink: brand.text,
+  soft: brand.surfaceSoft,
+  rule: brand.border,
 };
 
 export default function TodayTab({
@@ -196,7 +197,7 @@ export default function TodayTab({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
-            <div style={straightRule(profileColor(activeUser))} />
+            <div style={straightRule(brand.teal)} />
           </div>
           {isMine && !editingIntention && (
             <button
@@ -222,7 +223,7 @@ export default function TodayTab({
                 ...inputStyle,
                 minHeight: 88,
                 resize: "vertical",
-                background: "#FFFDF9",
+                background: brand.surface,
                 borderRadius: 8,
                 lineHeight: 1.45,
               }}
@@ -231,7 +232,7 @@ export default function TodayTab({
               <button onClick={() => { setIntentionDraft(intention); setEditingIntention(false); }} style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", padding: "10px 14px", borderRadius: 7 }}>
                 Cancel
               </button>
-              <button onClick={commitIntention} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", padding: "10px 16px", borderRadius: 7 }}>
+              <button onClick={commitIntention} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", padding: "10px 16px", borderRadius: 7 }}>
                 Save
               </button>
             </div>
@@ -270,12 +271,12 @@ export default function TodayTab({
               {activeFasts[activeUser] ? (
                 <>
                   <button onClick={() => openFastEditor(activeFasts[activeUser])} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                  <button onClick={endFast} disabled={fastBusy} style={{ background: "#FFFDF9", color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{fastBusy ? "Ending…" : "End fast"}</button>
+                  <button onClick={endFast} disabled={fastBusy} style={{ background: brand.surface, color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{fastBusy ? "Ending…" : "End fast"}</button>
                 </>
               ) : (
                 <>
                   <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Not today</button>
-                  <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: "#FFFDF9", color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
+                  <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: brand.surface, color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
                 </>
               )}
             </div>
@@ -284,7 +285,7 @@ export default function TodayTab({
       )}
 
       {isToday && isMine && fastEditorOpen && (
-        <div style={{ background: "#FFFDF9", border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
+        <div style={{ background: brand.surface, border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
@@ -293,7 +294,7 @@ export default function TodayTab({
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, borderRadius: 7 }}>Cancel</button>
-            <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), borderRadius: 7 }}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
+            <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={{ ...bigButton(brand.teal, brand.inkOn), borderRadius: 7 }}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
           </div>
         </div>
       )}
@@ -307,7 +308,7 @@ export default function TodayTab({
                 key={label}
                 onClick={() => openLog(kind, selectedDate)}
                 style={{
-                  background: "#FFFDF9",
+                  background: brand.surface,
                   color: PEN.ink,
                   border: `1px solid ${PEN.rule}`,
                   borderTop: `4px solid ${color}`,
@@ -445,7 +446,7 @@ export default function TodayTab({
               maxWidth: 480,
               maxHeight: "78vh",
               overflowY: "auto",
-              background: "#FFFDF9",
+              background: brand.surface,
               borderRadius: "18px 18px 0 0",
               padding: "18px 18px calc(18px + env(safe-area-inset-bottom))",
               boxShadow: "0 -12px 40px rgba(37,36,34,.16)",
@@ -503,7 +504,7 @@ export default function TodayTab({
             {isMine && (
               <button
                 onClick={() => { setFoodDetailOpen(false); openLog("food", selectedDate); }}
-                style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), marginTop: 4, borderRadius: 8 }}
+                style={{ ...bigButton(brand.teal, brand.inkOn), marginTop: 4, borderRadius: 8 }}
               >
                 + Add food
               </button>
