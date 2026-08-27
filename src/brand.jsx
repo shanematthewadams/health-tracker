@@ -1,31 +1,51 @@
 import withLogo from "./assets/brand/with-logo.svg";
 
 export const brand = {
-  bg: "#FEFDF9",
+  teal: "#1F5E57",
+  tealDark: "#174E49",
+  sage: "#B7C8BF",
+  clay: "#E08A6A",
+  sun: "#F2C96D",
+  stone: "#F0ECE4",
+  bg: "#FFFBF5",
   surface: "#FFFFFF",
   surfaceSoft: "#F7F3EC",
-  border: "#E6E1D8",
-  text: "#252422",
-  textMuted: "#746F68",
+  border: "#E9E4DA",
+  text: "#111111",
+  textMuted: "#53565A",
+  textSoft: "#8A8F94",
   warn: "#C83D34",
-  ink: "#252422",
   inkOn: "#FFFFFF",
+};
+
+export const metricColors = {
+  food: "#1F5E57",
+  weight: "#D96C57",
+  activity: "#6E9F8E",
+  water: "#6E9DB5",
+  steps: "#D9A642",
 };
 
 export function BrandLogo({ compact = false, style = {} }) {
   return (
-    <img
-      src={withLogo}
-      alt="With"
+    <span
+      aria-label="With"
+      role="img"
       style={{
-        display: "block",
+        display: "inline-block",
         width: compact ? 78 : 146,
-        height: "auto",
-        objectFit: "contain",
-        color: brand.ink,
+        color: brand.teal,
+        lineHeight: 0,
         ...style,
       }}
-    />
+    >
+      <img
+        src={withLogo}
+        alt=""
+        aria-hidden="true"
+        style={{ display: "block", width: "100%", height: "auto" }}
+      />
+    </span>
   );
 }
 
@@ -51,12 +71,12 @@ export function BrandLoading({ children = "Getting your With ready…" }) {
           textAlign: "center",
           background: brand.surface,
           border: `1px solid ${brand.border}`,
-          borderRadius: 14,
-          padding: "22px 20px 20px",
-          boxShadow: "0 4px 18px rgba(37,36,34,.045)",
+          borderRadius: 16,
+          padding: "24px 20px 21px",
+          boxShadow: "0 8px 28px rgba(17,17,17,.05)",
         }}
       >
-        <BrandLogo style={{ width: 116, margin: "0 auto 12px" }} />
+        <BrandLogo style={{ width: 116, margin: "0 auto 13px" }} />
         <div style={{ fontSize: 13, lineHeight: 1.45 }}>{children}</div>
       </div>
     </div>
