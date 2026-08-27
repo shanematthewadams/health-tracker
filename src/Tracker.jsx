@@ -377,6 +377,7 @@ export default function Tracker() {
   const [foodServingLabel, setFoodServingLabel] = useState("1 serving");
   const [saveAsSaved, setSaveAsSaved] = useState(false);
   const [editingSavedId, setEditingSavedId] = useState(null);
+  const [editingFoodId, setEditingFoodId] = useState(null);
   const [showManageSaved, setShowManageSaved] = useState(false);
   const [foodStates, setFoodStates] = useState([]);
   const [foodLibraryTab, setFoodLibraryTab] = useState("recent");
@@ -890,10 +891,22 @@ export default function Tracker() {
     window.__withButtonTimer = window.setTimeout(() => setButtonSuccess(null), 1400);
   }
 
-  function openLog(kind = logTab, date = todayStr()) {
+  function defaultMealForNow() {
+    const h = new Date().getHours();
+    if (h < 11) return "Breakfast";
+    if (h < 15) return "Lunch";
+    if (h < 21) return "Dinner";
+    return "Snack";
+  }
+
+  function openLog(kind = logTab, date = todayStr(), meal = null) {
     setLogTab(kind);
     localStorage.setItem("with-log-tab", kind);
-    if (kind === "food") setFoodDate(date);
+    if (kind === "food") {
+      if (!editingFoodId) clearFoodForm();
+      setFoodDate(date);
+      setFoodMeal(meal || defaultMealForNow());
+    }
     if (kind === "weight") setWeightDate(date);
     if (kind === "activity") setActDate(date);
     if (kind === "water") setWaterDate(date);
@@ -923,7 +936,7 @@ export default function Tracker() {
 
   function clearFoodForm() {
     setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes("");
-    setFoodQuantity("1"); setFoodServingLabel("1 serving"); setSaveAsSaved(false); setSelectedSavedFoodId(null); setEditingSavedId(null);
+    setFoodQuantity("1"); setFoodServingLabel("1 serving"); setSaveAsSaved(false); setSelectedSavedFoodId(null); setEditingSavedId(null); setEditingFoodId(null);
   }
 
   function chooseSavedFood(food) {
@@ -1011,6 +1024,22 @@ export default function Tracker() {
     if (error) throw error;
   }
 
+  function editLoggedFood(food) {
+    clearFoodForm();
+    setEditingFoodId(food.id);
+    setFoodName(food.name || "");
+    setFoodCals(String(food.calories ?? ""));
+    setFoodFat(String(food.fat ?? ""));
+    setFoodCarbs(String(food.carbs ?? ""));
+    setFoodFiber(String(food.fiber ?? ""));
+    setFoodProtein(String(food.protein ?? ""));
+    setFoodMeal(food.meal || defaultMealForNow());
+    setFoodNotes(food.notes || "");
+    setFoodDate(food.date || todayStr());
+    setLogTab("food");
+    setTab("log");
+  }
+
   async function addFood() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     if (!foodName.trim()) { setFoodError("Give it a name."); return; }
@@ -1032,10 +1061,13 @@ export default function Tracker() {
         if (useError) throw useError;
       }
       if (selectedSavedFoodId) await recordFoodUse(selectedSource, selectedId);
-      const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
+      const entryPayload = { household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null };
+      const { error } = editingFoodId
+        ? await supabase.from("food_entries").update(entryPayload).eq("id", editingFoodId)
+        : await supabase.from("food_entries").insert(entryPayload);
       if (error) throw error;
     });
-    if (ok) { const loggedName = foodName.trim(); clearFoodForm(); showSuccess(`${loggedName} added`, "food"); }
+    if (ok) { const loggedName = foodName.trim(); const wasEditing = !!editingFoodId; clearFoodForm(); showSuccess(`${loggedName} ${wasEditing ? "updated" : "added"}`, "food"); }
   }
   async function deleteFood(id) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
@@ -1292,6 +1324,7 @@ export default function Tracker() {
             fastElapsed={fastElapsed}
             openLog={openLog}
             deleteFood={deleteFood}
+            editLoggedFood={editLoggedFood}
             setActiveUser={setActiveUser}
             profileColor={profileColor}
             profileText={profileText}
@@ -1336,6 +1369,7 @@ export default function Tracker() {
             saveAsSaved={saveAsSaved}
             setSaveAsSaved={setSaveAsSaved}
             editingSavedId={editingSavedId}
+            editingFoodId={editingFoodId}
             showManageSaved={showManageSaved}
             setShowManageSaved={setShowManageSaved}
             foodLibraryTab={foodLibraryTab}
@@ -1371,6 +1405,7 @@ export default function Tracker() {
             setFoodServingLabel={setFoodServingLabel}
             foodError={foodError}
             addFood={addFood}
+            deleteFood={deleteFood}
             weightInput={weightInput}
             setWeightInput={setWeightInput}
             weightDate={weightDate}
