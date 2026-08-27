@@ -289,7 +289,7 @@ export default function LogTab(props) {
       {logTab === "weight" && <div style={cardStyle}>
         <div style={headingStyle}>Weight</div><div style={fieldLabel}>Weight (lb)</div>
         <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <div style={fieldLabel}>Date</div><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", padding: "10px 9px", fontSize: 15, marginBottom: 12 }} />
         {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
         <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
         {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
@@ -299,7 +299,7 @@ export default function LogTab(props) {
         <div style={headingStyle}>Activity</div><div style={fieldLabel}>Activity</div>
         <input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Calories burned</div><input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <div style={fieldLabel}>Date</div><input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", padding: "10px 9px", fontSize: 15, marginBottom: 12 }} />
         <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
       </div>}
 
@@ -307,14 +307,14 @@ export default function LogTab(props) {
         <div style={headingStyle}>Water</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{[8,16,24].map((oz) => <button key={oz} onClick={() => addWater(oz)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>)}</div>
         <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <div style={fieldLabel}>Date</div><input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", padding: "10px 9px", fontSize: 15, marginBottom: 12 }} />
         <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
       </div>}
 
       {logTab === "steps" && <div style={cardStyle}>
         <div style={headingStyle}>Steps</div><div style={fieldLabel}>Step count</div>
         <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <div style={fieldLabel}>Date</div><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", padding: "10px 9px", fontSize: 15, marginBottom: 12 }} />
         <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
       </div>}
     </>
