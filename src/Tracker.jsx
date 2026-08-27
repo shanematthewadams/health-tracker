@@ -115,12 +115,17 @@ function ProgressRow({ label, value, target, unit, color }) {
 }
 
 function AuthScreen({ initialMessage = "" }) {
-  const [mode, setMode] = useState("signin");
+  const inviteFromUrl = new URLSearchParams(window.location.search).get("invite")?.trim().toUpperCase() || "";
+  const [mode, setMode] = useState(inviteFromUrl ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState(initialMessage);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
+  }, [inviteFromUrl]);
 
   async function submit(e) {
     e.preventDefault();
@@ -135,7 +140,7 @@ function AuthScreen({ initialMessage = "" }) {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) setError(authError.message);
     } else {
-      const currentInvite = new URLSearchParams(window.location.search).get("invite");
+      const currentInvite = new URLSearchParams(window.location.search).get("invite") || localStorage.getItem("with-pending-invite");
       const redirectUrl = new URL(window.location.origin);
       if (currentInvite) redirectUrl.searchParams.set("invite", currentInvite);
       const { data, error: authError } = await supabase.auth.signUp({
