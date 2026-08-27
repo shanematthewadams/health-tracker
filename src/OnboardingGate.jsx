@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
 
-const BG = "#FCFCFB";
-const SURFACE = "#FFFFFF";
-const SURFACE_2 = "#F4F6F8";
-const BORDER = "#D8DDE5";
-const TEXT = "#1C2430";
-const TEXT_MUTED = "#68717D";
-const WARN = "#C83D34";
-const ACCENT = "#D9825B";
-const ACCENT_TEXT = "#3C2418";
+const BG = brand.bg;
+const SURFACE = brand.surface;
+const SURFACE_2 = brand.surfaceSoft;
+const BORDER = brand.border;
+const TEXT = brand.text;
+const TEXT_MUTED = brand.textMuted;
+const WARN = brand.warn;
+const ACCENT = brand.ink;
+const ACCENT_TEXT = brand.inkOn;
 
 const inputStyle = {
   background: SURFACE,
@@ -69,11 +70,11 @@ function ScreenShell({ children }) {
         style={{
           background: SURFACE,
           border: `1px solid ${BORDER}`,
-          borderRadius: 10,
-          padding: "1.4rem",
+          borderRadius: 14,
+          padding: "1.5rem",
           width: "100%",
           maxWidth: 440,
-          boxShadow: "0 2px 8px rgba(28,36,48,.045)",
+          boxShadow: "0 4px 18px rgba(37,36,34,.045)",
         }}
       >
         {children}
@@ -85,8 +86,8 @@ function ScreenShell({ children }) {
 function BrandIntro({ eyebrow }) {
   return (
     <>
-      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 32, lineHeight: 1, marginBottom: 6 }}>With</div>
-      {eyebrow && <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 20 }}>{eyebrow}</div>}
+      <BrandLogo style={{ marginBottom: 10 }} />
+      {eyebrow && <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 22 }}>{eyebrow}</div>}
     </>
   );
 }
@@ -162,7 +163,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>Who are you with?</div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>Who are you with?</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 22 }}>
           With is a private place to track your own health alongside people you trust. Your goals and health information stay yours.
         </div>
@@ -177,7 +178,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
   return (
     <ScreenShell>
       <BrandIntro eyebrow={isCreate ? "Start with yourself. Add your people when you’re ready." : "Your goals are still yours. You’ll just have company."} />
-      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 27, fontWeight: 600, lineHeight: 1.08, marginBottom: 8 }}>
+      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>
         {isCreate ? "Create your With" : inviterName ? `Join ${inviterName}’s With` : "Join a With"}
       </div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
@@ -331,11 +332,7 @@ export default function OnboardingGate({ children }) {
   }
 
   if (checking && session) {
-    return (
-      <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
-        getting your With ready…
-      </div>
-    );
+    return <BrandLoading>Getting your With ready…</BrandLoading>;
   }
 
   if (checkError && session) {
