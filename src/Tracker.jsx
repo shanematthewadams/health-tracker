@@ -115,7 +115,9 @@ function ProgressRow({ label, value, target, unit, color }) {
 }
 
 function AuthScreen({ initialMessage = "" }) {
-  const inviteFromUrl = new URLSearchParams(window.location.search).get("invite")?.trim().toUpperCase() || "";
+  const params = new URLSearchParams(window.location.search);
+  const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
+  const inviterFromUrl = params.get("inviter")?.trim() || "";
   const [mode, setMode] = useState(inviteFromUrl ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -125,7 +127,8 @@ function AuthScreen({ initialMessage = "" }) {
 
   useEffect(() => {
     if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
-  }, [inviteFromUrl]);
+    if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
+  }, [inviteFromUrl, inviterFromUrl]);
 
   async function submit(e) {
     e.preventDefault();
@@ -140,13 +143,10 @@ function AuthScreen({ initialMessage = "" }) {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) setError(authError.message);
     } else {
-      const currentInvite = new URLSearchParams(window.location.search).get("invite") || localStorage.getItem("with-pending-invite");
-      const redirectUrl = new URL(window.location.origin);
-      if (currentInvite) redirectUrl.searchParams.set("invite", currentInvite);
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectUrl.toString() },
+        options: { emailRedirectTo: window.location.origin },
       });
       if (authError) setError(authError.message);
       else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
@@ -795,7 +795,9 @@ export default function Tracker() {
 
   function inviteUrl() {
     const url = new URL(window.location.origin);
+    const inviterName = Object.values(profiles).find((p) => p.user_id === session?.user?.id)?.name || profileNameInput || activeUser;
     url.searchParams.set("invite", inviteCode);
+    if (inviterName) url.searchParams.set("inviter", inviterName);
     return url.toString();
   }
 
