@@ -1201,7 +1201,7 @@ export default function Tracker() {
 
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(255,251,245,.97)", borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", backdropFilter: "blur(10px)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.65rem 1rem 0.6rem", display: "grid", gridTemplateColumns: "auto auto", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <BrandLogo compact style={{ width: 102, flexShrink: 0 }} />
+          <BrandLogo compact style={{ width: 110, flexShrink: 0 }} />
           <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "8px 10px 9px", boxShadow: "0 2px 8px rgba(17,17,17,.035)" }}>
             <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "right", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {householdName}
