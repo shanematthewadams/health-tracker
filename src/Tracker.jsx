@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users, UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight } from "lucide-react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, Search, BookmarkPlus, Pencil, Trash2, Star, UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight } from "lucide-react";
 import { supabase } from "./supabase";
 import TodayTab from "./tabs/TodayTab.jsx";
 import LogTab from "./tabs/LogTab.jsx";
@@ -158,7 +158,7 @@ function AuthScreen({ initialMessage = "" }) {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
         <BrandLogo style={{ marginBottom: 10 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginBottom: 8 }}>We’re in this together.</div>
@@ -1164,9 +1164,6 @@ export default function Tracker() {
     return { start, latest, goal, pctLost: start !== 0 ? ((start - latest) / start) * 100 : 0, toGoal: goal != null ? latest - goal : null };
   }
 
-  const activeGoalDate = data[activeUser]?.goalDate || null;
-  const weeksLeft = activeGoalDate ? weeksUntil(activeGoalDate) : null;
-
   if (!authReady) {
     return <BrandLoading>Checking your session…</BrandLoading>;
   }
@@ -1196,56 +1193,41 @@ export default function Tracker() {
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; }
         input, select, textarea, button { font-family: inherit; }
-        .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+        .num { font-family: 'DM Sans', -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
         button { cursor: pointer; -webkit-appearance: none; }
         ::placeholder { color: #5A5E60; }
         textarea { resize: vertical; }
       `}</style>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.8rem 1rem 0.7rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 9 }}>
-            <div style={{ minWidth: 0 }}>
-              <BrandLogo compact style={{ marginBottom: 3 }} />
-              <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{householdName}</div>
-            </div>
-            <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}><LogOut style={{ width: 18, height: 18 }} /></button>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(255,251,245,.97)", borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", backdropFilter: "blur(10px)" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.7rem 1rem 0.55rem" }}>
+          <BrandLogo compact style={{ display: "block", marginBottom: 7 }} />
+          <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".02em", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {householdName}
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", marginBottom: 8, paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
             {profileNames.map((u) => (
               <button
                 key={u}
                 title={u}
                 onClick={() => { setActiveUser(u); setFastEditorOpen(false); if (tab === "profile") setTab("today"); }}
                 style={{
-                  flex: "0 1 auto",
-                  minWidth: 0,
-                  maxWidth: profileNames.length <= 2 ? "48%" : 160,
-                  border: "none",
-                  borderBottom: activeUser === u ? `2px solid ${profileColor(u)}` : "2px solid transparent",
-                  background: "transparent",
+                  flexShrink: 0,
+                  border: activeUser === u ? `1px solid ${profileColor(u)}` : `1px solid ${BORDER}`,
+                  background: activeUser === u ? SURFACE : "transparent",
                   color: activeUser === u ? TEXT : TEXT_MUTED,
-                  padding: "5px 4px 6px",
+                  borderRadius: 999,
+                  padding: "6px 10px",
                   fontFamily: "'DM Sans', -apple-system, sans-serif",
-                  
                   fontWeight: activeUser === u ? 700 : 500,
-                  fontSize: 13,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  fontSize: 12,
                   whiteSpace: "nowrap",
                 }}
               >
+                <span aria-hidden="true" style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: profileColor(u), marginRight: 6 }} />
                 {u}
               </button>
             ))}
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {activeGoalDate ? `${weeksLeft} ${weeksLeft === 1 ? "week" : "weeks"} until ${fmtGoalDate(activeGoalDate)}` : "No goal date set"}
-            </div>
-            {inviteCode && <button onClick={copyInviteCode} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}><Users style={{ width: 13, height: 13 }} /> Invite</button>}
           </div>
         </div>
       </div>
