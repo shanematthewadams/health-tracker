@@ -330,13 +330,13 @@ export default function TodayTab({
                 key={label}
                 onClick={() => openLog(kind, selectedDate)}
                 style={{
-                  background: brand.surface,
+                  background: "transparent",
                   color: PEN.ink,
                   border: `1px solid ${PEN.rule}`,
-                  borderTop: `4px solid ${color}`,
+                  borderTop: `3px solid ${color}`,
                   borderRadius: 9,
-                  padding: "11px 3px 9px",
-                  boxShadow: "0 2px 7px rgba(63,52,39,.055)",
+                  padding: "10px 3px 9px",
+                  boxShadow: "none",
                   fontSize: 11,
                   fontWeight: 800,
                   display: "flex",
