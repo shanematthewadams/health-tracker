@@ -1160,8 +1160,30 @@ export default function Tracker() {
   function goalInfo(u) {
     const w = data[u].weights;
     if (w.length === 0) return null;
-    const start = w[0].weight, latest = w[w.length - 1].weight, goal = data[u].goalWeight;
-    return { start, latest, goal, pctLost: start !== 0 ? ((start - latest) / start) * 100 : 0, toGoal: goal != null ? latest - goal : null };
+    const start = w[0].weight;
+    const latest = w[w.length - 1].weight;
+    const goal = data[u].goalWeight;
+
+    if (goal == null || goal === start) {
+      return {
+        start,
+        latest,
+        goal,
+        plannedChange: goal == null ? null : 0,
+        progressAmount: 0,
+        progressPct: goal == null ? null : 100,
+        remaining: goal == null ? null : 0,
+      };
+    }
+
+    const direction = Math.sign(goal - start);
+    const plannedChange = Math.abs(goal - start);
+    const directionalProgress = (latest - start) * direction;
+    const progressAmount = Math.max(0, Math.min(plannedChange, directionalProgress));
+    const progressPct = plannedChange ? (progressAmount / plannedChange) * 100 : 100;
+    const remaining = Math.max(0, plannedChange - progressAmount);
+
+    return { start, latest, goal, plannedChange, progressAmount, progressPct, remaining };
   }
 
   if (!authReady) {
