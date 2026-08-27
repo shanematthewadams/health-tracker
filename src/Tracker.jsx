@@ -135,7 +135,14 @@ function AuthScreen({ initialMessage = "" }) {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) setError(authError.message);
     } else {
-      const { data, error: authError } = await supabase.auth.signUp({ email, password });
+      const currentInvite = new URLSearchParams(window.location.search).get("invite");
+      const redirectUrl = new URL(window.location.origin);
+      if (currentInvite) redirectUrl.searchParams.set("invite", currentInvite);
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: redirectUrl.toString() },
+      });
       if (authError) setError(authError.message);
       else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
       else setMessage("Account created. Setting up your group…");
@@ -328,6 +335,10 @@ export default function Tracker() {
   const [renamingWith, setRenamingWith] = useState(false);
   const [withNameInput, setWithNameInput] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteError, setInviteError] = useState("");
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
@@ -777,15 +788,62 @@ export default function Tracker() {
     setAccountBusy(false);
   }
 
+  function inviteUrl() {
+    const url = new URL(window.location.origin);
+    url.searchParams.set("invite", inviteCode);
+    return url.toString();
+  }
+
+  async function sendInviteEmail() {
+    const email = inviteEmail.trim();
+    setInviteError(""); setInviteMessage("");
+    if (!email) { setInviteError("Enter an email address."); return; }
+    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
+
+    setInviteBusy(true);
+    const { error } = await supabase.functions.invoke("send-with-invite", {
+      body: { email, inviteCode, inviteUrl: inviteUrl() },
+    });
+    if (error) {
+      setInviteError(error.message || "The invite email could not be sent.");
+    } else {
+      setInviteMessage(`Invite sent to ${email}.`);
+      setInviteEmail("");
+      showSuccess("Invite sent");
+    }
+    setInviteBusy(false);
+  }
+
+  async function shareInvite() {
+    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
+    const url = inviteUrl();
+    const shareData = {
+      title: `Join ${householdName} on With`,
+      text: `Join my With, ${householdName}. Your health stays yours; we’ll just be doing life With each other.`,
+      url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setInviteMessage("Invite link copied.");
+        showSuccess("Invite link copied");
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") setInviteError("Couldn’t share the invite. Copy the invite code instead.");
+    }
+  }
+
   async function copyInviteCode() {
     if (!inviteCode) { setAccountError("Invite code isn’t available yet. Refresh and try again."); return; }
     try {
-      await navigator.clipboard.writeText(inviteCode);
+      await navigator.clipboard.writeText(inviteUrl());
       setAccountError("");
-      setAccountMessage(`Invite code ${inviteCode} copied.`);
-      showSuccess("Invite code copied");
+      setAccountMessage("Invite link copied.");
+      showSuccess("Invite link copied");
     } catch {
-      setAccountError(`Invite code: ${inviteCode}. Copy it manually.`);
+      setAccountError(`Invite code: ${inviteCode}. Copy it manually if needed.`);
     }
   }
 
@@ -1382,6 +1440,13 @@ export default function Tracker() {
             householdName={householdName}
             householdRole={householdRole}
             inviteCode={inviteCode}
+            inviteEmail={inviteEmail}
+            setInviteEmail={setInviteEmail}
+            inviteBusy={inviteBusy}
+            inviteMessage={inviteMessage}
+            inviteError={inviteError}
+            sendInviteEmail={sendInviteEmail}
+            shareInvite={shareInvite}
             copyInviteCode={copyInviteCode}
             profileNames={profileNames}
             profileNameInput={profileNameInput}
