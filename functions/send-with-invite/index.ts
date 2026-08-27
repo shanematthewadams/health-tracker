@@ -83,20 +83,36 @@ Deno.serve(async (req) => {
     const safeWithName = escapeHtml(withName);
     const safeInviteUrl = escapeHtml(inviteUrl);
 
-    // Placeholder copy for now. Replace the wording once final invite copy is supplied.
-    const subject = `${inviterName} invited you to join ${withName} on With`;
+    const subject = `${inviterName} invited you to With`;
     const html = `
+      <div style="display:none;max-height:0;overflow:hidden;opacity:0">Track your health with ${safeInviter}.</div>
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#252422;line-height:1.55">
-        <h1 style="font-size:28px;margin-bottom:8px">You’re invited to With.</h1>
-        <p><strong>${safeInviter}</strong> invited you to join <strong>${safeWithName}</strong>.</p>
-        <p>With is a private place to take care of your own health alongside people you trust. Your goals and health information stay yours.</p>
+        <h1 style="font-size:28px;margin-bottom:18px">${safeInviter} invited you to With.</h1>
+        <p>With is a simple, private way to track your health alongside the people you care about.</p>
+        <p>Track the things that matter to you, like nutrition, movement, water and weight, while ${safeInviter} works toward their own goals too.</p>
+        <p>Your goals are yours. Their goals are theirs. You’re just doing it alongside each other.</p>
         <p style="margin:28px 0">
-          <a href="${safeInviteUrl}" style="display:inline-block;background:#F06A24;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">Join this With</a>
+          <a href="${safeInviteUrl}" style="display:inline-block;background:#F06A24;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">Join ${safeInviter} on With</a>
         </p>
-        <p style="font-size:13px;color:#746F68">If the button doesn’t work, use this link:<br><a href="${safeInviteUrl}">${safeInviteUrl}</a></p>
+        <div style="font-weight:700;margin-top:30px">With</div>
+        <div style="font-style:italic;color:#746F68">We’re in this together.</div>
+        <p style="font-size:12px;color:#8A857F;margin-top:24px">If the button doesn’t work, use this link:<br><a href="${safeInviteUrl}">${safeInviteUrl}</a></p>
       </div>
     `;
-    const text = `${inviterName} invited you to join ${withName} on With. Join here: ${inviteUrl}`;
+    const text = `Track your health with ${inviterName}.
+
+${inviterName} invited you to With.
+
+With is a simple, private way to track your health alongside the people you care about.
+
+Track the things that matter to you, like nutrition, movement, water and weight, while ${inviterName} works toward their own goals too.
+
+Your goals are yours. Their goals are theirs. You’re just doing it alongside each other.
+
+Join ${inviterName} on With: ${inviteUrl}
+
+With
+We’re in this together.`;
 
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
