@@ -15,14 +15,14 @@ export default function LogTab(props) {
     fastStartDate, fastStartTime, setFastStartDate, setFastStartTime,
     setFastEditorOpen, dismissFastPromptToday, openFastEditor, startFast, updateFastStart, fastElapsed,
     savedFoods, globalFoods, savedSearch, setSavedSearch, selectedSavedFoodId, setSelectedSavedFoodId,
-    foodQuantity, foodServingLabel, saveAsSaved, setSaveAsSaved, editingSavedId,
+    foodQuantity, foodServingLabel, saveAsSaved, setSaveAsSaved, editingSavedId, editingFoodId,
     showManageSaved, setShowManageSaved, foodLibraryTab, setFoodLibraryTab,
     visibleLibraryFoods, managedSavedFoods, chooseSavedFood, isFavoriteFood, toggleFavorite,
     editSavedFood, deleteSavedFood, changeQuantity, clearFoodForm, saveSavedFoodOnly,
     foodName, setFoodName, foodMeal, setFoodMeal, foodDate, setFoodDate,
     foodCals, setFoodCals, foodProtein, setFoodProtein, foodCarbs, setFoodCarbs,
     foodFat, setFoodFat, foodFiber, setFoodFiber, foodNotes, setFoodNotes, setFoodServingLabel,
-    foodError, addFood,
+    foodError, addFood, deleteFood,
     weightInput, setWeightInput, weightDate, setWeightDate, weightError, addWeight, deleteWeight,
     actName, setActName, actCals, setActCals, actDate, setActDate, addActivity,
     waterOz, setWaterOz, waterDate, setWaterDate, addWater,
@@ -126,14 +126,14 @@ export default function LogTab(props) {
 
         <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ ...headingStyle, marginBottom: 0 }}>Food</div>
-            {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "done" : `manage mine (${savedFoods.length})`}</button>}
+            <div style={{ ...headingStyle, marginBottom: 0 }}>{editingFoodId ? "Edit Logged Food" : "Food"}</div>
+            {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "Done" : `Manage My Foods (${savedFoods.length})`}</button>}
           </div>
 
           {(savedFoods.length > 0 || globalFoods.length > 0) && (
             <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Find a food</div>
-              <input type="text" placeholder="Search all foods" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Add food</div>
+              <input type="text" placeholder="Search foods or type a new one" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
               {!showManageSaved && <>
                 <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
                   {[["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"]].map(([id, label]) => (
@@ -145,13 +145,19 @@ export default function LogTab(props) {
                     <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
                       <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? brand.teal : BORDER}`, color: TEXT, borderRadius: 8, padding: "10px 11px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
-                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
+                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · {Math.round(f.fat)}g fat · {Math.round(f.carbs)}g carbs · {Math.round(f.fiber)}g fiber · {Math.round(f.protein)}g protein</div>
                         <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
                       </button>
                       <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? brand.teal : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} /></button>
                     </div>
                   ))}
-                  {visibleLibraryFoods.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{savedSearch ? "No foods match that search." : foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>}
+                  {visibleLibraryFoods.length === 0 && savedSearch ? (
+                    <button onClick={() => { setFoodName(savedSearch.trim()); setSelectedSavedFoodId(null); }} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>
+                      + Create “{savedSearch.trim()}”
+                    </button>
+                  ) : visibleLibraryFoods.length === 0 ? (
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>
+                  ) : null}
                 </div>
               </>}
               {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
@@ -176,16 +182,18 @@ export default function LogTab(props) {
 
           <div style={fieldLabel}>Food name</div>
           <input type="text" placeholder="Food name" value={foodName} onChange={(e) => { setFoodName(e.target.value); if (selectedSavedFoodId) setSelectedSavedFoodId(null); }} style={{ ...inputStyle, marginBottom: 10 }} />
-          <div style={fieldLabel}>Meal</div>
-          <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, background: SURFACE_2, borderRadius: 8, padding: "9px 11px" }}>
+            <span style={{ color: TEXT_MUTED, fontSize: 12 }}>Adding to</span>
+            <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ border: "none", background: "transparent", color: TEXT, fontWeight: 800, fontSize: 13, textAlign: "right" }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+          </div>
           <div style={fieldLabel}>Date</div><input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Carbs (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
             <div><div style={fieldLabel}>Fat (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
+            <div><div style={fieldLabel}>Carbs (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
+            <div><div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={inputStyle} /></div>
+            <div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
           </div>
-          <div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
           {!selectedSavedFoodId && <><div style={fieldLabel}>Serving description</div><input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
           <div style={fieldLabel}>Notes (optional)</div><input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
 
@@ -194,7 +202,10 @@ export default function LogTab(props) {
           {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
             <button onClick={saveSavedFoodOnly} style={bigButton(brand.teal, brand.inkOn)}>Save changes</button>
-          </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
+          </div> : <>
+            <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "food" ? "✓ Saved" : editingFoodId ? "Save changes" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>
+            {editingFoodId && <button onClick={async () => { await deleteFood(editingFoodId); clearFoodForm(); }} style={{ width: "100%", marginTop: 10, padding: 10, background: "transparent", border: "none", color: WARN, fontSize: 12, fontWeight: 700 }}>Delete logged food</button>}
+          </>}
         </div>
       </>}
 
