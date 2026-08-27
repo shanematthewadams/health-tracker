@@ -91,11 +91,11 @@ function BrandIntro({ eyebrow }) {
   );
 }
 
-function OnboardingScreen({ onComplete }) {
-  const [mode, setMode] = useState(null);
+function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
+  const [mode, setMode] = useState(initialInviteCode ? "join" : null);
   const [householdName, setHouseholdName] = useState("");
   const [profileName, setProfileName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(initialInviteCode);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -103,7 +103,7 @@ function OnboardingScreen({ onComplete }) {
     setMode(null);
     setError("");
     setHouseholdName("");
-    setInviteCode("");
+    setInviteCode(initialInviteCode);
   }
 
   async function createHousehold(event) {
@@ -181,7 +181,9 @@ function OnboardingScreen({ onComplete }) {
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
         {isCreate
           ? "Give your private space a name, then create your own health profile."
-          : "Enter the invite code you received, then create your own health profile."}
+          : initialInviteCode
+            ? "You’ve been invited to join this With. Create your own health profile to continue."
+            : "Enter the invite code you received, then create your own health profile."}
       </div>
 
       <form onSubmit={isCreate ? createHousehold : joinHousehold}>
@@ -202,16 +204,22 @@ function OnboardingScreen({ onComplete }) {
         ) : (
           <>
             <div style={fieldLabel}>Invite code</div>
-            <input
-              type="text"
-              required
-              autoFocus
-              autoCapitalize="characters"
-              placeholder="e.g. A7K2M9QX"
-              value={inviteCode}
-              onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-              style={{ ...inputStyle, marginBottom: 14, textTransform: "uppercase" }}
-            />
+            {initialInviteCode ? (
+              <div style={{ ...inputStyle, marginBottom: 14, background: SURFACE_2, fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>
+                {inviteCode}
+              </div>
+            ) : (
+              <input
+                type="text"
+                required
+                autoFocus
+                autoCapitalize="characters"
+                placeholder="e.g. A7K2M9QX"
+                value={inviteCode}
+                onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                style={{ ...inputStyle, marginBottom: 14, textTransform: "uppercase" }}
+              />
+            )}
           </>
         )}
 
@@ -247,6 +255,7 @@ function OnboardingScreen({ onComplete }) {
 }
 
 export default function OnboardingGate({ children }) {
+  const initialInviteCode = new URLSearchParams(window.location.search).get("invite")?.trim().toUpperCase() || "";
   const [session, setSession] = useState(null);
   const [checking, setChecking] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
@@ -335,7 +344,7 @@ export default function OnboardingGate({ children }) {
   }
 
   if (session && needsOnboarding) {
-    return <OnboardingScreen onComplete={finishOnboarding} />;
+    return <OnboardingScreen onComplete={finishOnboarding} initialInviteCode={initialInviteCode} />;
   }
 
   return children;
