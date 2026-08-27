@@ -91,7 +91,7 @@ function BrandIntro({ eyebrow }) {
   );
 }
 
-function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
+function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = "" }) {
   const [mode, setMode] = useState(initialInviteCode ? "join" : null);
   const [householdName, setHouseholdName] = useState("");
   const [profileName, setProfileName] = useState("");
@@ -153,6 +153,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
     }
 
     localStorage.removeItem("with-pending-invite");
+    localStorage.removeItem("with-pending-inviter");
     await onComplete();
     setBusy(false);
   }
@@ -177,13 +178,15 @@ function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
     <ScreenShell>
       <BrandIntro eyebrow={isCreate ? "Start with yourself. Add your people when you’re ready." : "Your goals are still yours. You’ll just have company."} />
       <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 27, fontWeight: 600, lineHeight: 1.08, marginBottom: 8 }}>
-        {isCreate ? "Create your With" : "Join a With"}
+        {isCreate ? "Create your With" : inviterName ? `Join ${inviterName}’s With` : "Join a With"}
       </div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
         {isCreate
           ? "Give your private space a name, then create your own health profile."
           : initialInviteCode
-            ? "You’ve been invited to join this With. Create your own health profile to continue."
+            ? inviterName
+              ? `${inviterName} invited you to join their With. Create your own health profile to continue.`
+              : "You’ve been invited to join this With. Create your own health profile to continue."
             : "Enter the invite code you received, then create your own health profile."}
       </div>
 
@@ -256,8 +259,11 @@ function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
 }
 
 export default function OnboardingGate({ children }) {
-  const inviteFromUrl = new URLSearchParams(window.location.search).get("invite")?.trim().toUpperCase() || "";
+  const params = new URLSearchParams(window.location.search);
+  const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
+  const inviterFromUrl = params.get("inviter")?.trim() || "";
   const initialInviteCode = inviteFromUrl || localStorage.getItem("with-pending-invite") || "";
+  const initialInviterName = inviterFromUrl || localStorage.getItem("with-pending-inviter") || "";
   const [session, setSession] = useState(null);
   const [checking, setChecking] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
@@ -265,7 +271,8 @@ export default function OnboardingGate({ children }) {
 
   useEffect(() => {
     if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
-  }, [inviteFromUrl]);
+    if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
+  }, [inviteFromUrl, inviterFromUrl]);
 
   async function checkMembership(nextSession) {
     if (!nextSession?.user) {
@@ -350,7 +357,7 @@ export default function OnboardingGate({ children }) {
   }
 
   if (session && needsOnboarding) {
-    return <OnboardingScreen onComplete={finishOnboarding} initialInviteCode={initialInviteCode} />;
+    return <OnboardingScreen onComplete={finishOnboarding} initialInviteCode={initialInviteCode} inviterName={initialInviterName} />;
   }
 
   return children;
