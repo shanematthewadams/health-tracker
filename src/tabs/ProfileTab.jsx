@@ -1,3 +1,4 @@
+import { brand } from "../brand.jsx";
 import { useState } from "react";
 import { ChevronRight, Share2, Check } from "lucide-react";
 
@@ -119,7 +120,7 @@ export default function ProfileTab({
               {data[activeUser]?.goalWeight ? `${data[activeUser].goalWeight} lb${data[activeUser].goalDate ? ` by ${fmtGoalDate(data[activeUser].goalDate)}` : ""}` : "Not set yet"}
             </div>
           </div>
-          <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: profileColor(activeUser, true), display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>
+          <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: brand.tealDark, display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>
             Manage <ChevronRight style={{ width: 14, height: 14 }} />
           </button>
         </div>
@@ -146,7 +147,7 @@ export default function ProfileTab({
             );
           })}
         </div>
-        <button onClick={saveProfileName} disabled={accountBusy} style={bigButton(profileSaveColor, profileSaveText)}>Save profile</button>
+        <button onClick={saveProfileName} disabled={accountBusy} style={bigButton(brand.teal, brand.inkOn)}>Save profile</button>
       </div>
 
       <div style={cardStyle}>
@@ -175,7 +176,7 @@ export default function ProfileTab({
                 setRenamingWith(true);
                 clearAccountError();
               }}
-              style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontSize: 12, fontWeight: 700 }}
+              style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 700 }}
             >
               Rename
             </button>
@@ -188,7 +189,7 @@ export default function ProfileTab({
             <input type="text" maxLength={40} value={withNameInput} onChange={(e) => setWithNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <button onClick={() => { setRenamingWith(false); setWithNameInput(householdName); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-              <button onClick={renameWith} disabled={accountBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{accountBusy ? "Saving…" : "Save name"}</button>
+              <button onClick={renameWith} disabled={accountBusy} style={bigButton(brand.teal, brand.inkOn)}>{accountBusy ? "Saving…" : "Save name"}</button>
             </div>
           </div>
         ) : (
@@ -219,7 +220,7 @@ export default function ProfileTab({
                 type="button"
                 onClick={sendInviteEmail}
                 disabled={inviteBusy || !inviteEmail.trim()}
-                style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", padding: "10px 14px", opacity: inviteBusy || !inviteEmail.trim() ? .6 : 1 }}
+                style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", padding: "10px 14px", opacity: inviteBusy || !inviteEmail.trim() ? .6 : 1 }}
               >
                 {inviteBusy ? "Sending…" : "Send"}
               </button>
