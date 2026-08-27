@@ -205,11 +205,26 @@ export default function LogTab(props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
               <div style={fieldLabel}>Date</div>
-              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, height: 44, minHeight: 44, padding: "8px 10px", fontSize: 15, lineHeight: 1.1 }} />
+              <div style={{ height: 46, border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden" }}>
+                <input
+                  type="date"
+                  value={foodDate}
+                  onChange={(e) => setFoodDate(e.target.value)}
+                  style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 12px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}
+                />
+              </div>
             </div>
             <div>
               <div style={fieldLabel}>Meal</div>
-              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, height: 44, minHeight: 44, padding: "8px 10px", fontSize: 15 }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+              <div style={{ height: 46, border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden" }}>
+                <select
+                  value={foodMeal}
+                  onChange={(e) => setFoodMeal(e.target.value)}
+                  style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 12px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}
+                >
+                  <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option>
+                </select>
+              </div>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
