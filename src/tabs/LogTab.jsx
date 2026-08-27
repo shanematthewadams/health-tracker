@@ -124,14 +124,14 @@ export default function LogTab(props) {
           </div>
         )}
 
-        <div style={cardStyle}>
+        <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <div style={{ ...headingStyle, marginBottom: 0 }}>{editingFoodId ? "Edit Logged Food" : "Food"}</div>
             {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "Done" : `Manage My Foods (${savedFoods.length})`}</button>}
           </div>
 
           {(savedFoods.length > 0 || globalFoods.length > 0) && (
-            <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 16 }}>
+            <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Add food</div>
               <input type="text" placeholder="Search foods or type a new one" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
               {!showManageSaved && <>
@@ -186,16 +186,25 @@ export default function LogTab(props) {
             <input type="text" placeholder="Food name" value={foodName} onChange={(e) => { setFoodName(e.target.value); if (selectedSavedFoodId) setSelectedSavedFoodId(null); }} style={{ ...inputStyle, marginBottom: 10 }} />
           </>}
           {foodName && !editingSavedId && !editingFoodId && !selectedSavedFoodId && (
-            <div style={{ fontSize: 13, fontWeight: 800, color: TEXT, margin: "0 0 10px", padding: "9px 11px", background: SURFACE_2, borderRadius: 8 }}>Creating: {foodName}</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 10px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Creating</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div>
+              </div>
+              <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Change</button>
+            </div>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
-              <div style={fieldLabel}>Meal</div>
-              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={inputStyle}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+              <div style={fieldLabel}>Date</div>
+              {foodDate === today ? (
+                <button type="button" onClick={(e) => { const input = e.currentTarget.nextElementSibling; input?.showPicker?.(); input?.focus?.(); }} style={{ ...inputStyle, height: 46, textAlign: "left", fontWeight: 700, display: "flex", alignItems: "center" }}>Today</button>
+              ) : null}
+              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, height: 46, display: foodDate === today ? "none" : "block" }} />
             </div>
             <div>
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={inputStyle} />
+              <div style={fieldLabel}>Meal</div>
+              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, height: 46 }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
