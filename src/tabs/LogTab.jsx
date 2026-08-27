@@ -133,36 +133,40 @@ export default function LogTab(props) {
           {(savedFoods.length > 0 || globalFoods.length > 0) && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Add food</div>
-              <input type="text" placeholder="Search foods or type a new one" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
-              {!showManageSaved && <>
-                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 8px 7px", marginTop: 8 }}>
-                <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
-                  {[["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"]].map(([id, label]) => (
-                    <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? brand.teal : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 8, padding: "8px 11px", fontSize: 11, fontWeight: 700 }}>{label}</button>
-                  ))}
-                </div>
-                <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto", overflowX: "hidden", padding: "2px 6px 4px 2px", marginRight: -2 }}>
-                  {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
-                    <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 42px", gap: 6, alignItems: "stretch", width: "100%" }}>
-                      <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? brand.teal : BORDER}`, color: TEXT, borderRadius: 8, padding: "10px 11px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
-                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · {Math.round(f.fat)}g fat · {Math.round(f.carbs)}g carbs · {Math.round(f.fiber)}g fiber · {Math.round(f.protein)}g protein</div>
-                        <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
+              <input
+                type="text"
+                placeholder="Search foods or type a new one"
+                value={savedSearch}
+                onFocus={() => { setFoodSearchOpen(true); if (!savedSearch.trim()) setFoodLibraryTab("recent"); }}
+                onChange={(e) => { setSavedSearch(e.target.value); setFoodSearchOpen(true); }}
+                style={{ ...inputStyle, marginBottom: 0 }}
+              />
+
+              {!showManageSaved && foodSearchOpen && (
+                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px", marginTop: 7 }}>
+                  {!savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", padding: "1px 3px 7px" }}>Recent</div>}
+                  <div style={{ display: "grid", gap: 6, maxHeight: 245, overflowY: "auto", overflowX: "hidden", paddingRight: 5 }}>
+                    {visibleLibraryFoods.slice(0, savedSearch ? 20 : 6).map((f) => (
+                      <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 40px", gap: 6, width: "100%" }}>
+                        <button onClick={() => { chooseSavedFood(f); setFoodSearchOpen(false); }} style={{ textAlign: "left", background: "transparent", border: `1px solid ${BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px", minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>{Math.round(f.calories)} cal</span></div>
+                          <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.serving_label || "1 serving"} · {Math.round(f.fat)}g fat · {Math.round(f.carbs)}g carbs · {Math.round(f.fiber)}g fiber · {Math.round(f.protein)}g protein</div>
+                          {f.source === "global" && <div style={{ color: TEXT_MUTED, fontSize: 9, marginTop: 2 }}>Shared</div>}
+                        </button>
+                        <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 40, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? brand.teal : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Star style={{ width: 17, height: 17 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} /></button>
+                      </div>
+                    ))}
+                    {savedSearch.trim() && (
+                      <button onClick={() => { setFoodName(savedSearch.trim()); setSelectedSavedFoodId(null); setSavedSearch(""); setFoodSearchOpen(false); }} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>
+                        + Create new food “{savedSearch.trim()}”
                       </button>
-                      <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? brand.teal : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} /></button>
-                    </div>
-                  ))}
-                  {savedSearch.trim() && (
-                    <button onClick={() => { setFoodName(savedSearch.trim()); setSelectedSavedFoodId(null); setSavedSearch(""); }} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700, marginTop: visibleLibraryFoods.length ? 4 : 0 }}>
-                      + Create new food “{savedSearch.trim()}”
-                    </button>
-                  )}
-                  {visibleLibraryFoods.length === 0 && !savedSearch.trim() && (
-                    <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>
-                  )}
+                    )}
+                    {visibleLibraryFoods.length === 0 && !savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 3px" }}>No recent foods yet.</div>}
+                  </div>
                 </div>
-              </>}
-              {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+              )}
+
+              {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto", marginTop: 8 }}>
                 {managedSavedFoods.map((f) => <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: `1px solid ${BORDER}`, padding: "8px 0" }}>
                   <div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{f.name}</div><div className="num" style={{ fontSize: 11, color: TEXT_MUTED }}>{f.serving_label || "1 serving"} · {Math.round(f.calories)} cal</div></div>
                   <div style={{ display: "flex", gap: 4 }}>
