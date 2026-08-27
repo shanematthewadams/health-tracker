@@ -140,6 +140,7 @@ export default function LogTab(props) {
                 placeholder="Search foods or type a new one"
                 value={savedSearch}
                 onFocus={() => { setFoodSearchOpen(true); if (!savedSearch.trim()) setFoodLibraryTab("recent"); }}
+                onBlur={() => window.setTimeout(() => setFoodSearchOpen(false), 140)}
                 onChange={(e) => { setSavedSearch(e.target.value); setFoodSearchOpen(true); }}
                 style={{ ...inputStyle, marginBottom: 0 }}
               />
@@ -204,11 +205,11 @@ export default function LogTab(props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
               <div style={fieldLabel}>Date</div>
-              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, height: 46 }} />
+              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, height: 44, minHeight: 44, padding: "8px 10px", fontSize: 15, lineHeight: 1.1 }} />
             </div>
             <div>
               <div style={fieldLabel}>Meal</div>
-              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, height: 46 }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, height: 44, minHeight: 44, padding: "8px 10px", fontSize: 15 }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
