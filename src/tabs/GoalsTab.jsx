@@ -40,7 +40,7 @@ export default function GoalsTab({
   fmtGoalDate,
   styles,
 }) {
-  const { SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
+  const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
   const user = data[activeUser];
   const goalWeeks = weeksUntil(user.goalDate);
   const hasGoals = !!(user.goalWeight || user.goalDate || user.targets.calories);
