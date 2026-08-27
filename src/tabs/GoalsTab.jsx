@@ -1,3 +1,12 @@
+function weeksUntil(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr + "T12:00:00");
+  const now = new Date();
+  const ms = target - now;
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (7 * 24 * 60 * 60 * 1000));
+}
+
 import { brand } from "../brand.jsx";
 export default function GoalsTab({
   activeUser,
@@ -33,6 +42,7 @@ export default function GoalsTab({
 }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
   const user = data[activeUser];
+  const goalWeeks = weeksUntil(user.goalDate);
   const hasGoals = !!(user.goalWeight || user.goalDate || user.targets.calories);
 
   return (
@@ -56,7 +66,14 @@ export default function GoalsTab({
               <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 26, fontWeight: 600 }}>
                 {gi ? `${gi.latest} → ${gi.goal ?? "—"} lb` : `${user.goalWeight ?? "—"} lb`}
               </div>
-              {user.goalDate && <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{fmtGoalDate(user.goalDate)}</div>}
+              {user.goalDate && (
+                <div style={{ color: TEXT_MUTED, fontSize: 13, textAlign: "right" }}>
+                  <div>{fmtGoalDate(user.goalDate)}</div>
+                  <div style={{ marginTop: 2, fontWeight: 600, color: brand.tealDark }}>
+                    {goalWeeks} {goalWeeks === 1 ? "week" : "weeks"} to go
+                  </div>
+                </div>
+              )}
             </div>
 
             {gi && (
