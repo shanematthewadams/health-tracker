@@ -8,6 +8,13 @@ export default function ProfileTab({
   householdName,
   householdRole,
   inviteCode,
+  inviteEmail,
+  setInviteEmail,
+  inviteBusy,
+  inviteMessage,
+  inviteError,
+  sendInviteEmail,
+  shareInvite,
   copyInviteCode,
   profileNames,
   profileNameInput,
@@ -195,13 +202,48 @@ export default function ProfileTab({
         {inviteCode && (
           <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Invite someone to your With</div>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 10 }}>
-              Share this private code with someone you want to join this With. They’ll create their own account and their own health profile.
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>
+              Send an invite by email or share the invite link another way. They’ll create their own account and their own health profile.
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ flex: 1, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>{inviteCode}</div>
-              <button type="button" onClick={copyInviteCode} style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", border: `1px solid ${BORDER}`, padding: "10px 14px" }}>Copy</button>
+
+            <div style={fieldLabel}>Email address</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="friend@example.com"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={sendInviteEmail}
+                disabled={inviteBusy || !inviteEmail.trim()}
+                style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", padding: "10px 14px", opacity: inviteBusy || !inviteEmail.trim() ? .6 : 1 }}
+              >
+                {inviteBusy ? "Sending…" : "Send"}
+              </button>
             </div>
+
+            <button
+              type="button"
+              onClick={shareInvite}
+              style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            >
+              <Share2 style={{ width: 16, height: 16 }} />
+              Share invite
+            </button>
+
+            {inviteError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{inviteError}</div>}
+            {inviteMessage && <div style={{ color: successColor, fontSize: 12, marginBottom: 8 }}>{inviteMessage}</div>}
+
+            <details>
+              <summary style={{ color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>Use invite code instead</summary>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                <div style={{ flex: 1, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>{inviteCode}</div>
+                <button type="button" onClick={copyInviteCode} style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", border: `1px solid ${BORDER}`, padding: "10px 14px" }}>Copy link</button>
+              </div>
+            </details>
           </div>
         )}
       </div>
