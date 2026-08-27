@@ -723,18 +723,35 @@ export default function Tracker() {
   }
 
   async function saveProfileName() {
-    if (!ownedProfileId || !profileNameInput.trim()) return;
+    const nextName = profileNameInput.trim();
+    if (!ownedProfileId || !nextName) { setAccountError("Your profile needs a name."); return; }
+    if (nextName.length > 40) { setAccountError("Keep your profile name to 40 characters or fewer."); return; }
+    const currentName = Object.values(profiles).find((p) => p.id === ownedProfileId)?.name || activeUser;
+    const duplicate = Object.values(profiles).some((p) =>
+      p.id !== ownedProfileId && String(p.name || "").trim().toLowerCase() === nextName.toLowerCase()
+    );
+    if (duplicate) { setAccountError("Someone in this With already uses that name."); return; }
+    if (nextName === currentName) { setAccountError(""); setAccountMessage("Your profile name is already up to date."); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
-    const { error } = await supabase.from("profiles").update({ name: profileNameInput.trim() }).eq("id", ownedProfileId);
+    const { error } = await supabase.from("profiles").update({ name: nextName }).eq("id", ownedProfileId);
     if (error) setAccountError(error.message);
     else { setAccountMessage("Profile name updated."); await loadAll(); }
     setAccountBusy(false);
   }
 
   async function saveEmail() {
-    if (!emailInput.trim()) return;
+    const nextEmail = emailInput.trim();
+    if (!nextEmail) { setAccountError("Enter an email address."); return; }
+    if (nextEmail.toLowerCase() === String(session?.user?.email || "").toLowerCase()) {
+      setAccountError("");
+      setAccountMessage("That’s already your account email.");
+      return;
+    }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
-    const { error } = await supabase.auth.updateUser({ email: emailInput.trim() });
+    const { error } = await supabase.auth.updateUser(
+      { email: nextEmail },
+      { emailRedirectTo: window.location.origin }
+    );
     if (error) setAccountError(error.message);
     else setAccountMessage("Email update requested. Check your inbox to confirm the change.");
     setAccountBusy(false);
