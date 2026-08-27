@@ -205,27 +205,21 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
               style={{ ...inputStyle, marginBottom: 14 }}
             />
           </>
-        ) : (
+        ) : !initialInviteCode ? (
           <>
             <div style={fieldLabel}>Invite code</div>
-            {initialInviteCode ? (
-              <div style={{ ...inputStyle, marginBottom: 14, background: SURFACE_2, fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>
-                {inviteCode}
-              </div>
-            ) : (
-              <input
-                type="text"
-                required
-                autoFocus
-                autoCapitalize="characters"
-                placeholder="e.g. A7K2M9QX"
-                value={inviteCode}
-                onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-                style={{ ...inputStyle, marginBottom: 14, textTransform: "uppercase" }}
-              />
-            )}
+            <input
+              type="text"
+              required
+              autoFocus
+              autoCapitalize="characters"
+              placeholder="e.g. A7K2M9QX"
+              value={inviteCode}
+              onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+              style={{ ...inputStyle, marginBottom: 14, textTransform: "uppercase" }}
+            />
           </>
-        )}
+        ) : null}
 
         <div style={fieldLabel}>What should we call you?</div>
         <input
@@ -248,7 +242,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
         )}
 
         <button type="submit" disabled={busy} style={{ ...primaryButton, opacity: busy ? 0.65 : 1, marginBottom: 8 }}>
-          {busy ? "Setting things up…" : isCreate ? "Create my With" : "Join With"}
+          {busy ? "Setting things up…" : isCreate ? "Create my With" : inviterName ? `Join ${inviterName}’s With` : "Join With"}
         </button>
         <button type="button" onClick={goBack} disabled={busy} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 9, fontSize: 13 }}>
           Back
