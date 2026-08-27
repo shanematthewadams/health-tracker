@@ -62,32 +62,58 @@ export default function GoalsTab({
         <>
           <div style={cardStyle}>
             <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>Your goal</div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
-              <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 26, fontWeight: 600 }}>
-                {gi ? `${gi.latest} → ${gi.goal ?? "—"} lb` : `${user.goalWeight ?? "—"} lb`}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>
+                  {gi && gi.goal != null ? `${gi.start} → ${gi.goal} lb` : `${user.goalWeight ?? "—"} lb`}
+                </div>
+                {gi && (
+                  <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 5 }}>
+                    {gi.latest} lb currently
+                  </div>
+                )}
               </div>
+
               {user.goalDate && (
-                <div style={{ color: TEXT_MUTED, fontSize: 13, textAlign: "right" }}>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, textAlign: "right", flexShrink: 0 }}>
                   <div>{fmtGoalDate(user.goalDate)}</div>
-                  <div style={{ marginTop: 2, fontWeight: 600, color: brand.tealDark }}>
+                  <div style={{ marginTop: 2, fontWeight: 700, color: brand.tealDark }}>
                     {goalWeeks} {goalWeeks === 1 ? "week" : "weeks"} to go
                   </div>
                 </div>
               )}
             </div>
 
-            {gi && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-                <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Bodyweight lost</div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{gi.pctLost.toFixed(1)}%</div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{(gi.start - gi.latest).toFixed(1)} lb</div>
+            {gi && gi.goal != null && gi.progressPct != null && (
+              <>
+                <div style={{ marginTop: 20, marginBottom: 8, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1 }}>
+                      {Math.round(gi.progressPct)}%
+                    </div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4 }}>of your goal complete</div>
+                  </div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 12, textAlign: "right" }}>
+                    <strong style={{ color: TEXT }}>{gi.progressAmount.toFixed(1)} lb</strong> of {gi.plannedChange.toFixed(1)} lb
+                  </div>
                 </div>
-                <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
-                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>To go</div>
-                  <div style={{ fontSize: 21, fontWeight: 700 }}>{gi.toGoal != null ? (gi.toGoal > 0 ? `${gi.toGoal.toFixed(1)} lb` : "You’re there") : "—"}</div>
+
+                <div style={{ height: 7, background: SURFACE_2, borderRadius: 999, overflow: "hidden", marginBottom: 14 }}>
+                  <div style={{ width: `${Math.min(100, Math.max(0, gi.progressPct))}%`, height: "100%", background: brand.teal, borderRadius: 999 }} />
                 </div>
-              </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Progress made</div>
+                    <div style={{ fontSize: 22, fontWeight: 700 }}>{gi.progressAmount.toFixed(1)} lb</div>
+                  </div>
+                  <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>To go</div>
+                    <div style={{ fontSize: 22, fontWeight: 700 }}>{gi.remaining > 0 ? `${gi.remaining.toFixed(1)} lb` : "You’re there"}</div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
