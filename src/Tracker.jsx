@@ -6,6 +6,7 @@ import LogTab from "./tabs/LogTab.jsx";
 import TrendsTab from "./tabs/TrendsTab.jsx";
 import GoalsTab from "./tabs/GoalsTab.jsx";
 import ProfileTab from "./tabs/ProfileTab.jsx";
+import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
 
 const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
@@ -30,13 +31,13 @@ function userColor(name, dim=false) {
 }
 function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
 
-const BG = "#FEFDF9";
-const SURFACE = "#FFFDF9";
-const SURFACE_2 = "#F7F3EC";
-const BORDER = "#E6E1D8";
-const TEXT = "#252422";
-const TEXT_MUTED = "#746F68";
-const WARN = "#C83D34";
+const BG = brand.bg;
+const SURFACE = brand.surface;
+const SURFACE_2 = brand.surfaceSoft;
+const BORDER = brand.border;
+const TEXT = brand.text;
+const TEXT_MUTED = brand.textMuted;
+const WARN = brand.warn;
 const NAV_H = 64;
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -159,8 +160,8 @@ function AuthScreen({ initialMessage = "" }) {
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Shadows+Into+Light&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>With</div>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
+        <BrandLogo style={{ marginBottom: 10 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginBottom: 8 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
           {mode === "forgot" ? "We’ll send you a link to choose a new password." : "Your health is personal, but you don't have to do it alone."}
         </div>
@@ -227,8 +228,8 @@ function ResetPasswordScreen({ onDone }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>With</div>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 18, marginBottom: 20 }}>Choose a new password.</div>
+        <BrandLogo style={{ marginBottom: 12 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginBottom: 20 }}>Choose a new password.</div>
         <div style={fieldLabel}>New password</div>
         <input type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         <div style={fieldLabel}>Confirm password</div>
@@ -264,7 +265,8 @@ function Onboarding({ onComplete }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to With</div>
+        <BrandLogo style={{ marginBottom: 12 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 28, lineHeight: 1.05, marginBottom: 8 }}>Welcome to With</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
         {!mode ? <>
           <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Start a group</button>
@@ -307,8 +309,8 @@ function ClaimProfile({ profiles, onClaim }) {
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>With</div>
-        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 17, marginBottom: 16 }}>We’re in this together.</div>
+        <BrandLogo style={{ marginBottom: 10 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 16 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 18 }}>Which profile is yours?</div>
         <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }}>
           <option value="">Choose your profile</option>
@@ -1166,14 +1168,14 @@ export default function Tracker() {
   const weeksLeft = activeGoalDate ? weeksUntil(activeGoalDate) : null;
 
   if (!authReady) {
-    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>checking your session...</div>;
+    return <BrandLoading>Checking your session…</BrandLoading>;
   }
   if (passwordRecovery && session) return <ResetPasswordScreen onDone={() => { setPasswordRecovery(false); setAuthNotice("Password updated. Sign in with your new password."); }} />;
   if (!session) return <AuthScreen initialMessage={authNotice} />;
   if (needsOnboarding) return <Onboarding onComplete={loadAll} />;
   if (!loading && session && !ownedProfileId && Object.values(profiles).some((p) => !p.user_id)) return <ClaimProfile profiles={profiles} onClaim={loadAll} />;
   if (loading) {
-    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the shared space...</div>;
+    return <BrandLoading>Getting your With ready…</BrandLoading>;
   }
 
   const gi = goalInfo(activeUser);
@@ -1204,8 +1206,8 @@ export default function Tracker() {
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.8rem 1rem 0.7rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 9 }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 700, fontSize: 22, lineHeight: 1 }}>With</div>
-              <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{householdName}</div>
+              <BrandLogo compact style={{ marginBottom: 3 }} />
+              <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{householdName}</div>
             </div>
             <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center", flexShrink: 0 }}><LogOut style={{ width: 18, height: 18 }} /></button>
           </div>
