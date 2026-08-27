@@ -209,7 +209,7 @@ export default function LogTab(props) {
 
           {selectedSavedFoodId && <>
             <div style={fieldLabel}>Quantity</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginBottom: 10 }}>
               <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
               <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{foodServingLabel} each</div>
             </div>
@@ -236,7 +236,7 @@ export default function LogTab(props) {
                   type="date"
                   value={foodDate}
                   onChange={(e) => setFoodDate(e.target.value)}
-                  style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 12px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}
+                  style={{ width: "100%", maxWidth: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 8px", fontSize: 15, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}
                 />
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function LogTab(props) {
                 <select
                   value={foodMeal}
                   onChange={(e) => setFoodMeal(e.target.value)}
-                  style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 12px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}
+                  style={{ width: "100%", maxWidth: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 8px", fontSize: 15, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}
                 >
                   <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option>
                 </select>
