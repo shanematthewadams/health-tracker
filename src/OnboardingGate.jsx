@@ -288,8 +288,19 @@ export default function OnboardingGate({ children }) {
       if (mounted) checkMembership(currentSession);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (mounted) checkMembership(nextSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return;
+
+      if (event === "PASSWORD_RECOVERY") {
+        sessionStorage.setItem("with-password-recovery", "1");
+        setSession(nextSession);
+        setNeedsOnboarding(false);
+        setCheckError("");
+        setChecking(false);
+        return;
+      }
+
+      checkMembership(nextSession);
     });
 
     return () => {
