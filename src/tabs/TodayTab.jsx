@@ -20,6 +20,21 @@ function shiftDate(dateStr, delta) {
   return d.toISOString().slice(0, 10);
 }
 
+function goalDateLabel(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function weeksUntil(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr + "T12:00:00");
+  const now = new Date();
+  const ms = target - now;
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (7 * 24 * 60 * 60 * 1000));
+}
+
 const PEN = {
   blue: metricColors.food,
   purple: metricColors.water,
@@ -63,6 +78,10 @@ export default function TodayTab({
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, fieldLabel, inputStyle, bigButton } = styles;
   const u = data[activeUser];
   const targets = u.targets;
+  const goalWeeks = weeksUntil(u.goalDate);
+  const goalTiming = u.goalDate
+    ? `${goalWeeks} ${goalWeeks === 1 ? "week" : "weeks"} to ${goalDateLabel(u.goalDate)}`
+    : "";
   const isMine = activeCanEdit;
   const intention = intentions?.[activeUser] || "";
   const [editingIntention, setEditingIntention] = useState(false);
@@ -138,9 +157,12 @@ export default function TodayTab({
       color: PEN.red,
       show: latestDayWeight != null,
       value: latestDayWeight != null ? `${latestDayWeight} lb` : "",
-      sub: latestDayWeight != null && prevWeightEntry
-        ? `${latestDayWeight < prevWeightEntry.weight ? "↓" : latestDayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestDayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
-        : isToday ? "Logged today" : "Logged that day",
+      sub: [
+        latestDayWeight != null && prevWeightEntry
+          ? `${latestDayWeight < prevWeightEntry.weight ? "↓" : latestDayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestDayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
+          : isToday ? "Logged today" : "Logged that day",
+        isToday && goalTiming ? goalTiming : null,
+      ].filter(Boolean).join(" · "),
     },
   ];
 
@@ -240,10 +262,10 @@ export default function TodayTab({
         ) : (
           <div style={{
             marginTop: 12,
-            fontFamily: intention ? "'Shadows Into Light', cursive" : "'DM Sans', -apple-system, sans-serif",
+            fontFamily: intention ? "'Newsreader', Georgia, serif" : "'DM Sans', -apple-system, sans-serif",
             fontStyle: intention ? "italic" : "normal",
             fontWeight: intention ? 500 : 600,
-            fontSize: intention ? 21 : 15,
+            fontSize: intention ? 20 : 15,
             lineHeight: 1.4,
             color: intention ? profileColor(activeUser) : TEXT_MUTED,
           }}>
@@ -406,16 +428,19 @@ export default function TodayTab({
                     <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: PEN.blue }} />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
                     {[
-                      ["Protein", Math.round(ts.protein), "g", PEN.green],
-                      ["Carbs", Math.round(ts.carbs), "g", PEN.orange],
-                      ["Fat", Math.round(ts.fat), "g", PEN.purple],
-                      ["Fiber", Math.round(ts.fiber), "g", PEN.red],
-                    ].map(([label, value, unit, color]) => (
-                      <div key={label} style={{ borderTop: `2px solid ${color}`, paddingTop: 7 }}>
-                        <div style={{ fontSize: 10, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 800 }}>{label}</div>
-                        <div className="num" style={{ fontSize: 15, fontWeight: 800, color: PEN.ink, marginTop: 2 }}>{value}{unit}</div>
+                      ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
+                      ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
+                      ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
+                      ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
+                    ].map(([label, value, target, color]) => (
+                      <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
+                        <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                        <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
+                        <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
+                          {value} <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target || "—"}g</span>
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -480,7 +505,7 @@ export default function TodayTab({
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{ fontWeight: 800, fontSize: 14, color: PEN.ink }}>{food.name}</div>
                             <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4, lineHeight: 1.45 }}>
-                              {Math.round(food.calories)} cal · P {Math.round(food.protein)}g · C {Math.round(food.carbs)}g · F {Math.round(food.fat)}g · Fiber {Math.round(food.fiber || 0)}g
+                              {Math.round(food.calories)} cal · {Math.round(food.protein)}g protein · {Math.round(food.carbs)}g carbs · {Math.round(food.fat)}g fat
                             </div>
                             {food.notes && <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4 }}>{food.notes}</div>}
                           </div>
