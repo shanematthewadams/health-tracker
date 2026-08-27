@@ -120,7 +120,7 @@ export default function ProfileTab({
         <div style={headingStyle}>Your profile</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>This is how your name appears to the people you’re with.</div>
         <div style={fieldLabel}>Profile name</div>
-        <input type="text" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} />
+        <input type="text" maxLength={40} value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} />
         <div style={fieldLabel}>Your color</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
           {profileColorOptions.map((c) => {
@@ -214,6 +214,8 @@ export default function ProfileTab({
         <div style={{ ...headingStyle, color: WARN }}>Delete account</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>
           This permanently removes your login, your profile, and your personal health entries. It does not delete other people or their data.
+          {householdRole === "owner" && profileNames.length > 1 ? " Another person in this With will become the owner." : ""}
+          {profileNames.length === 1 ? " Because you’re the only person in this With, the With itself will also be removed." : ""}
         </div>
         <div style={fieldLabel}>Type DELETE to confirm</div>
         <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
