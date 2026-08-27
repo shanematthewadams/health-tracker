@@ -151,13 +151,14 @@ export default function LogTab(props) {
                       <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? brand.teal : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} /></button>
                     </div>
                   ))}
-                  {visibleLibraryFoods.length === 0 && savedSearch ? (
-                    <button onClick={() => { setFoodName(savedSearch.trim()); setSelectedSavedFoodId(null); }} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>
-                      + Create “{savedSearch.trim()}”
+                  {savedSearch.trim() && (
+                    <button onClick={() => { setFoodName(savedSearch.trim()); setSelectedSavedFoodId(null); setSavedSearch(""); }} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700, marginTop: visibleLibraryFoods.length ? 4 : 0 }}>
+                      + Create new food “{savedSearch.trim()}”
                     </button>
-                  ) : visibleLibraryFoods.length === 0 ? (
+                  )}
+                  {visibleLibraryFoods.length === 0 && !savedSearch.trim() && (
                     <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>
-                  ) : null}
+                  )}
                 </div>
               </>}
               {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
@@ -180,13 +181,23 @@ export default function LogTab(props) {
             </div>
           </>}
 
-          <div style={fieldLabel}>Food name</div>
-          <input type="text" placeholder="Food name" value={foodName} onChange={(e) => { setFoodName(e.target.value); if (selectedSavedFoodId) setSelectedSavedFoodId(null); }} style={{ ...inputStyle, marginBottom: 10 }} />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, background: SURFACE_2, borderRadius: 8, padding: "9px 11px" }}>
-            <span style={{ color: TEXT_MUTED, fontSize: 12 }}>Adding to</span>
-            <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ border: "none", background: "transparent", color: TEXT, fontWeight: 800, fontSize: 13, textAlign: "right" }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+          {(editingSavedId || editingFoodId) && <>
+            <div style={fieldLabel}>Food name</div>
+            <input type="text" placeholder="Food name" value={foodName} onChange={(e) => { setFoodName(e.target.value); if (selectedSavedFoodId) setSelectedSavedFoodId(null); }} style={{ ...inputStyle, marginBottom: 10 }} />
+          </>}
+          {foodName && !editingSavedId && !editingFoodId && !selectedSavedFoodId && (
+            <div style={{ fontSize: 13, fontWeight: 800, color: TEXT, margin: "0 0 10px", padding: "9px 11px", background: SURFACE_2, borderRadius: 8 }}>Creating: {foodName}</div>
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <div>
+              <div style={fieldLabel}>Meal</div>
+              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={inputStyle}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+            </div>
+            <div>
+              <div style={fieldLabel}>Date</div>
+              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={inputStyle} />
+            </div>
           </div>
-          <div style={fieldLabel}>Date</div><input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div>
             <div><div style={fieldLabel}>Fat (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
@@ -194,7 +205,18 @@ export default function LogTab(props) {
             <div><div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={inputStyle} /></div>
             <div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
           </div>
-          {!selectedSavedFoodId && <><div style={fieldLabel}>Serving description</div><input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
+          {!selectedSavedFoodId && <>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <div style={{ ...fieldLabel, marginBottom: 0 }}>Serving description</div>
+              <details style={{ position: "relative" }}>
+                <summary aria-label="What is serving description?" style={{ listStyle: "none", cursor: "pointer", width: 18, height: 18, borderRadius: "50%", border: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: 11, fontWeight: 800, display: "grid", placeItems: "center" }}>?</summary>
+                <div style={{ position: "absolute", zIndex: 5, left: 0, top: 24, width: 250, background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 9, padding: 10, boxShadow: "0 5px 18px rgba(37,36,34,.12)", color: TEXT, fontSize: 11, lineHeight: 1.45 }}>
+                  Describe the amount these nutrition numbers represent, like “1 bar” or “2 tbsp.” It does not change the calories or macros you enter. If you save the food, With uses this as the base serving when you log it later.
+                </div>
+              </details>
+            </div>
+            <input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+          </>}
           <div style={fieldLabel}>Notes (optional)</div><input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
 
           {!selectedSavedFoodId && !editingSavedId && <label style={{ display: "flex", alignItems: "center", gap: 9, color: TEXT_MUTED, fontSize: 13, marginBottom: 12, cursor: "pointer" }}><input type="checkbox" checked={saveAsSaved} onChange={(e) => setSaveAsSaved(e.target.checked)} style={{ width: 18, height: 18 }} /><BookmarkPlus style={{ width: 15, height: 15 }} /> Save this to household foods</label>}
