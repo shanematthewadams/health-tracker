@@ -424,6 +424,8 @@ export default function Tracker() {
         setSaveError(null);
       }
       if (event === "SIGNED_OUT") {
+        sessionStorage.removeItem("with-password-recovery");
+        setPasswordRecovery(false);
         setHouseholdId(null);
         setHouseholdName("");
         setHouseholdRole(null);
