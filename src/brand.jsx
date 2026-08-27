@@ -1,4 +1,4 @@
-import withLogo from "./assets/brand/with-logo-preview-white.png";
+import withLogo from "./assets/brand/with-logo.svg";
 
 export const brand = {
   bg: "#FEFDF9",
@@ -22,6 +22,7 @@ export function BrandLogo({ compact = false, style = {} }) {
         width: compact ? 78 : 146,
         height: "auto",
         objectFit: "contain",
+        color: brand.ink,
         ...style,
       }}
     />
