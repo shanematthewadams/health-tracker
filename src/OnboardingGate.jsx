@@ -152,11 +152,12 @@ function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
       return;
     }
 
+    localStorage.removeItem("with-pending-invite");
     await onComplete();
     setBusy(false);
   }
 
-  if (!mode) {
+  if (!mode && !initialInviteCode) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
@@ -255,11 +256,16 @@ function OnboardingScreen({ onComplete, initialInviteCode = "" }) {
 }
 
 export default function OnboardingGate({ children }) {
-  const initialInviteCode = new URLSearchParams(window.location.search).get("invite")?.trim().toUpperCase() || "";
+  const inviteFromUrl = new URLSearchParams(window.location.search).get("invite")?.trim().toUpperCase() || "";
+  const initialInviteCode = inviteFromUrl || localStorage.getItem("with-pending-invite") || "";
   const [session, setSession] = useState(null);
   const [checking, setChecking] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [checkError, setCheckError] = useState("");
+
+  useEffect(() => {
+    if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
+  }, [inviteFromUrl]);
 
   async function checkMembership(nextSession) {
     if (!nextSession?.user) {
