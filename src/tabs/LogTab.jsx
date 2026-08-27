@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { brand } from "../brand.jsx";
 import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints } from "lucide-react";
 
@@ -32,6 +33,7 @@ export default function LogTab(props) {
   } = props;
 
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
+  const [foodSearchOpen, setFoodSearchOpen] = useState(false);
 
   const todayFoods = data[activeUser].foods.filter((f) => f.date === today);
   const todayActivities = data[activeUser].activities.filter((a) => a.date === today);
