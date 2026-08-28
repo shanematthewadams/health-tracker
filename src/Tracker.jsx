@@ -1,23 +1,29 @@
-import { useState, useEffect, useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, LogOut, Search, BookmarkPlus, Pencil, Trash2, Star, Users, UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, Search, BookmarkPlus, Pencil, Trash2, Star, UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight } from "lucide-react";
 import { supabase } from "./supabase";
+import TodayTab from "./tabs/TodayTab.jsx";
+import LogTab from "./tabs/LogTab.jsx";
+import TrendsTab from "./tabs/TrendsTab.jsx";
+import GoalsTab from "./tabs/GoalsTab.jsx";
+import ProfileTab from "./tabs/ProfileTab.jsx";
+import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import { CheckMark, WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
 const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
-  { name: "Terracotta", value: "#D9825B", dim: "#B96E4B", text: "#3C2418" },
-  { name: "Lavender", value: "#8F7AAE", dim: "#776590", text: "#2F2639" },
-  { name: "Sage", value: "#7E9A7B", dim: "#667E64", text: "#1F2D20" },
-  { name: "Dusty blue", value: "#6F8FA8", dim: "#5D788D", text: "#1E2A33" },
-  { name: "Ochre", value: "#C4934A", dim: "#A5793C", text: "#332716" },
-  { name: "Rose", value: "#B97878", dim: "#996363", text: "#332020" },
-  { name: "Teal", value: "#5E918B", dim: "#4D7772", text: "#18302D" },
-  { name: "Plum", value: "#8A6680", dim: "#715369", text: "#2E202B" },
+  { name: "Orange", value: "#F06A24", dim: "#C94F12", text: "#FFFFFF" },
+  { name: "Violet", value: "#7047EB", dim: "#5631C8", text: "#FFFFFF" },
+  { name: "Deep Blue", value: "#4C6EF5", dim: "#3553D8", text: "#FFFFFF" },
+  { name: "Coral", value: "#E7685B", dim: "#C94E44", text: "#FFFFFF" },
+  { name: "Amber", value: "#D99524", dim: "#B87812", text: "#111111" },
+  { name: "Rose", value: "#D95B83", dim: "#BA4068", text: "#FFFFFF" },
+  { name: "Indigo", value: "#4658C9", dim: "#3545A8", text: "#FFFFFF" },
+  { name: "Lilac", value: "#9B88D8", dim: "#806CC0", text: "#FFFFFF" },
 ];
 
-const USER_COLOR = { Shane: "#D9825B", Alli: "#8F7AAE" };
-const USER_COLOR_DIM = { Shane: "#B96E4B", Alli: "#776590" };
-const USER_TEXT_ON = { Shane: "#3C2418", Alli: "#2F2639" };
+const USER_COLOR = { Shane: "#F06A24", Alli: "#7047EB" };
+const USER_COLOR_DIM = { Shane: "#C94F12", Alli: "#5631C8" };
+const USER_TEXT_ON = { Shane: "#FFFFFF", Alli: "#FFFFFF" };
 function userColor(name, dim=false) {
   if (USER_COLOR[name]) return dim ? USER_COLOR_DIM[name] : USER_COLOR[name];
   const palette = dim ? ["#6FA39A","#A1845C","#7F88B8","#A46E83"] : ["#9ED8CE","#D8B77E","#AEB7EA","#D69AAF"];
@@ -26,16 +32,47 @@ function userColor(name, dim=false) {
 }
 function userText(name) { return USER_TEXT_ON[name] || "#162321"; }
 
-const BG = "#F6F1E8";
-const SURFACE = "#FFFCF7";
-const SURFACE_2 = "#EFE7DA";
-const BORDER = "#DDD2C2";
-const TEXT = "#24302C";
-const TEXT_MUTED = "#716D64";
-const WARN = "#B6533C";
+const BG = brand.bg;
+const SURFACE = brand.surface;
+const SURFACE_2 = brand.surfaceSoft;
+const BORDER = brand.border;
+const TEXT = brand.text;
+const TEXT_MUTED = brand.textMuted;
+const WARN = brand.warn;
 const NAV_H = 64;
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function dateKeyInTimeZone(date = new Date(), timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+function todayStr(timeZone) { return dateKeyInTimeZone(new Date(), timeZone); }
+function zonedParts(date = new Date(), timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map((p) => [p.type, p.value]));
+}
+function zonedDateTimeToDate(dateStr, timeStr, timeZone) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = timeStr.split(":").map(Number);
+  const desired = Date.UTC(year, month - 1, day, hour, minute, 0);
+  let guess = desired;
+  for (let i = 0; i < 2; i++) {
+    const p = zonedParts(new Date(guess), timeZone);
+    const shownAsUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), 0);
+    guess += desired - shownAsUtc;
+  }
+  return new Date(guess);
+}
+function addCalendarDays(dateStr, amount) {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + amount);
+  return d.toISOString().slice(0, 10);
+}
 function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -51,7 +88,7 @@ function defaultTargets(u) {
   return { bmr: 0, calories: 0, protein: 0, carbs: 0, fat: 0, fiberMin: 0, fiberMax: 0 };
 }
 function emptyData(u) {
-  return { weights: [], foods: [], activities: [], steps: [], water: [], goalWeight: null, goalDate: null, targets: defaultTargets(u) };
+  return { weights: [], foods: [], activities: [], steps: [], water: [], fasts: [], goalWeight: null, goalDate: null, targets: defaultTargets(u) };
 }
 function weeksUntil(dateStr) {
   const target = new Date(dateStr + "T00:00:00");
@@ -69,6 +106,16 @@ function rollingAvgSeries(weightsSorted, windowSize) {
   return out;
 }
 function num(v) { return v == null ? 0 : Number(v); }
+function friendlyError(error, fallback = "Something went wrong. Try again.") {
+  const raw = String(error?.message || error || "").toLowerCase();
+  if (raw.includes("invalid login credentials")) return "That email or password doesn’t look right.";
+  if (raw.includes("email not confirmed")) return "Confirm your email before signing in.";
+  if (raw.includes("user already registered")) return "An account already exists for that email.";
+  if (raw.includes("network") || raw.includes("fetch")) return "We couldn’t connect to With. Check your connection and try again.";
+  if (raw.includes("jwt") || raw.includes("expired")) return "Your session has expired. Sign in again.";
+  if (raw.includes("duplicate key") || raw.includes("unique constraint")) return "That’s already in use.";
+  return fallback;
+}
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -81,16 +128,16 @@ function fullTodayLabel() {
 
 const inputStyle = {
   background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT,
-  borderRadius: 12, padding: "12px 14px", fontSize: 16, width: "100%",
-  boxShadow: "0 1px 0 rgba(45,35,25,.03)",
+  borderRadius: 10, padding: "12px 14px", fontSize: 16, width: "100%", minHeight: 46,
+  boxShadow: "0 1px 0 rgba(45,35,25,.025)",
 };
-const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 18, padding: "1.25rem", marginBottom: "1rem", boxShadow: "0 6px 24px rgba(65,48,30,.045)" };
-const headingStyle = { fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 20, letterSpacing: "0", marginBottom: "0.9rem" };
-const fieldLabel = { fontSize: 12, color: TEXT_MUTED, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
+const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "1.15rem", marginBottom: "0.9rem", boxShadow: "0 3px 12px rgba(28,36,48,.04)" };
+const headingStyle = { fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 22, letterSpacing: "-0.015em", lineHeight: 1.1, marginBottom: "0.85rem" };
+const fieldLabel = { fontSize: 11, color: TEXT_MUTED, marginBottom: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.055em" };
 const bigButton = (color, textColor) => ({
-  background: color, color: textColor, border: "none", borderRadius: 12,
-  padding: "13px 18px", fontWeight: 700, fontSize: 15, width: "100%",
-  fontFamily: "'Fraunces', serif", fontStyle: "italic", letterSpacing: "0",
+  background: color, color: textColor, border: "none", borderRadius: 10,
+  padding: "12px 18px", minHeight: 46, fontWeight: 700, fontSize: 15, width: "100%",
+  fontFamily: "'DM Sans', -apple-system, sans-serif", letterSpacing: "-0.01em",
 });
 
 function ProgressRow({ label, value, target, unit, color }) {
@@ -110,13 +157,21 @@ function ProgressRow({ label, value, target, unit, color }) {
   );
 }
 
-function AuthScreen() {
-  const [mode, setMode] = useState("signin");
+function AuthScreen({ initialMessage = "" }) {
+  const params = new URLSearchParams(window.location.search);
+  const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
+  const inviterFromUrl = params.get("inviter")?.trim() || "";
+  const [mode, setMode] = useState(inviteFromUrl ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
+    if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
+  }, [inviteFromUrl, inviterFromUrl]);
 
   async function submit(e) {
     e.preventDefault();
@@ -125,14 +180,18 @@ function AuthScreen() {
       const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin,
       });
-      if (authError) setError(authError.message);
+      if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
       else setMessage("Check your email for a password reset link.");
     } else if (mode === "signin") {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) setError(authError.message);
+      if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
     } else {
-      const { data, error: authError } = await supabase.auth.signUp({ email, password });
-      if (authError) setError(authError.message);
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
       else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
       else setMessage("Account created. Setting up your group…");
     }
@@ -140,11 +199,11 @@ function AuthScreen() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
-      <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 8 }}>We’re in this together.</div>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
+        <BrandLogo style={{ marginBottom: 10 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginBottom: 8 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
           {mode === "forgot" ? "We’ll send you a link to choose a new password." : "Your health is personal, but you don't have to do it alone."}
         </div>
@@ -166,12 +225,15 @@ function AuthScreen() {
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
         {message && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginBottom: 10 }}>{message}</div>}
 
-        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? 0.65 : 1 }}>
+        <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? 0.65 : 1 }}>
           {busy ? "Working…" : mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
 
         {mode === "signin" && <button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Forgot password?</button>}
         {mode === "forgot" && <button type="button" onClick={() => { setMode("signin"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Back to sign in</button>}
+        <div style={{ textAlign: "center", marginTop: 14 }}>
+          <a href="/privacy" style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>Privacy policy</a>
+        </div>
       </form>
     </div>
   );
@@ -190,22 +252,35 @@ function ResetPasswordScreen({ onDone }) {
     if (password !== confirm) { setError("Those passwords don't match."); return; }
     setBusy(true);
     const { error: authError } = await supabase.auth.updateUser({ password });
-    if (authError) setError(authError.message);
-    else onDone();
+    if (authError) {
+      setError(friendlyError(authError, "We couldn’t complete that. Try again."));
+      setBusy(false);
+      return;
+    }
+
+    sessionStorage.removeItem("with-password-recovery");
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      setError("Your password was changed, but we couldn't sign you out. Please close this window and sign in again.");
+      setBusy(false);
+      return;
+    }
+
+    onDone();
     setBusy(false);
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
-      <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, marginBottom: 6 }}>WITH</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 18, marginBottom: 20 }}>Choose a new password.</div>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
+        <BrandLogo style={{ marginBottom: 12 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginBottom: 20 }}>Choose a new password.</div>
         <div style={fieldLabel}>New password</div>
         <input type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         <div style={fieldLabel}>Confirm password</div>
         <input type="password" minLength={6} autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Save new password"}</button>
+        <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Save new password"}</button>
       </form>
     </div>
   );
@@ -222,23 +297,24 @@ function Onboarding({ onComplete }) {
   async function createHousehold(e) {
     e.preventDefault(); setBusy(true); setError("");
     const { error } = await supabase.rpc("create_household", { household_name: householdName.trim(), profile_name: profileName.trim() });
-    if (error) setError(error.message); else await onComplete();
+    if (error) setError(friendlyError(error, "We couldn’t create your With. Try again.")); else await onComplete();
     setBusy(false);
   }
   async function joinHousehold(e) {
     e.preventDefault(); setBusy(true); setError("");
     const { error } = await supabase.rpc("join_household", { invite_code_input: inviteCode.trim().toUpperCase(), profile_name: profileName.trim() });
-    if (error) setError(error.message); else await onComplete();
+    if (error) setError(friendlyError(error, "We couldn’t join that With. Check the invite and try again.")); else await onComplete();
     setBusy(false);
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
-      <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 30, marginBottom: 8 }}>Welcome to WITH</div>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
+        <BrandLogo style={{ marginBottom: 12 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 28, lineHeight: 1.05, marginBottom: 8 }}>Welcome to With</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
         {!mode ? <>
-          <button onClick={() => setMode("create")} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), marginBottom: 10 }}>Start a group</button>
+          <button onClick={() => setMode("create")} style={{ ...bigButton(brand.teal, brand.inkOn), marginBottom: 10 }}>Start a group</button>
           <button onClick={() => setMode("join")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Join your people</button>
         </> : (
           <form onSubmit={mode === "create" ? createHousehold : joinHousehold}>
@@ -252,7 +328,7 @@ function Onboarding({ onComplete }) {
             <div style={fieldLabel}>Your profile name</div>
             <input required placeholder="e.g. Shane" value={profileName} onChange={(e) => setProfileName(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
             {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-            <button disabled={busy} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Start group" : "Join group"}</button>
+            <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? .65 : 1, marginBottom: 10 }}>{busy ? "Working…" : mode === "create" ? "Start group" : "Join group"}</button>
             <button type="button" onClick={() => { setMode(null); setError(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 8 }}>Back</button>
           </form>
         )}
@@ -271,22 +347,22 @@ function ClaimProfile({ profiles, onClaim }) {
     if (!selected) return;
     setBusy(true); setError("");
     const { error } = await supabase.rpc("claim_profile", { profile_id_input: selected });
-    if (error) setError(error.message); else await onClaim();
+    if (error) setError(friendlyError(error, "We couldn’t connect that profile. Try again.")); else await onClaim();
     setBusy(false);
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'Karla', -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 700, fontSize: 30, marginBottom: 6 }}>WITH</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontSize: 17, marginBottom: 16 }}>We’re in this together.</div>
+        <BrandLogo style={{ marginBottom: 10 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 16 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 18 }}>Which profile is yours?</div>
         <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }}>
           <option value="">Choose your profile</option>
           {available.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        <button disabled={!selected || busy} onClick={claim} style={{ ...bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane), opacity: !selected || busy ? .6 : 1 }}>{busy ? "Connecting…" : "This is me"}</button>
+        <button disabled={!selected || busy} onClick={claim} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: !selected || busy ? .6 : 1 }}>{busy ? "Connecting…" : "This is me"}</button>
       </div>
     </div>
   );
@@ -295,7 +371,8 @@ function ClaimProfile({ profiles, onClaim }) {
 export default function Tracker() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(() => sessionStorage.getItem("with-password-recovery") === "1");
+  const [authNotice, setAuthNotice] = useState("");
   const [profileNameInput, setProfileNameInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [newPasswordInput, setNewPasswordInput] = useState("");
@@ -304,19 +381,30 @@ export default function Tracker() {
   const [accountError, setAccountError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [accountBusy, setAccountBusy] = useState(false);
+  const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const [timeZone, setTimeZone] = useState(deviceTimeZone);
   const [householdId, setHouseholdId] = useState(null);
   const [householdName, setHouseholdName] = useState("");
+  const [householdRole, setHouseholdRole] = useState(null);
+  const [renamingWith, setRenamingWith] = useState(false);
+  const [withNameInput, setWithNameInput] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteError, setInviteError] = useState("");
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [profileColors, setProfileColors] = useState({});
+  const [profileWithmarks, setProfileWithmarks] = useState({});
+  const [intentions, setIntentions] = useState({});
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
   const [fastPromptDismissedDate, setFastPromptDismissedDate] = useState(null);
   const [clockNow, setClockNow] = useState(Date.now());
   const [fastEditorOpen, setFastEditorOpen] = useState(false);
-  const [fastStartDate, setFastStartDate] = useState(todayStr());
+  const [fastStartDate, setFastStartDate] = useState(() => todayStr());
   const [fastStartTime, setFastStartTime] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
@@ -337,12 +425,13 @@ export default function Tracker() {
   const [foodServingLabel, setFoodServingLabel] = useState("1 serving");
   const [saveAsSaved, setSaveAsSaved] = useState(false);
   const [editingSavedId, setEditingSavedId] = useState(null);
+  const [editingFoodId, setEditingFoodId] = useState(null);
   const [showManageSaved, setShowManageSaved] = useState(false);
   const [foodStates, setFoodStates] = useState([]);
   const [foodLibraryTab, setFoodLibraryTab] = useState("recent");
 
   const [weightInput, setWeightInput] = useState("");
-  const [weightDate, setWeightDate] = useState(todayStr());
+  const [weightDate, setWeightDate] = useState(() => todayStr());
   const [weightError, setWeightError] = useState("");
 
   const [foodName, setFoodName] = useState("");
@@ -353,18 +442,38 @@ export default function Tracker() {
   const [foodFiber, setFoodFiber] = useState("");
   const [foodMeal, setFoodMeal] = useState("Breakfast");
   const [foodNotes, setFoodNotes] = useState("");
-  const [foodDate, setFoodDate] = useState(todayStr());
+  const [foodDate, setFoodDate] = useState(() => todayStr());
   const [foodError, setFoodError] = useState("");
 
   const [stepsInput, setStepsInput] = useState("");
-  const [stepsDate, setStepsDate] = useState(todayStr());
+  const [stepsError, setStepsError] = useState("");
+  const [stepsDate, setStepsDate] = useState(() => todayStr());
   const [waterOz, setWaterOz] = useState("");
-  const [waterDate, setWaterDate] = useState(todayStr());
+  const [waterError, setWaterError] = useState("");
+  const [waterDate, setWaterDate] = useState(() => todayStr());
   const [actName, setActName] = useState("");
+  const [activityError, setActivityError] = useState("");
   const [actCals, setActCals] = useState("");
-  const [actDate, setActDate] = useState(todayStr());
+  const [actDate, setActDate] = useState(() => todayStr());
+  const previousTodayRef = useRef(todayStr(deviceTimeZone));
+
+  useEffect(() => {
+    const nextToday = todayStr(timeZone);
+    const previousToday = previousTodayRef.current;
+    if (nextToday !== previousToday) {
+      const moveIfToday = (setter) => setter((value) => value === previousToday ? nextToday : value);
+      moveIfToday(setWeightDate);
+      moveIfToday(setFoodDate);
+      moveIfToday(setStepsDate);
+      moveIfToday(setWaterDate);
+      moveIfToday(setActDate);
+      moveIfToday(setFastStartDate);
+      previousTodayRef.current = nextToday;
+    }
+  }, [timeZone, clockNow]);
 
   const [goalInput, setGoalInput] = useState("");
+  const [goalError, setGoalError] = useState("");
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalDateInput, setGoalDateInput] = useState("");
   const [tBmr, setTBmr] = useState("");
@@ -381,13 +490,46 @@ export default function Tracker() {
   }, []);
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const authError = searchParams.get("error_description") || hashParams.get("error_description");
+    if (authError) {
+      setAuthNotice("That password reset link is invalid or has expired. Request a new one.");
+    }
+
+    if (sessionStorage.getItem("with-password-recovery") === "1") {
+      setPasswordRecovery(true);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.user) setTimeZone(session.user.user_metadata?.timezone || deviceTimeZone);
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "SIGNED_OUT") {
+        sessionStorage.removeItem("with-password-recovery");
+        setPasswordRecovery(false);
+        setHouseholdId(null);
+        setHouseholdName("");
+        setHouseholdRole(null);
+        setInviteCode("");
+        setProfiles({});
+        setProfileColors({});
+        setProfileWithmarks({});
+        setIntentions({});
+        setActiveFasts({});
+        setOwnedProfileId(null);
+        setNeedsOnboarding(false);
+        setLoading(false);
+      }
       setSession(nextSession);
-      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if (nextSession?.user) setTimeZone(nextSession.user.user_metadata?.timezone || deviceTimeZone);
+      if (event === "PASSWORD_RECOVERY") {
+        sessionStorage.setItem("with-password-recovery", "1");
+        setPasswordRecovery(true);
+        setAuthNotice("");
+      }
       setAuthReady(true);
     });
     return () => subscription.unsubscribe();
@@ -395,12 +537,15 @@ export default function Tracker() {
 
   async function loadAll() {
     if (!session?.user) return;
-    setLoading(true); setSaveError(null);
+    const shouldBlock = !householdId || !Object.keys(profiles).length;
+    if (shouldBlock) setLoading(true);
+    setSaveError(null);
     try {
       const { data: memberships, error: memberError } = await supabase
-        .from("household_members").select("household_id").eq("user_id", session.user.id).limit(1);
+        .from("household_members").select("household_id, role").eq("user_id", session.user.id).limit(1);
       if (memberError) throw memberError;
       const hid = memberships?.[0]?.household_id;
+      setHouseholdRole(memberships?.[0]?.role || null);
       if (!hid) {
         setNeedsOnboarding(true);
         setHouseholdId(null);
@@ -409,8 +554,10 @@ export default function Tracker() {
       }
       setNeedsOnboarding(false);
       setHouseholdId(hid);
-      const { data: householdRow } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
+      const { data: householdRow, error: householdError } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
+      if (householdError) throw householdError;
       setHouseholdName(householdRow?.name || "Your household");
+      setWithNameInput(householdRow?.name || "Your household");
       setInviteCode(householdRow?.invite_code || "");
 
       const { data: profileRows, error: profileError } = await supabase
@@ -429,6 +576,8 @@ export default function Tracker() {
       });
       setProfiles(pmap);
       setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
+      setProfileWithmarks(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_withmark || null])));
+      setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr(timeZone) ? (p.current_intention || "") : ""])));
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
       if (owned) {
@@ -450,7 +599,7 @@ export default function Tracker() {
         supabase.from("saved_foods").select("*").eq("household_id", hid).order("name"),
         supabase.from("global_foods").select("*").order("name"),
         supabase.from("household_food_state").select("*").eq("household_id", hid),
-        supabase.from("fasting_entries").select("*").in("profile_id", profileIds).is("ended_at", null),
+        supabase.from("fasting_entries").select("*").in("profile_id", profileIds).order("started_at"),
       ]);
       for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes]) if (r.error) throw r.error;
       const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
@@ -459,22 +608,23 @@ export default function Tracker() {
       for (const a of activitiesRes.data || []) { const n = nameById[a.profile_id]; if (next[n]) next[n].activities.push({ id: a.id, date: a.entry_date, name: a.name, caloriesBurned: num(a.calories_burned) }); }
       for (const s of stepsRes.data || []) { const n = nameById[s.profile_id]; if (next[n]) next[n].steps.push({ id: s.id, date: s.entry_date, count: Number(s.step_count) }); }
       for (const w of waterRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
+      for (const fast of fastsRes.data || []) { const n = nameById[fast.profile_id]; if (next[n]) next[n].fasts.push({ id: fast.id, startedAt: fast.started_at, endedAt: fast.ended_at || null }); }
       setSavedFoods((savedFoodsRes.data || []).map((f) => ({ ...f, source: "household", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), use_count: Number(f.use_count || 0) })));
       setGlobalFoods((globalFoodsRes.data || []).map((f) => ({ ...f, source: "global", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber) })));
       setFoodStates(foodStatesRes.data || []);
       setData(next);
       const fastMap = {};
-      (fastsRes?.data || []).forEach((f) => {
+      (fastsRes?.data || []).filter((f) => !f.ended_at).forEach((f) => {
         const name = Object.keys(pmap).find((n) => pmap[n].id === f.profile_id);
         if (name) fastMap[name] = f;
       });
       setActiveFasts(fastMap);
     } catch (e) {
-      setSaveError(e.message || "Could not load your household data.");
+      setSaveError(friendlyError(e, "We couldn’t load your With. Refresh and try again."));
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady]);
+  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady, timeZone, todayStr(timeZone)]);
 
   useEffect(() => {
     if (loading) return;
@@ -497,7 +647,7 @@ export default function Tracker() {
     if (!ownedProfileId) return;
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.from("profiles").update({ profile_color: color }).eq("id", ownedProfileId);
-    if (error) setAccountError(error.message);
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else {
       setProfileColors((prev) => ({ ...prev, [profileNameInput || activeUser]: color }));
       setAccountMessage("Your color is updated.");
@@ -506,40 +656,81 @@ export default function Tracker() {
     setAccountBusy(false);
   }
 
-  const fastPromptDismissedToday = fastPromptDismissedDate === todayStr();
+  async function saveProfileWithmark(withmark) {
+    if (!ownedProfileId) return false;
+    const allowed = WITHMARK_OPTIONS.some((option) => option.id === withmark);
+    if (!allowed) {
+      setAccountError("Choose one of the available Withmarks.");
+      return false;
+    }
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.from("profiles").update({ profile_withmark: withmark }).eq("id", ownedProfileId);
+    if (error) {
+      setAccountError(friendlyError(error, "We couldn’t save your Withmark. Try again."));
+      setAccountBusy(false);
+      return false;
+    }
+    setProfileWithmarks((prev) => ({ ...prev, [profileNameInput || activeUser]: withmark }));
+    setAccountMessage("Your Withmark is updated.");
+    setAccountBusy(false);
+    return true;
+  }
+
+  async function saveIntention(text) {
+    if (!activeCanEdit) {
+      setSaveError("Only the owner of this profile can edit its intention.");
+      return false;
+    }
+    const p = profileFor(activeUser);
+    if (!p) return false;
+    const next = String(text || "").trim().slice(0, 280);
+    setSaveError(null);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ current_intention: next || null, intention_date: todayStr(timeZone) })
+      .eq("id", p.id);
+    if (error) {
+      setSaveError(friendlyError(error, "We couldn’t save your intention. Try again."));
+      return false;
+    }
+    setIntentions((prev) => ({ ...prev, [activeUser]: next }));
+    showSuccess(next ? "Intention saved" : "Intention cleared", "intention");
+    return true;
+  }
+
+  const fastPromptDismissedToday = fastPromptDismissedDate === todayStr(timeZone);
 
   async function dismissFastPromptToday() {
     if (!ownedProfileId) return;
-    const date = todayStr();
+    const date = todayStr(timeZone);
     setFastPromptDismissedDate(date);
     const { error } = await supabase
       .from("profiles")
       .update({ fasting_prompt_dismissed_date: date })
       .eq("id", ownedProfileId);
     if (error) {
-      setSaveError(`Could not dismiss fasting prompt: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t save that preference. Try again."));
       setFastPromptDismissedDate(null);
     }
   }
 
   function openFastEditor(existing = null) {
     const d = existing?.started_at ? new Date(existing.started_at) : new Date();
-    const localDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    const localTime = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-    setFastStartDate(localDate);
-    setFastStartTime(localTime);
+    const p = zonedParts(d, timeZone);
+    setFastStartDate(`${p.year}-${p.month}-${p.day}`);
+    setFastStartTime(`${p.hour}:${p.minute}`);
     setFastEditorOpen(true);
   }
 
   async function startFast() {
     if (!activeCanEdit || fastBusy) {
-      setSaveError(`Fasting unavailable: activeCanEdit=${activeCanEdit}, fastBusy=${fastBusy}`);
+      setSaveError(activeCanEdit ? "Fasting is already being updated. Give it a moment and try again." : "Only the owner of this profile can manage fasting.");
       return;
     }
     const p = profileFor(activeUser);
     if (!p) { setSaveError("Your profile could not be found."); return; }
 
-    const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
+    const started = zonedDateTimeToDate(fastStartDate, fastStartTime, timeZone);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
 
@@ -555,7 +746,7 @@ export default function Tracker() {
       .single();
 
     if (error) {
-      setSaveError(`Could not start fast: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t start your fast. Try again."));
     } else {
       setActiveFasts((prev) => ({ ...prev, [activeUser]: created }));
       setFastEditorOpen(false);
@@ -570,7 +761,7 @@ export default function Tracker() {
     const fast = activeFasts[activeUser];
     if (!fast) { setSaveError("No active fast was found."); return; }
 
-    const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
+    const started = zonedDateTimeToDate(fastStartDate, fastStartTime, timeZone);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
 
@@ -583,7 +774,7 @@ export default function Tracker() {
       .single();
 
     if (error) {
-      setSaveError(`Could not update fast: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t update your fast. Try again."));
     } else {
       setActiveFasts((prev) => ({ ...prev, [activeUser]: updated }));
       setFastEditorOpen(false);
@@ -605,7 +796,7 @@ export default function Tracker() {
       .eq("id", fast.id);
 
     if (error) {
-      setSaveError(`Could not end fast: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t end your fast. Try again."));
     } else {
       setActiveFasts((prev) => {
         const next = { ...prev };
@@ -626,42 +817,154 @@ export default function Tracker() {
     return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
   }
 
-  async function saveProfileName() {
-    if (!ownedProfileId || !profileNameInput.trim()) return;
+  async function renameWith() {
+    const nextName = withNameInput.trim();
+    if (!nextName) { setAccountError("Your With needs a name."); return; }
+    if (nextName.length > 40) { setAccountError("Keep your With name to 40 characters or fewer."); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
-    const { error } = await supabase.from("profiles").update({ name: profileNameInput.trim() }).eq("id", ownedProfileId);
-    if (error) setAccountError(error.message);
-    else { setAccountMessage("Profile name updated."); await loadAll(); }
+    const { error } = await supabase.rpc("rename_household", { new_name: nextName });
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
+    else {
+      setHouseholdName(nextName);
+      setRenamingWith(false);
+      setAccountMessage("Your With has been renamed.");
+    }
     setAccountBusy(false);
   }
 
-  async function saveEmail() {
-    if (!emailInput.trim()) return;
+  async function saveProfileName() {
+    const nextName = profileNameInput.trim();
+    if (!ownedProfileId || !nextName) { setAccountError("Your profile needs a name."); return false; }
+    if (nextName.length > 40) { setAccountError("Keep your profile name to 40 characters or fewer."); return false; }
+    const currentName = Object.values(profiles).find((p) => p.id === ownedProfileId)?.name || activeUser;
+    const duplicate = Object.values(profiles).some((p) =>
+      p.id !== ownedProfileId && String(p.name || "").trim().toLowerCase() === nextName.toLowerCase()
+    );
+    if (duplicate) { setAccountError("Someone in this With already uses that name."); return false; }
+    if (nextName === currentName) { setAccountError(""); setAccountMessage("Your profile name is already up to date."); return true; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
-    const { error } = await supabase.auth.updateUser({ email: emailInput.trim() });
-    if (error) setAccountError(error.message);
-    else setAccountMessage("Email update requested. Check your inbox to confirm the change.");
+    const { error } = await supabase.from("profiles").update({ name: nextName }).eq("id", ownedProfileId);
+    if (error) { setAccountError(friendlyError(error, "We couldn’t update your profile name. Try again.")); setAccountBusy(false); return false; }
+    setAccountMessage("Profile name updated."); await loadAll();
     setAccountBusy(false);
+    return true;
+  }
+
+  async function saveEmail() {
+    const nextEmail = emailInput.trim();
+    if (!nextEmail) { setAccountError("Enter an email address."); return false; }
+    if (nextEmail.toLowerCase() === String(session?.user?.email || "").toLowerCase()) {
+      setAccountError("");
+      setAccountMessage("That’s already your account email.");
+      return true;
+    }
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.auth.updateUser(
+      { email: nextEmail },
+      { emailRedirectTo: window.location.origin }
+    );
+    if (error) { setAccountError(friendlyError(error, "We couldn’t update your email. Try again.")); setAccountBusy(false); return false; }
+    setAccountMessage("Email update requested. Check your inbox to confirm the change.");
+    setAccountBusy(false);
+    return true;
   }
 
   async function savePassword() {
     setAccountError(""); setAccountMessage("");
-    if (newPasswordInput.length < 6) { setAccountError("Use at least 6 characters."); return; }
-    if (newPasswordInput !== confirmPasswordInput) { setAccountError("Those passwords don't match."); return; }
+    if (newPasswordInput.length < 6) { setAccountError("Use at least 6 characters."); return false; }
+    if (newPasswordInput !== confirmPasswordInput) { setAccountError("Those passwords don't match."); return false; }
     setAccountBusy(true);
     const { error } = await supabase.auth.updateUser({ password: newPasswordInput });
-    if (error) setAccountError(error.message);
-    else { setAccountMessage("Password updated."); setNewPasswordInput(""); setConfirmPasswordInput(""); }
+    if (error) { setAccountError(friendlyError(error, "We couldn’t update your password. Try again.")); setAccountBusy(false); return false; }
+    setAccountMessage("Password updated."); setNewPasswordInput(""); setConfirmPasswordInput("");
     setAccountBusy(false);
+    return true;
+  }
+
+  async function saveTimeZone(nextZone) {
+    if (!nextZone) return false;
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const currentData = session?.user?.user_metadata || {};
+    const { data: updated, error } = await supabase.auth.updateUser({ data: { ...currentData, timezone: nextZone } });
+    if (error) {
+      setAccountError(friendlyError(error, "We couldn’t update your time zone. Try again."));
+      setAccountBusy(false);
+      return false;
+    }
+    setTimeZone(updated?.user?.user_metadata?.timezone || nextZone);
+    setAccountMessage("Time zone updated.");
+    setAccountBusy(false);
+    return true;
   }
 
   async function deleteAccount() {
     if (deleteConfirm !== "DELETE") { setAccountError('Type DELETE to confirm.'); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.functions.invoke("delete-account");
-    if (error) { setAccountError(error.message || "Could not delete account."); setAccountBusy(false); return; }
+    if (error) { setAccountError(friendlyError(error, "We couldn’t delete your account. Nothing was removed. Try again.")); setAccountBusy(false); return false; }
     await supabase.auth.signOut();
     setAccountBusy(false);
+  }
+
+  function inviteUrl() {
+    const url = new URL(window.location.origin);
+    const inviterName = Object.values(profiles).find((p) => p.user_id === session?.user?.id)?.name || profileNameInput || activeUser;
+    url.searchParams.set("invite", inviteCode);
+    if (inviterName) url.searchParams.set("inviter", inviterName);
+    return url.toString();
+  }
+
+  async function sendInviteEmail() {
+    const email = inviteEmail.trim();
+    setInviteError(""); setInviteMessage("");
+    if (!email) { setInviteError("Enter an email address."); return; }
+    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
+
+    setInviteBusy(true);
+    const { error } = await supabase.functions.invoke("send-with-invite", {
+      body: { email, inviteCode, inviteUrl: inviteUrl() },
+    });
+    if (error) {
+      setInviteError(friendlyError(error, "We couldn’t send that invitation. Try again."));
+    } else {
+      setInviteMessage(`Invite sent to ${email}.`);
+      setInviteEmail("");
+      showSuccess("Invite sent");
+    }
+    setInviteBusy(false);
+  }
+
+  async function shareInvite() {
+    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
+    const url = inviteUrl();
+    const shareData = {
+      title: `Join ${householdName} on With`,
+      text: `Join my With, ${householdName}. Your health stays yours; we’ll just be doing life With each other.`,
+      url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setInviteMessage("Invite link copied.");
+        showSuccess("Invite link copied");
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") setInviteError("Couldn’t share the invite. Copy the invite code instead.");
+    }
+  }
+
+  async function copyInviteCode() {
+    setInviteError(""); setInviteMessage("");
+    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
+    try {
+      await navigator.clipboard.writeText(inviteUrl());
+      setInviteMessage("Invite link copied.");
+      showSuccess("Invite link copied");
+    } catch {
+      setInviteError(`We couldn’t copy the link. You can still use invite code ${inviteCode}.`);
+    }
   }
 
   function profileColor(name, dim=false) {
@@ -678,6 +981,14 @@ export default function Tracker() {
     const match = PROFILE_COLORS.find((c) => c.value === chosen);
     return match?.text || userText(name);
   }
+  function profileWithmark(name) {
+    const chosen = profileWithmarks[name];
+    if (WITHMARK_OPTIONS.some((option) => option.id === chosen)) return chosen;
+    const ids = WITHMARK_OPTIONS.map((option) => option.id);
+    let total = 0;
+    for (const char of String(name || "")) total += char.charCodeAt(0);
+    return ids[total % ids.length] || "star";
+  }
 
   function profileFor(name) { return profiles[name]; }
   function canEdit(name) { return profiles[name]?.user_id === session?.user?.id; }
@@ -685,7 +996,7 @@ export default function Tracker() {
   async function runWrite(work) {
     setSaveError(null);
     try { await work(); await loadAll(); return true; }
-    catch (e) { setSaveError(e.message || "Save failed. Try again."); return false; }
+    catch (e) { setSaveError(friendlyError(e, "We couldn’t save that. Try again.")); return false; }
   }
 
   function showSuccess(message, kind) {
@@ -697,9 +1008,26 @@ export default function Tracker() {
     window.__withButtonTimer = window.setTimeout(() => setButtonSuccess(null), 1400);
   }
 
-  function openLog(kind = logTab) {
+  function defaultMealForNow() {
+    const h = Number(zonedParts(new Date(), timeZone).hour);
+    if (h < 11) return "Breakfast";
+    if (h < 15) return "Lunch";
+    if (h < 21) return "Dinner";
+    return "Snack";
+  }
+
+  function openLog(kind = logTab, date = todayStr(timeZone), meal = null) {
     setLogTab(kind);
     localStorage.setItem("with-log-tab", kind);
+    if (kind === "food") {
+      if (!editingFoodId) clearFoodForm();
+      setFoodDate(date);
+      setFoodMeal(meal || defaultMealForNow());
+    }
+    if (kind === "weight") setWeightDate(date);
+    if (kind === "activity") setActDate(date);
+    if (kind === "water") setWaterDate(date);
+    if (kind === "steps") setStepsDate(date);
     setTab("log");
   }
 
@@ -725,7 +1053,7 @@ export default function Tracker() {
 
   function clearFoodForm() {
     setFoodName(""); setFoodCals(""); setFoodProtein(""); setFoodCarbs(""); setFoodFat(""); setFoodFiber(""); setFoodNotes("");
-    setFoodQuantity("1"); setFoodServingLabel("1 serving"); setSaveAsSaved(false); setSelectedSavedFoodId(null); setEditingSavedId(null);
+    setFoodQuantity("1"); setFoodServingLabel("1 serving"); setSaveAsSaved(false); setSelectedSavedFoodId(null); setEditingSavedId(null); setEditingFoodId(null);
   }
 
   function chooseSavedFood(food) {
@@ -813,6 +1141,22 @@ export default function Tracker() {
     if (error) throw error;
   }
 
+  function editLoggedFood(food) {
+    clearFoodForm();
+    setEditingFoodId(food.id);
+    setFoodName(food.name || "");
+    setFoodCals(String(food.calories ?? ""));
+    setFoodFat(String(food.fat ?? ""));
+    setFoodCarbs(String(food.carbs ?? ""));
+    setFoodFiber(String(food.fiber ?? ""));
+    setFoodProtein(String(food.protein ?? ""));
+    setFoodMeal(food.meal || defaultMealForNow());
+    setFoodNotes(food.notes || "");
+    setFoodDate(food.date || todayStr(timeZone));
+    setLogTab("food");
+    setTab("log");
+  }
+
   async function addFood() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     if (!foodName.trim()) { setFoodError("Give it a name."); return; }
@@ -834,31 +1178,38 @@ export default function Tracker() {
         if (useError) throw useError;
       }
       if (selectedSavedFoodId) await recordFoodUse(selectedSource, selectedId);
-      const { error } = await supabase.from("food_entries").insert({ household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null });
+      const entryPayload = { household_id: householdId, profile_id: p.id, saved_food_id: savedId, entry_date: foodDate, name: foodName.trim(), calories: cals, protein, carbs, fat, fiber, meal: foodMeal, notes: foodNotes.trim() || null };
+      const { error } = editingFoodId
+        ? await supabase.from("food_entries").update(entryPayload).eq("id", editingFoodId)
+        : await supabase.from("food_entries").insert(entryPayload);
       if (error) throw error;
     });
-    if (ok) { const loggedName = foodName.trim(); clearFoodForm(); showSuccess(`${loggedName} added`, "food"); }
+    if (ok) { const loggedName = foodName.trim(); const wasEditing = !!editingFoodId; clearFoodForm(); showSuccess(`${loggedName} ${wasEditing ? "updated" : "added"}`, "food"); }
   }
   async function deleteFood(id) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("food_entries").delete().eq("id", id); if (error) throw error; }); }
 
   async function saveSteps() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) return;
+    const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) { setStepsError("Enter a valid step total."); return; }
+    setStepsError("");
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
     if (ok) { setStepsInput(""); showSuccess(`${val.toLocaleString()} steps saved`, "steps"); }
   }
   async function addWater(amount) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) return;
+    const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) { setWaterError("Enter an amount greater than 0."); return; }
+    setWaterError("");
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
     if (ok) { setWaterOz(""); showSuccess(`${val} oz water added`, "water"); }
   }
   async function addActivity() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    if (!actName.trim()) return; const cals = parseFloat(actCals) || 0; if (!cals) return;
+    if (!actName.trim()) { setActivityError("Add an activity name."); return; }
+    const cals = parseFloat(actCals) || 0; if (!cals || cals <= 0) { setActivityError("Enter calories burned."); return; }
+    setActivityError("");
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
     if (ok) { const loggedActivity = actName.trim(); setActName(""); setActCals(""); showSuccess(`${loggedActivity} added`, "activity"); }
@@ -868,13 +1219,19 @@ export default function Tracker() {
 
   async function saveGoal() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) return;
-    await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null }).eq("id", p.id); if (error) throw error; });
+    const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) { setGoalError("We couldn’t find your profile. Refresh and try again."); return false; }
+    if (goalInput && (!Number.isFinite(val) || val <= 0)) { setGoalError("Enter a valid goal weight."); return false; }
+    setGoalError("");
+    return await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null }).eq("id", p.id); if (error) throw error; });
   }
   async function saveTargets() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const p = profileFor(activeUser); if (!p) return;
-    await runWrite(async () => {
+    const p = profileFor(activeUser); if (!p) { setGoalError("We couldn’t find your profile. Refresh and try again."); return false; }
+    const nums = [tBmr, tCal, tProtein, tCarbs, tFat, tFiberMin, tFiberMax].map((v) => v === "" ? 0 : Number(v));
+    if (nums.some((v) => !Number.isFinite(v) || v < 0)) { setGoalError("Check your daily targets and use numbers 0 or higher."); return false; }
+    if (Number(tFiberMax || 0) && Number(tFiberMin || 0) > Number(tFiberMax || 0)) { setGoalError("Fiber max should be higher than fiber min."); return false; }
+    setGoalError("");
+    return await runWrite(async () => {
       const { error } = await supabase.from("profiles").update({ bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0, carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0, fiber_min: parseFloat(tFiberMin) || 0, fiber_max: parseFloat(tFiberMax) || 0 }).eq("id", p.id);
       if (error) throw error;
     });
@@ -931,7 +1288,7 @@ export default function Tracker() {
 
   const streaks = useMemo(() => {
     const days = [];
-    for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
+    for (let i = 13; i >= 0; i--) days.push(addCalendarDays(todayStr(timeZone), -i));
     const result = {};
     profileNames.forEach((u) => {
       const logged = new Set([
@@ -943,7 +1300,7 @@ export default function Tracker() {
     return { days, result };
   }, [data]);
 
-  const today = todayStr();
+  const today = todayStr(timeZone);
   const todayStats = useMemo(() => {
     const out = {};
     profileNames.forEach((u) => {
@@ -963,22 +1320,41 @@ export default function Tracker() {
   function goalInfo(u) {
     const w = data[u].weights;
     if (w.length === 0) return null;
-    const start = w[0].weight, latest = w[w.length - 1].weight, goal = data[u].goalWeight;
-    return { start, latest, goal, pctLost: start !== 0 ? ((start - latest) / start) * 100 : 0, toGoal: goal != null ? latest - goal : null };
-  }
+    const start = w[0].weight;
+    const latest = w[w.length - 1].weight;
+    const goal = data[u].goalWeight;
 
-  const activeGoalDate = data[activeUser]?.goalDate || null;
-  const weeksLeft = activeGoalDate ? weeksUntil(activeGoalDate) : null;
+    if (goal == null || goal === start) {
+      return {
+        start,
+        latest,
+        goal,
+        plannedChange: goal == null ? null : 0,
+        progressAmount: 0,
+        progressPct: goal == null ? null : 100,
+        remaining: goal == null ? null : 0,
+      };
+    }
+
+    const direction = Math.sign(goal - start);
+    const plannedChange = Math.abs(goal - start);
+    const directionalProgress = (latest - start) * direction;
+    const progressAmount = Math.max(0, Math.min(plannedChange, directionalProgress));
+    const progressPct = plannedChange ? (progressAmount / plannedChange) * 100 : 100;
+    const remaining = Math.max(0, plannedChange - progressAmount);
+
+    return { start, latest, goal, plannedChange, progressAmount, progressPct, remaining };
+  }
 
   if (!authReady) {
-    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>checking your session...</div>;
+    return <BrandLoading>Checking your session…</BrandLoading>;
   }
-  if (passwordRecovery && session) return <ResetPasswordScreen onDone={() => setPasswordRecovery(false)} />;
-  if (!session) return <AuthScreen />;
+  if (passwordRecovery && session) return <ResetPasswordScreen onDone={() => { setPasswordRecovery(false); setAuthNotice("Password updated. Sign in with your new password."); }} />;
+  if (!session) return <AuthScreen initialMessage={authNotice} />;
   if (needsOnboarding) return <Onboarding onComplete={loadAll} />;
   if (!loading && session && !ownedProfileId && Object.values(profiles).some((p) => !p.user_id)) return <ClaimProfile profiles={profiles} onClaim={loadAll} />;
   if (loading) {
-    return <div style={{ minHeight: "100vh", background: BG, color: TEXT_MUTED, padding: "3rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>loading the shared space...</div>;
+    return <BrandLoading>Getting your With ready…</BrandLoading>;
   }
 
   const gi = goalInfo(activeUser);
@@ -993,753 +1369,356 @@ export default function Tracker() {
   ];
 
   return (
-    <div style={{ background: BG, color: TEXT, minHeight: "100vh", fontFamily: "'Karla', -apple-system, sans-serif", boxSizing: "border-box" }}>
+    <div style={{ background: BG, color: TEXT, minHeight: "100vh", fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,500;1,600;1,700&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; }
         input, select, textarea, button { font-family: inherit; }
-        .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+        .num { font-family: 'DM Sans', -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
         button { cursor: pointer; -webkit-appearance: none; }
-        ::placeholder { color: #5A5E60; }
+        button:disabled { cursor: default; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+          outline: 3px solid rgba(31,94,87,.18);
+          outline-offset: 2px;
+        }
+        ::placeholder { color: #747875; }
         textarea { resize: vertical; }
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+        }
       `}</style>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: BG, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.9rem 1rem 0.75rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 21, lineHeight: 1.15 }}>
-              WITH
-              <div style={{ fontFamily: "'Karla', sans-serif", fontStyle: "normal", fontWeight: 500, fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>{householdName}</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ display: "flex", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3 }}>
-              {profileNames.map((u) => (
-                <button key={u} onClick={() => { setActiveUser(u); setFastEditorOpen(false); }} style={{
-                  border: "none", padding: "9px 16px", borderRadius: 8,
-                  fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 15,
-                  background: activeUser === u ? profileColor(u) : "transparent",
-                  color: activeUser === u ? profileText(u) : TEXT_MUTED,
-                }}>{u}</button>
-              ))}
-              </div>
-              <button title="Sign out" onClick={() => supabase.auth.signOut()} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 7, display: "grid", placeItems: "center" }}><LogOut style={{ width: 18, height: 18 }} /></button>
-            </div>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: brand.teal, borderBottom: `1px solid ${brand.tealDark}`, paddingTop: "env(safe-area-inset-top)", boxShadow: "0 2px 10px rgba(23,78,73,.12)" }}>
+        <div style={{ maxWidth: 520, margin: "0 auto", padding: "0.72rem 1rem 0.68rem", display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1 }}>
+            <BrandLogo compact style={{ width: 96, backgroundColor: brand.inkOn }} />
+            <div style={{ color: "rgba(255,255,255,.72)", fontSize: 9, fontWeight: 500, letterSpacing: ".01em", lineHeight: 1.15, whiteSpace: "nowrap" }}>We’re in this together.</div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <div style={{ fontSize: 12, color: TEXT_MUTED }}>
-              {activeGoalDate ? `${weeksLeft} ${weeksLeft === 1 ? "week" : "weeks"} until ${fmtGoalDate(activeGoalDate)}` : "No goal date set"}
+          <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: "rgba(255,255,255,.10)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 12, padding: "7px 9px 8px" }}>
+            <div title={householdName} style={{ fontSize: 11, color: "rgba(255,255,255,.76)", fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "center", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {householdName}
             </div>
-            {inviteCode && <button onClick={() => navigator.clipboard?.writeText(inviteCode)} title={`Invite code: ${inviteCode}. Tap to copy.`} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}><Users style={{ width: 13, height: 13 }} /> Invite someone</button>}
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
+              {profileNames.map((u) => (
+                <button
+                  key={u}
+                  title={u}
+                  onClick={() => { setActiveUser(u); setFastEditorOpen(false); if (tab === "profile") setTab("today"); }}
+                  style={{
+                    flexShrink: 0,
+                    border: activeUser === u ? "1px solid rgba(255,255,255,.78)" : "1px solid rgba(255,255,255,.22)",
+                    background: activeUser === u ? "rgba(255,255,255,.16)" : "transparent",
+                    color: brand.inkOn,
+                    borderRadius: 999,
+                    padding: "5px 9px",
+                    minHeight: 30,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    lineHeight: 1,
+                    fontFamily: "'DM Sans', -apple-system, sans-serif",
+                    fontWeight: activeUser === u ? 700 : 500,
+                    fontSize: 11,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <WithMark id={profileWithmark(u)} size={15} color={activeUser === u ? brand.inkOn : "rgba(255,255,255,.72)"} />
+                  <span style={{ display: "block", lineHeight: 1 }}>{u}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "1rem 1rem", paddingBottom: NAV_H + 32 }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "1.05rem 1rem", paddingBottom: NAV_H + 36 }}>
         {saveError && (
-          <div style={{ background: "#3A2420", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
+          <div style={{ background: "#FFF1F0", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
         )}
-        {!activeCanEdit && (
+        {tab !== "profile" && !activeCanEdit && (
           <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT_MUTED, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 12 }}>
             You’re viewing {activeUser}’s health information. Only {activeUser} can make changes.
           </div>
         )}
 
         {tab === "today" && (
-          <>
-            {(() => {
-              const u = data[activeUser];
-              const targets = u.targets;
-              const todaysFoods = u.foods.filter((f) => f.date === today);
-              const todaysActivities = u.activities.filter((a) => a.date === today);
-              const todaysWeight = u.weights.filter((w) => w.date === today);
-              const hasAnything = todaysFoods.length > 0 || todaysActivities.length > 0 || ts.water > 0 || ts.steps != null || todaysWeight.length > 0;
-              const isMine = activeCanEdit;
-              const otherPeople = profileNames.filter((n) => n !== activeUser);
-              const MEAL_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
-              const groups = {};
-              todaysFoods.forEach((f) => { const key = f.meal || "Other"; if (!groups[key]) groups[key] = []; groups[key].push(f); });
-              const orderedKeys = [...MEAL_ORDER.filter((m) => groups[m]), ...Object.keys(groups).filter((k) => !MEAL_ORDER.includes(k))];
-
-              const quick = [
-                ["Food", "food"],
-                ["Weight", "weight"],
-                ["Activity", "activity"],
-                ["Water", "water"],
-                ["Steps", "steps"],
-              ];
-
-              return <>
-                <div style={{ padding: "0.35rem 0.15rem 1rem" }}>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, lineHeight: 1.08, color: TEXT }}>
-                    {isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`}
-                  </div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 14, marginTop: 5 }}>{fullTodayLabel()}</div>
-                </div>
-                {isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
-                  <div style={{ ...cardStyle, background: activeFasts[activeUser] ? "#F1EBDD" : "#FFF8EE", borderColor: activeFasts[activeUser] ? "#D8CCB8" : "#E6D6C1", padding: "1.05rem 1.2rem" }}>
-                    {activeFasts[activeUser] ? (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>You’re fasting</div>
-                          <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>
-                            Started {new Date(activeFasts[activeUser].started_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} · {fastElapsed(activeFasts[activeUser].started_at)}
-                          </div>
-                        </div>
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button onClick={() => openFastEditor(activeFasts[activeUser])} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                          <button onClick={endFast} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                            {fastBusy ? "Ending…" : "End fast"}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                        <div>
-                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600 }}>Fasting today?</div>
-                          <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 3 }}>WITH can adjust your Today prompts while you fast.</div>
-                        </div>
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>
-                            Not today
-                          </button>
-                          <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>
-                            Start fast
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {isMine && fastEditorOpen && (
-                  <div style={{ ...cardStyle, marginTop: "-0.35rem", padding: "1.1rem 1.2rem" }}>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
-                      {activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}
-                    </div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>
-                      It defaults to right now. Backdating is completely fine.
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                      <div>
-                        <div style={fieldLabel}>Date</div>
-                        <input
-                          type="date"
-                          max={todayStr()}
-                          value={fastStartDate}
-                          onChange={(e) => setFastStartDate(e.target.value)}
-                          style={inputStyle}
-                        />
-                      </div>
-                      <div>
-                        <div style={fieldLabel}>Time</div>
-                        <input
-                          type="time"
-                          value={fastStartTime}
-                          onChange={(e) => setFastStartTime(e.target.value)}
-                          style={inputStyle}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <button
-                        onClick={() => setFastEditorOpen(false)}
-                        disabled={fastBusy}
-                        style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={activeFasts[activeUser] ? updateFastStart : startFast}
-                        disabled={fastBusy}
-                        style={bigButton(profileColor(activeUser), profileText(activeUser))}
-                      >
-                        {fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {!hasAnything && (
-                  <div style={{ ...cardStyle, padding: "1.45rem", background: "#FFF8EE", borderColor: "#E6D6C1" }}>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>
-                      {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
-                    </div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: isMine ? 16 : 0 }}>
-                      {isMine ? (activeFasts[activeUser] ? "You’re fasting right now. You can still add water, activity, weight or steps. Food stays available whenever you need to backfill it." : "Add something whenever you’re ready. A little information is still useful information.") : `${activeUser} hasn’t added anything today.`}
-                    </div>
-                    {isMine && <button onClick={() => openLog(activeFasts[activeUser] ? "water" : "food")} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 20 }}>Add something</button>}
-                  </div>
-                )}
-
-                {isMine && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, margin: "0 2px 8px", textTransform: "uppercase", letterSpacing: ".06em" }}>Quick add</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
-                      {quick.map(([label, kind]) => (
-                        <button key={label} onClick={() => openLog(kind)} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "11px 4px", fontSize: 11, fontWeight: 700, boxShadow: "0 3px 12px rgba(65,48,30,.035)" }}>+ {label}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {hasAnything && (
-                  <div style={{ ...cardStyle, padding: "1.35rem" }}>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Today at a glance</div>
-                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 }}>
-                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600 }}>Calories</div>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round(ts.calories)} <span style={{ color: TEXT_MUTED, fontSize: 13, fontWeight: 500 }}>/ {targets.calories}</span></div>
-                    </div>
-                    <div style={{ height: 8, borderRadius: 99, background: SURFACE_2, overflow: "hidden", marginBottom: 16 }}>
-                      <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: profileColor(activeUser), borderRadius: 99 }} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "9px 16px", marginBottom: 15 }}>
-                      {[
-                        ["Protein", ts.protein, targets.protein, "g"],
-                        ["Carbs", ts.carbs, targets.carbs, "g"],
-                        ["Fat", ts.fat, targets.fat, "g"],
-                        ["Fiber", ts.fiber, `${targets.fiberMin}–${targets.fiberMax}`, "g"],
-                      ].map(([label,val,target,unit]) => (
-                        <div key={label} style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8 }}>
-                          <div style={{ color: TEXT_MUTED, fontSize: 11 }}>{label}</div>
-                          <div style={{ fontSize: 15, fontWeight: 700 }}>{Math.round(val)}{unit} <span style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 500 }}>/ {target}{unit}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: 18, paddingTop: 12, borderTop: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: 13 }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Zap style={{ width: 15 }} />{Math.round(ts.burned)} cal activity</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Footprints style={{ width: 15 }} />{ts.steps != null ? ts.steps.toLocaleString() : "No steps"}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Droplet style={{ width: 15 }} />{Math.round(ts.water)} oz</span>
-                    </div>
-                  </div>
-                )}
-
-                <div style={cardStyle}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={headingStyle}>Today so far</div>
-                    {isMine && <button onClick={() => openLog("food")} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>+ Add food</button>}
-                  </div>
-
-                  {todaysFoods.length === 0 && todaysActivities.length === 0 && ts.water === 0 && ts.steps == null && todaysWeight.length === 0 ? (
-                    <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Nothing logged yet.</div>
-                  ) : <>
-                    {orderedKeys.map((meal) => (
-                      <div key={meal} style={{ marginBottom: 14 }}>
-                        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 5 }}>{meal}</div>
-                        {groups[meal].map((f) => (
-                          <div key={f.id} style={{ padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                              <span style={{ fontWeight: 600 }}>{f.name}</span>
-                              <span style={{ color: TEXT_MUTED }}>{Math.round(f.calories)} cal</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                    {todaysActivities.length > 0 && <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 5 }}>Activity</div>
-                      {todaysActivities.map((a) => <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ fontWeight: 600 }}>{a.name}</span><span style={{ color: TEXT_MUTED }}>{Math.round(a.caloriesBurned)} cal</span></div>)}
-                    </div>}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, paddingTop: 4 }}>
-                      {todaysWeight.length > 0 && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Weight {todaysWeight[todaysWeight.length-1].weight} lb</span>}
-                      {ts.water > 0 && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Water {Math.round(ts.water)} oz</span>}
-                      {ts.steps != null && <span style={{ background: SURFACE_2, borderRadius: 999, padding: "7px 10px", fontSize: 12 }}>Steps {ts.steps.toLocaleString()}</span>}
-                    </div>
-                  </>}
-                </div>
-
-                {otherPeople.length > 0 && (
-                  <div style={cardStyle}>
-                    <div style={headingStyle}>People you’re with</div>
-                    {otherPeople.map((name) => {
-                      const o = todayStats[name];
-                      const od = data[name];
-                      const hasOther = od.foods.some((f) => f.date === today) || od.activities.some((a) => a.date === today) || o?.water > 0 || o?.steps != null || od.weights.some((w) => w.date === today);
-                      return <button key={name} onClick={() => setActiveUser(name)} style={{ width: "100%", textAlign: "left", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "12px 14px", color: TEXT, marginBottom: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 600 }}>{name}</span>
-                          <span style={{ color: TEXT_MUTED, fontSize: 12 }}>View day →</span>
-                        </div>
-                        <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4 }}>{hasOther ? `${Math.round(o.calories)} cal logged${o.steps != null ? ` · ${o.steps.toLocaleString()} steps` : ""}${o.water > 0 ? ` · ${Math.round(o.water)} oz water` : ""}` : "Nothing shared today yet."}</div>
-                      </button>;
-                    })}
-                  </div>
-                )}
-              </>;
-            })()}
-          </>
+          <TodayTab
+            activeUser={activeUser}
+            activeCanEdit={activeCanEdit}
+            data={data}
+            profileNames={profileNames}
+            today={today}
+            timeZone={timeZone}
+            todayStats={todayStats}
+            activeFasts={activeFasts}
+            fastPromptDismissedToday={fastPromptDismissedToday}
+            fastEditorOpen={fastEditorOpen}
+            fastBusy={fastBusy}
+            fastStartDate={fastStartDate}
+            fastStartTime={fastStartTime}
+            setFastStartDate={setFastStartDate}
+            setFastStartTime={setFastStartTime}
+            setFastEditorOpen={setFastEditorOpen}
+            dismissFastPromptToday={dismissFastPromptToday}
+            openFastEditor={openFastEditor}
+            startFast={startFast}
+            updateFastStart={updateFastStart}
+            endFast={endFast}
+            fastElapsed={fastElapsed}
+            openLog={openLog}
+            deleteFood={deleteFood}
+            editLoggedFood={editLoggedFood}
+            setActiveUser={setActiveUser}
+            profileColor={profileColor}
+            profileText={profileText}
+            intentions={intentions}
+            saveIntention={saveIntention}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+          />
         )}
 
         {tab === "log" && (
-          <>
-            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
-            </div>
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "2px 1px 10px", marginBottom: 6, WebkitOverflowScrolling: "touch" }}>
-              {[
-                ["food","Food",Utensils],
-                ["weight","Weight",Scale],
-                ["activity","Activity",Dumbbell],
-                ["water","Water",Droplet],
-                ["steps","Steps",Footprints],
-              ].map(([id,label,Icon]) => (
-                <button key={id} onClick={() => { setLogTab(id); localStorage.setItem("with-log-tab", id); }} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${logTab === id ? profileColor(activeUser) : BORDER}`, background: logTab === id ? "#FFF8EE" : SURFACE, color: logTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "9px 13px", fontSize: 12, fontWeight: 700 }}>
-                  <Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
-                  {label}
-                </button>
-              ))}
-            </div>
-            {logTab === "food" && <>
-            {activeFasts[activeUser] ? (
-              <div style={{ ...cardStyle, background: "#F1EBDD", borderColor: "#D8CCB8", padding: "0.95rem 1.1rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div>
-                  </div>
-                  {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
-                </div>
-              </div>
-            ) : activeCanEdit && !fastPromptDismissedToday ? (
-              <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1", padding: "0.95rem 1.1rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    <button onClick={dismissFastPromptToday} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 9px", fontSize: 11, fontWeight: 700 }}>Not today</button>
-                    <button onClick={() => openFastEditor()} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Start fast</button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            {activeCanEdit && fastEditorOpen && (
-              <div style={{ ...cardStyle, padding: "1.05rem 1.1rem" }}>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
-                  {activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}
-                </div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>It defaults to right now. Backdating is completely fine.</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                  <div><div style={fieldLabel}>Date</div><input type="date" max={todayStr()} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={inputStyle} /></div>
-                  <div><div style={fieldLabel}>Time</div><input type="time" value={fastStartTime} onChange={(e) => setFastStartTime(e.target.value)} style={inputStyle} /></div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                  <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
-                </div>
-              </div>
-            )}
-            <div style={cardStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ ...headingStyle, marginBottom: 0 }}>Food</div>
-                {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "done" : `manage mine (${savedFoods.length})`}</button>}
-              </div>
-
-              {(savedFoods.length > 0 || globalFoods.length > 0) && (
-                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginBottom: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Find a food</div>
-                  <input type="text" placeholder="Search all foods" value={savedSearch} onChange={(e) => setSavedSearch(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
-                  {!showManageSaved && <>
-                    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
-                      {[
-                        ["recent", "Recent"], ["favorites", "★ Favorites"], ["mine", "All Mine"], ["shared", "Shared"],
-                      ].map(([id, label]) => (
-                        <button key={id} onClick={() => { setFoodLibraryTab(id); setSavedSearch(""); }} style={{ flexShrink: 0, border: `1px solid ${foodLibraryTab === id ? profileColor(activeUser) : BORDER}`, background: foodLibraryTab === id ? SURFACE : "transparent", color: foodLibraryTab === id ? TEXT : TEXT_MUTED, borderRadius: 999, padding: "7px 10px", fontSize: 11, fontWeight: 700 }}>{label}</button>
-                      ))}
-                    </div>
-                    <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
-                      {visibleLibraryFoods.slice(0, savedSearch ? 20 : 12).map((f) => (
-                        <div key={`${f.source}-${f.id}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 5, alignItems: "stretch" }}>
-                          <button onClick={() => chooseSavedFood(f)} style={{ textAlign: "left", background: selectedSavedFoodId === `${f.source}:${f.id}` ? SURFACE : "transparent", border: `1px solid ${selectedSavedFoodId === `${f.source}:${f.id}` ? profileColor(activeUser) : BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{f.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(f.calories)} cal</span></div>
-                            <div className="num" style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{f.serving_label || "1 serving"} · P{Math.round(f.protein)} C{Math.round(f.carbs)} F{Math.round(f.fat)} · Fiber {Math.round(f.fiber)}g</div>
-                            <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{f.source === "global" ? "Shared" : "Household"}</div>
-                          </button>
-                          <button aria-label={`${isFavoriteFood(f) ? "Remove" : "Add"} ${f.name} ${isFavoriteFood(f) ? "from" : "to"} favorites`} onClick={() => toggleFavorite(f)} style={{ width: 42, background: "transparent", border: `1px solid ${BORDER}`, color: isFavoriteFood(f) ? profileColor(activeUser) : TEXT_MUTED, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Star style={{ width: 18, height: 18 }} fill={isFavoriteFood(f) ? "currentColor" : "none"} />
-                          </button>
-                        </div>
-                      ))}
-                      {visibleLibraryFoods.length === 0 && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>{savedSearch ? "No foods match that search." : foodLibraryTab === "recent" ? "No recent foods yet. Log a saved or shared food and it’ll show up here." : foodLibraryTab === "favorites" ? "No favorites yet. Tap a star beside any food." : "Nothing here yet."}</div>}
-                    </div>
-                  </>}
-                  {showManageSaved && <div style={{ display: "grid", gap: 6, maxHeight: 300, overflowY: "auto" }}>
-                    {managedSavedFoods.map((f) => <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderBottom: `1px solid ${BORDER}`, padding: "8px 0" }}>
-                      <div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{f.name}</div><div className="num" style={{ fontSize: 11, color: TEXT_MUTED }}>{f.serving_label || "1 serving"} · {Math.round(f.calories)} cal</div></div>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        <button aria-label={`Edit ${f.name}`} onClick={() => editSavedFood(f)} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 6 }}><Pencil style={{ width: 15, height: 15 }} /></button>
-                        <button aria-label={`Delete ${f.name}`} onClick={() => deleteSavedFood(f.id)} style={{ background: "none", border: "none", color: WARN, padding: 6 }}><Trash2 style={{ width: 15, height: 15 }} /></button>
-                      </div>
-                    </div>)}
-                  </div>}
-                </div>
-              )}
-
-              {selectedSavedFoodId && <>
-                <div style={fieldLabel}>Quantity</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                  <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
-                  <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{foodServingLabel} each</div>
-                </div>
-              </>}
-
-              <div style={fieldLabel}>Food name</div>
-              <input type="text" placeholder="Food name" value={foodName} onChange={(e) => { setFoodName(e.target.value); if (selectedSavedFoodId) setSelectedSavedFoodId(null); }} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Meal</div>
-              <select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }}>
-                <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option>
-              </select>
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Protein (g)</div><input type="number" inputMode="numeric" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Carbs (g)</div><input type="number" inputMode="numeric" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
-                <div><div style={fieldLabel}>Fat (g)</div><input type="number" inputMode="numeric" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
-              </div>
-              <div style={fieldLabel}>Fiber (g)</div>
-              <input type="number" inputMode="numeric" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              {!selectedSavedFoodId && <>
-                <div style={fieldLabel}>Serving description</div>
-                <input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              </>}
-              <div style={fieldLabel}>Notes (optional)</div>
-              <input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-
-              {!selectedSavedFoodId && !editingSavedId && <label style={{ display: "flex", alignItems: "center", gap: 9, color: TEXT_MUTED, fontSize: 13, marginBottom: 12, cursor: "pointer" }}>
-                <input type="checkbox" checked={saveAsSaved} onChange={(e) => setSaveAsSaved(e.target.checked)} style={{ width: 18, height: 18 }} />
-                <BookmarkPlus style={{ width: 15, height: 15 }} /> Save this to household foods
-              </label>}
-
-              {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
-              {editingSavedId ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                <button onClick={saveSavedFoodOnly} style={bigButton(profileColor(activeUser), profileText(activeUser))}>Save changes</button>
-              </div> : <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "food" ? "✓ Added" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>}
-            </div>
-
-            </>}
-            {logTab === "weight" && <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Weight</div>
-              <div style={fieldLabel}>Weight (lb)</div>
-              <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-              <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "weight" ? "✓ Logged" : "Log weight"}</button>
-              {data[activeUser].weights.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  {data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => (
-                    <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
-                      <span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span>
-                      <span className="num">{w.weight} lb</span>
-                      <button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            </>}
-            {logTab === "activity" && <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Activity</div>
-              <div style={fieldLabel}>Activity</div>
-              <input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Calories burned</div>
-              <input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
-            </div>
-
-            </>}
-            {logTab === "water" && <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Water</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-                {[8, 16, 24].map((oz) => (
-                  <button key={oz} onClick={() => addWater(oz)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>
-                ))}
-              </div>
-              <div style={fieldLabel}>Custom amount (oz)</div>
-              <input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
-            </div>
-            </>}
-            {logTab === "steps" && <>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Steps</div>
-              <div style={fieldLabel}>Step count</div>
-              <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Date</div>
-              <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-              <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>{buttonSuccess === "steps" ? "✓ Saved" : "Save steps"}</button>
-            </div>
-
-            </>}
-          </>
+          <LogTab
+            activeUser={activeUser}
+            activeCanEdit={activeCanEdit}
+            data={data}
+            today={today}
+            ts={ts}
+            logTab={logTab}
+            setLogTab={setLogTab}
+            buttonSuccess={buttonSuccess}
+            activeFasts={activeFasts}
+            fastPromptDismissedToday={fastPromptDismissedToday}
+            fastEditorOpen={fastEditorOpen}
+            fastBusy={fastBusy}
+            fastStartDate={fastStartDate}
+            fastStartTime={fastStartTime}
+            setFastStartDate={setFastStartDate}
+            setFastStartTime={setFastStartTime}
+            setFastEditorOpen={setFastEditorOpen}
+            dismissFastPromptToday={dismissFastPromptToday}
+            openFastEditor={openFastEditor}
+            startFast={startFast}
+            updateFastStart={updateFastStart}
+            fastElapsed={fastElapsed}
+            savedFoods={savedFoods}
+            globalFoods={globalFoods}
+            savedSearch={savedSearch}
+            setSavedSearch={setSavedSearch}
+            selectedSavedFoodId={selectedSavedFoodId}
+            setSelectedSavedFoodId={setSelectedSavedFoodId}
+            foodQuantity={foodQuantity}
+            foodServingLabel={foodServingLabel}
+            saveAsSaved={saveAsSaved}
+            setSaveAsSaved={setSaveAsSaved}
+            editingSavedId={editingSavedId}
+            editingFoodId={editingFoodId}
+            showManageSaved={showManageSaved}
+            setShowManageSaved={setShowManageSaved}
+            foodLibraryTab={foodLibraryTab}
+            setFoodLibraryTab={setFoodLibraryTab}
+            visibleLibraryFoods={visibleLibraryFoods}
+            managedSavedFoods={managedSavedFoods}
+            chooseSavedFood={chooseSavedFood}
+            isFavoriteFood={isFavoriteFood}
+            toggleFavorite={toggleFavorite}
+            editSavedFood={editSavedFood}
+            deleteSavedFood={deleteSavedFood}
+            changeQuantity={changeQuantity}
+            clearFoodForm={clearFoodForm}
+            saveSavedFoodOnly={saveSavedFoodOnly}
+            foodName={foodName}
+            setFoodName={setFoodName}
+            foodMeal={foodMeal}
+            setFoodMeal={setFoodMeal}
+            foodDate={foodDate}
+            setFoodDate={setFoodDate}
+            foodCals={foodCals}
+            setFoodCals={setFoodCals}
+            foodProtein={foodProtein}
+            setFoodProtein={setFoodProtein}
+            foodCarbs={foodCarbs}
+            setFoodCarbs={setFoodCarbs}
+            foodFat={foodFat}
+            setFoodFat={setFoodFat}
+            foodFiber={foodFiber}
+            setFoodFiber={setFoodFiber}
+            foodNotes={foodNotes}
+            setFoodNotes={setFoodNotes}
+            setFoodServingLabel={setFoodServingLabel}
+            foodError={foodError}
+            addFood={addFood}
+            deleteFood={deleteFood}
+            weightInput={weightInput}
+            setWeightInput={setWeightInput}
+            weightDate={weightDate}
+            setWeightDate={setWeightDate}
+            weightError={weightError}
+            addWeight={addWeight}
+            deleteWeight={deleteWeight}
+            actName={actName}
+            activityError={activityError}
+            setActName={setActName}
+            actCals={actCals}
+            setActCals={setActCals}
+            actDate={actDate}
+            setActDate={setActDate}
+            addActivity={addActivity}
+            waterOz={waterOz}
+            waterError={waterError}
+            setWaterOz={setWaterOz}
+            waterDate={waterDate}
+            setWaterDate={setWaterDate}
+            addWater={addWater}
+            stepsInput={stepsInput}
+            stepsError={stepsError}
+            setStepsInput={setStepsInput}
+            stepsDate={stepsDate}
+            setStepsDate={setStepsDate}
+            saveSteps={saveSteps}
+            profileColor={profileColor}
+            profileText={profileText}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+          />
         )}
 
         {tab === "trends" && (
-          <>
-            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>See how things are changing over time.</div>
-            </div>
-            <div style={cardStyle}>
-              <div style={headingStyle}>Weight trend</div>
-              <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>solid = actual, dashed = 7-day avg</div>
-              <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
-                {profileNames.map((u) => {
-                  const info = goalInfo(u);
-                  return (
-                    <div key={u}>
-                      <div style={{ fontSize: 11, color: profileColor(u), fontWeight: 700 }}>{u}</div>
-                      <div className="num" style={{ fontSize: 16 }}>
-                        {info ? `${info.latest} lb` : "—"}
-                        {info && info.latest !== info.start && (
-                          <span style={{ color: info.latest < info.start ? profileColor(u) : WARN, fontSize: 12, marginLeft: 6 }}>
-                            {info.latest < info.start ? "▼" : "▲"} {Math.abs(info.latest - info.start).toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {chartData.length === 0 ? (
-                <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "2rem 0", textAlign: "center" }}>Your trend will take shape as you add weigh-ins.</div>
-              ) : (
-                <div style={{ width: "100%", height: 200 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                      <CartesianGrid stroke={BORDER} strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 10 }} axisLine={{ stroke: BORDER }} tickLine={false} />
-                      <YAxis tick={{ fill: TEXT_MUTED, fontSize: 10 }} axisLine={{ stroke: BORDER }} tickLine={false} domain={["dataMin - 3", "dataMax + 3"]} width={32} />
-                      <Tooltip contentStyle={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12 }} labelStyle={{ color: TEXT }} />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      {profileNames.map((u) => <Line key={u} type="monotone" dataKey={u} name={u} stroke={profileColor(u)} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />)}
-                      {profileNames.map((u) => <Line key={`${u}-avg`} type="monotone" dataKey={`${u}Avg`} name={`${u} avg`} stroke={profileColor(u)} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />)}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-
-            <div style={cardStyle}>
-              <div style={headingStyle}>Last 14 days</div>
-              {profileNames.map((u) => (
-                <div key={u} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: u === "Alli" ? 10 : 0 }}>
-                  <div style={{ width: 40, fontSize: 11, color: profileColor(u), fontWeight: 700 }}>{u}</div>
-                  <div style={{ display: "flex", gap: 3, flex: 1 }}>
-                    {streaks.days.map((d, i) => (
-                      <div key={d} title={`${fmtDate(d)}: ${streaks.result[u][i] ? "logged" : "nothing logged"}`}
-                        style={{ flex: 1, height: 18, borderRadius: 3, background: streaks.result[u][i] ? profileColor(u) : SURFACE_2, border: `1px solid ${streaks.result[u][i] ? profileColor(u) : BORDER}` }} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <TrendsTab
+            activeUser={activeUser}
+            data={data}
+            today={today}
+            goalInfo={goalInfo}
+            profileColor={profileColor}
+            styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle }}
+          />
         )}
 
         {tab === "goals" && (
-          <>
-            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What you’re working toward.</div>
-            </div>
-
-            {(!data[activeUser].goalWeight && !data[activeUser].goalDate && !data[activeUser].targets.calories) ? (
-              <div style={{ ...cardStyle, background: "#FFF8EE", borderColor: "#E6D6C1" }}>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
-                {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(profileColor(activeUser), profileText(activeUser)), width: "auto", paddingInline: 18 }}>Set your goals</button>}
-              </div>
-            ) : !editingGoals ? (
-              <>
-                <div style={cardStyle}>
-                  <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>Your goal</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600 }}>
-                      {gi ? `${gi.latest} → ${gi.goal ?? "—"} lb` : `${data[activeUser].goalWeight ?? "—"} lb`}
-                    </div>
-                    {data[activeUser].goalDate && <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{fmtGoalDate(data[activeUser].goalDate)}</div>}
-                  </div>
-
-                  {gi && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
-                      <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
-                        <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>Bodyweight lost</div>
-                        <div style={{ fontSize: 24, fontWeight: 700 }}>{gi.pctLost.toFixed(1)}%</div>
-                        <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{(gi.start - gi.latest).toFixed(1)} lb</div>
-                      </div>
-                      <div style={{ background: SURFACE_2, borderRadius: 14, padding: "0.85rem 1rem" }}>
-                        <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>To go</div>
-                        <div style={{ fontSize: 21, fontWeight: 700 }}>{gi.toGoal != null ? (gi.toGoal > 0 ? `${gi.toGoal.toFixed(1)} lb` : "You’re there") : "—"}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div style={cardStyle}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <div style={headingStyle}>Daily targets</div>
-                    {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: profileColor(activeUser, true), fontWeight: 700, fontSize: 12 }}>Edit</button>}
-                  </div>
-                  <div style={{ display: "grid", gap: 8 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Calories</span><strong>{data[activeUser].targets.calories || "—"}</strong></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Protein</span><strong>{data[activeUser].targets.protein || "—"}g</strong></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Carbs</span><strong>{data[activeUser].targets.carbs || "—"}g</strong></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Fat</span><strong>{data[activeUser].targets.fat || "—"}g</strong></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8 }}><span style={{ color: TEXT_MUTED }}>Fiber</span><strong>{data[activeUser].targets.fiberMin || "—"}–{data[activeUser].targets.fiberMax || "—"}g</strong></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: TEXT_MUTED }}>BMR</span><strong>{data[activeUser].targets.bmr || "—"}</strong></div>
-                  </div>
-                  {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginTop: 16 }}>Edit goals & targets</button>}
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={cardStyle}>
-                  <div style={headingStyle}>Edit goals & targets</div>
-                  <div style={fieldLabel}>Goal weight (lb)</div>
-                  <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-                  <div style={fieldLabel}>Goal date</div>
-                  <input type="date" value={goalDateInput} onChange={(e) => setGoalDateInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                    <div><div style={fieldLabel}>BMR</div><input type="number" value={tBmr} onChange={(e) => setTBmr(e.target.value)} style={inputStyle} /></div>
-                    <div><div style={fieldLabel}>Calories</div><input type="number" value={tCal} onChange={(e) => setTCal(e.target.value)} style={inputStyle} /></div>
-                    <div><div style={fieldLabel}>Protein (g)</div><input type="number" value={tProtein} onChange={(e) => setTProtein(e.target.value)} style={inputStyle} /></div>
-                    <div><div style={fieldLabel}>Carbs (g)</div><input type="number" value={tCarbs} onChange={(e) => setTCarbs(e.target.value)} style={inputStyle} /></div>
-                    <div><div style={fieldLabel}>Fat (g)</div><input type="number" value={tFat} onChange={(e) => setTFat(e.target.value)} style={inputStyle} /></div>
-                    <div></div>
-                    <div><div style={fieldLabel}>Fiber min (g)</div><input type="number" value={tFiberMin} onChange={(e) => setTFiberMin(e.target.value)} style={inputStyle} /></div>
-                    <div><div style={fieldLabel}>Fiber max (g)</div><input type="number" value={tFiberMax} onChange={(e) => setTFiberMax(e.target.value)} style={inputStyle} /></div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <button onClick={() => setEditingGoals(false)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-                    <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(profileColor(activeUser), profileText(activeUser))}>Save changes</button>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
+          <GoalsTab
+            activeUser={activeUser}
+            activeCanEdit={activeCanEdit}
+            data={data}
+            gi={gi}
+            editingGoals={editingGoals}
+            setEditingGoals={setEditingGoals}
+            goalInput={goalInput}
+            setGoalInput={setGoalInput}
+            goalDateInput={goalDateInput}
+            goalError={goalError}
+            setGoalDateInput={setGoalDateInput}
+            tBmr={tBmr}
+            setTBmr={setTBmr}
+            tCal={tCal}
+            setTCal={setTCal}
+            tProtein={tProtein}
+            setTProtein={setTProtein}
+            tCarbs={tCarbs}
+            setTCarbs={setTCarbs}
+            tFat={tFat}
+            setTFat={setTFat}
+            tFiberMin={tFiberMin}
+            setTFiberMin={setTFiberMin}
+            tFiberMax={tFiberMax}
+            setTFiberMax={setTFiberMax}
+            saveGoal={saveGoal}
+            saveTargets={saveTargets}
+            profileColor={profileColor}
+            profileText={profileText}
+            fmtGoalDate={fmtGoalDate}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+          />
         )}
 
         {tab === "profile" && (
-          <>
-            <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05 }}>Profile</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Your account, your goals, your people.</div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{profileNameInput || activeUser}</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{session?.user?.email}</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 2 }}>{householdName}</div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                <div>
-                  <div style={{ fontWeight: 700, marginBottom: 3 }}>Health goals & targets</div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 12 }}>
-                    {data[activeUser]?.goalWeight ? `${data[activeUser].goalWeight} lb${data[activeUser].goalDate ? ` by ${fmtGoalDate(data[activeUser].goalDate)}` : ""}` : "Not set yet"}
-                  </div>
-                </div>
-                <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: profileColor(activeUser, true), display: "flex", alignItems: "center", gap: 3, fontWeight: 700, fontSize: 12 }}>Manage <ChevronRight style={{ width: 14, height: 14 }} /></button>
-              </div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={headingStyle}>Your profile</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>This is how your name appears to the people you’re with.</div>
-              <div style={fieldLabel}>Profile name</div>
-              <input type="text" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} />
-              <div style={fieldLabel}>Your color</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-                {PROFILE_COLORS.map((c) => {
-                  const selected = (profileColors[profileNameInput || activeUser] || profileColor(profileNameInput || activeUser)) === c.value;
-                  return <button key={c.value} type="button" title={c.name} aria-label={`Choose ${c.name}`} onClick={() => saveProfileColor(c.value)} style={{ width: 36, height: 36, borderRadius: "50%", background: c.value, border: selected ? `3px solid ${TEXT}` : `2px solid ${SURFACE}`, boxShadow: selected ? `0 0 0 2px ${BORDER}` : `0 0 0 1px ${BORDER}`, padding: 0 }} />;
-                })}
-              </div>
-              <button onClick={saveProfileName} disabled={accountBusy} style={bigButton(USER_COLOR.Shane, USER_TEXT_ON.Shane)}>Save profile</button>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={headingStyle}>Account</div>
-              <div style={fieldLabel}>Email</div>
-              <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <button onClick={saveEmail} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginBottom: 18 }}>Update email</button>
-
-              <div style={fieldLabel}>New password</div>
-              <input type="password" minLength={6} value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <div style={fieldLabel}>Confirm new password</div>
-              <input type="password" minLength={6} value={confirmPasswordInput} onChange={(e) => setConfirmPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <button onClick={savePassword} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Change password</button>
-
-              {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 12 }}>{accountError}</div>}
-              {accountMessage && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginTop: 12 }}>{accountMessage}</div>}
-            </div>
-
-            <div style={cardStyle}>
-              <div style={headingStyle}>Your With</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{householdName}</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>{profileNames.length} {profileNames.length === 1 ? "person" : "people"} you’re with</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {profileNames.map((name) => <span key={name} style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "6px 9px", fontSize: 12 }}>{name}</span>)}
-              </div>
-            </div>
-
-            <div style={cardStyle}>
-              <button onClick={() => supabase.auth.signOut()} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Sign out</button>
-            </div>
-
-            <div style={{ ...cardStyle, borderColor: "#6E3531" }}>
-              <div style={{ ...headingStyle, color: WARN }}>Delete account</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>
-                This permanently removes your login, your profile, and your personal health entries. It does not delete other people or their data.
-              </div>
-              <div style={fieldLabel}>Type DELETE to confirm</div>
-              <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-              <button onClick={deleteAccount} disabled={accountBusy || deleteConfirm !== "DELETE"} style={{ ...bigButton("#6E3531", "#FFE8E4"), opacity: deleteConfirm === "DELETE" ? 1 : .55 }}>Delete my account</button>
-            </div>
-          </>
+          <ProfileTab
+            activeUser={activeUser}
+            data={data}
+            session={session}
+            timeZone={timeZone}
+            deviceTimeZone={deviceTimeZone}
+            saveTimeZone={saveTimeZone}
+            householdName={householdName}
+            householdRole={householdRole}
+            inviteCode={inviteCode}
+            inviteEmail={inviteEmail}
+            setInviteEmail={setInviteEmail}
+            inviteBusy={inviteBusy}
+            inviteMessage={inviteMessage}
+            inviteError={inviteError}
+            sendInviteEmail={sendInviteEmail}
+            shareInvite={shareInvite}
+            copyInviteCode={copyInviteCode}
+            profileNames={profileNames}
+            profileNameInput={profileNameInput}
+            setProfileNameInput={setProfileNameInput}
+            profileColors={profileColors}
+            profileColor={profileColor}
+            profileText={profileText}
+            profileWithmarks={profileWithmarks}
+            profileWithmark={profileWithmark}
+            withmarkOptions={WITHMARK_OPTIONS}
+            profileColorOptions={PROFILE_COLORS}
+            saveProfileColor={saveProfileColor}
+            saveProfileWithmark={saveProfileWithmark}
+            saveProfileName={saveProfileName}
+            openGoalsEdit={openGoalsEdit}
+            fmtGoalDate={fmtGoalDate}
+            emailInput={emailInput}
+            setEmailInput={setEmailInput}
+            saveEmail={saveEmail}
+            newPasswordInput={newPasswordInput}
+            setNewPasswordInput={setNewPasswordInput}
+            confirmPasswordInput={confirmPasswordInput}
+            setConfirmPasswordInput={setConfirmPasswordInput}
+            savePassword={savePassword}
+            accountBusy={accountBusy}
+            accountError={accountError}
+            accountMessage={accountMessage}
+            renamingWith={renamingWith}
+            setRenamingWith={setRenamingWith}
+            withNameInput={withNameInput}
+            setWithNameInput={setWithNameInput}
+            renameWith={renameWith}
+            clearAccountError={() => setAccountError("")}
+            signOut={async () => { const { error } = await supabase.auth.signOut(); if (error) setAccountError(friendlyError(error, "We couldn’t sign you out. Try again.")); }}
+            deleteConfirm={deleteConfirm}
+            setDeleteConfirm={setDeleteConfirm}
+            deleteAccount={deleteAccount}
+            profileSaveColor={brand.teal}
+            profileSaveText={brand.inkOn}
+            successColor={brand.teal}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+          />
         )}
 
       </div>
 
       {toast && (
-        <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(45,35,25,.18)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
-          ✓ {toast}
+        <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(28,36,48,.16)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <CheckMark size={15} color={SURFACE} />
+            {toast}
+          </span>
         </div>
       )}
 
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, background: SURFACE, borderTop: `1px solid ${BORDER}`,
-        paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10,
+        position: "fixed", bottom: 0, left: 0, right: 0, background: brand.teal, borderTop: `1px solid ${brand.tealDark}`,
+        paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10, boxShadow: "0 -2px 10px rgba(23,78,73,.10)",
       }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", height: NAV_H }}>
+        <div style={{ maxWidth: 520, margin: "0 auto", display: "flex", height: NAV_H }}>
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
               <button key={id} onClick={() => id === "log" ? openLog(logTab) : setTab(id)} style={{
                 flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 3,
-                color: active ? profileColor(activeUser) : TEXT_MUTED,
+                color: active ? brand.inkOn : "rgba(255,255,255,.62)",
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
-                <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'Fraunces', serif", fontStyle: "italic" }}>{label}</span>
+                <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal" }}>{label}</span>
               </button>
             );
           })}

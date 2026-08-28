@@ -29,7 +29,30 @@ Deno.serve(async (req) => {
     const householdId = membership?.household_id || null;
     const wasOwner = membership?.role === "owner";
 
-    // Removing the profile cascades the user's personal health-entry rows.
+    const { data: ownedProfiles, error: ownedProfilesError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId);
+    if (ownedProfilesError) throw ownedProfilesError;
+
+    const profileIds = (ownedProfiles || []).map((profile) => profile.id);
+
+    // Explicitly remove personal health data instead of relying on unknown
+    // foreign-key cascade behavior from older database setup.
+    if (profileIds.length) {
+      for (const table of [
+        "weight_entries",
+        "food_entries",
+        "activity_entries",
+        "step_entries",
+        "water_entries",
+        "fasting_entries",
+      ]) {
+        const { error: entryError } = await admin.from(table).delete().in("profile_id", profileIds);
+        if (entryError) throw entryError;
+      }
+    }
+
     const { error: profileError } = await admin.from("profiles").delete().eq("user_id", userId);
     if (profileError) throw profileError;
 
