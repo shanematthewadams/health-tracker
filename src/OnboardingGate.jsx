@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
 
@@ -270,6 +270,7 @@ export default function OnboardingGate({ children }) {
   const initialInviteCode = inviteFromUrl || localStorage.getItem("with-pending-invite") || "";
   const initialInviterName = inviterFromUrl || localStorage.getItem("with-pending-inviter") || "";
   const [session, setSession] = useState(null);
+  const sessionRef = useRef(null);
   const [checking, setChecking] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [checkError, setCheckError] = useState("");
@@ -281,6 +282,7 @@ export default function OnboardingGate({ children }) {
 
   async function checkMembership(nextSession) {
     if (!nextSession?.user) {
+      sessionRef.current = null;
       setSession(null);
       setNeedsOnboarding(false);
       setCheckError("");
@@ -288,6 +290,7 @@ export default function OnboardingGate({ children }) {
       return;
     }
 
+    sessionRef.current = nextSession;
     setSession(nextSession);
     setChecking(true);
     setCheckError("");
@@ -320,6 +323,7 @@ export default function OnboardingGate({ children }) {
 
       if (event === "PASSWORD_RECOVERY") {
         sessionStorage.setItem("with-password-recovery", "1");
+        sessionRef.current = nextSession;
         setSession(nextSession);
         setNeedsOnboarding(false);
         setCheckError("");
@@ -333,10 +337,12 @@ export default function OnboardingGate({ children }) {
       }
 
       if (event === "SIGNED_IN") {
-        const changedUser = session?.user?.id && nextSession?.user?.id && session.user.id !== nextSession.user.id;
-        if (changedUser || !session) {
+        const currentSession = sessionRef.current;
+        const changedUser = currentSession?.user?.id && nextSession?.user?.id && currentSession.user.id !== nextSession.user.id;
+        if (changedUser || !currentSession) {
           checkMembership(nextSession);
         } else {
+          sessionRef.current = nextSession;
           setSession(nextSession);
         }
         return;
@@ -344,6 +350,7 @@ export default function OnboardingGate({ children }) {
 
       // TOKEN_REFRESHED, USER_UPDATED and other routine auth events should not
       // blank the app or re-run onboarding checks. Keep the session current silently.
+      sessionRef.current = nextSession;
       setSession(nextSession);
     });
 
