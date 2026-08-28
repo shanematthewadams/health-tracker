@@ -12,6 +12,14 @@ const WARN = brand.warn;
 const ACCENT = brand.teal;
 const ACCENT_TEXT = brand.inkOn;
 
+function friendlyOnboardingError(error, fallback) {
+  const raw = String(error?.message || error || "").toLowerCase();
+  if (raw.includes("invalid") && raw.includes("invite")) return "That invite doesn’t look right. Check the code and try again.";
+  if (raw.includes("duplicate") || raw.includes("unique")) return "That name is already being used in this With.";
+  if (raw.includes("network") || raw.includes("fetch")) return "We couldn’t connect to With. Check your connection and try again.";
+  return fallback;
+}
+
 const inputStyle = {
   background: SURFACE,
   border: `1px solid ${BORDER}`,
@@ -123,7 +131,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     });
 
     if (createError) {
-      setError(createError.message);
+      setError(friendlyOnboardingError(createError, "We couldn’t create your With. Try again."));
       setBusy(false);
       return;
     }
@@ -148,7 +156,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     });
 
     if (joinError) {
-      setError(joinError.message);
+      setError(friendlyOnboardingError(joinError, "We couldn’t join that With. Check the invite and try again."));
       setBusy(false);
       return;
     }
@@ -289,7 +297,7 @@ export default function OnboardingGate({ children }) {
       .limit(1);
 
     if (error) {
-      setCheckError(error.message);
+      setCheckError(friendlyOnboardingError(error, "We couldn’t load your With. Try again."));
       setNeedsOnboarding(false);
     } else {
       setNeedsOnboarding(!data?.length);
@@ -341,7 +349,7 @@ export default function OnboardingGate({ children }) {
         <BrandIntro eyebrow="We’re in this together." />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 10 }}>We couldn’t load your With.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Nothing has been changed. Try signing out and back in.</div>
-        <div style={{ color: WARN, fontSize: 12, marginBottom: 14 }}>{checkError}</div>
+        <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 14 }}>{checkError}</div>
         <button type="button" onClick={() => supabase.auth.signOut()} style={secondaryButton}>Sign out</button>
       </ScreenShell>
     );
