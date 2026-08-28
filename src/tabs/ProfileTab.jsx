@@ -116,8 +116,8 @@ export default function ProfileTab({
 
   return (
     <>
-      <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05 }}>Profile</div>
+      <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Profile</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>You, your people, and the things you’re working toward.</div>
       </div>
 
@@ -126,7 +126,7 @@ export default function ProfileTab({
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
               <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: "50%", background: profileColor(activeUser), flexShrink: 0 }} />
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 29, fontWeight: 600, lineHeight: 1.05, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profileNameInput || activeUser}</div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profileNameInput || activeUser}</div>
             </div>
             <button onClick={() => { clearAccountError(); setEditingProfile(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Edit</button>
           </div>
