@@ -72,13 +72,6 @@ export function ArchMark(props) {
   return <MarkBase {...props}><path {...strokeProps} d="M5 18.5c.3-6.7 2.7-11 7-12.9 4.3 1.9 6.7 6.2 7 12.9M8.3 18.5c.2-4.7 1.5-7.8 3.7-9.3 2.2 1.5 3.5 4.6 3.7 9.3" /></MarkBase>;
 }
 
-export function BirdMark(props) {
-  return <MarkBase {...props}><path {...strokeProps} d="M5.1 14.5c1.5-3.1 4.3-4.7 7.3-3.7 1.8.6 2.8 2.1 3.3 3.7M15.7 14.5l3.3-1.4-2.1 2.8M10.4 17.4c1.5.5 3 .5 4.5-.1M8.3 10.6 6.5 8.9" /></MarkBase>;
-}
-
-export function LeafMark(props) {
-  return <MarkBase {...props}><path {...strokeProps} d="M5.2 18.8C6 10.6 10.7 6.1 18.9 5.2c-.9 8.2-5.4 12.9-13.7 13.6ZM7.6 16.4 16.9 7.1" /></MarkBase>;
-}
 
 export function SparkleMark(props) {
   return <MarkBase {...props}><path {...strokeProps} d="M12 3.8c.2 3 .8 5.1 2 6.2 1.1 1.1 3.2 1.8 6.1 2-2.9.2-5 .9-6.1 2-1.2 1.1-1.8 3.2-2 6.2-.2-3-.8-5.1-2-6.2-1.1-1.1-3.2-1.8-6.1-2 2.9-.2 5-.9 6.1-2 1.2-1.1 1.8-3.2 2-6.2Z" /></MarkBase>;
@@ -98,8 +91,6 @@ export const WITHMARK_OPTIONS = [
   { id: "bolt", name: "Bolt", Component: BoltMark },
   { id: "spiral", name: "Spiral", Component: SpiralMark },
   { id: "arch", name: "Arch", Component: ArchMark },
-  { id: "bird", name: "Bird", Component: BirdMark },
-  { id: "leaf", name: "Leaf", Component: LeafMark },
   { id: "sparkle", name: "Sparkle", Component: SparkleMark },
 ];
 
