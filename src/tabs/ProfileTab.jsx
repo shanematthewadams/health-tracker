@@ -1,6 +1,7 @@
 import { brand } from "../brand.jsx";
 import { useMemo, useState } from "react";
 import { Share2, Check } from "lucide-react";
+import { WithMark } from "../WithMarks.jsx";
 
 export default function ProfileTab({
   activeUser,
@@ -25,8 +26,12 @@ export default function ProfileTab({
   setProfileNameInput,
   profileColors,
   profileColor,
+  profileWithmarks,
+  profileWithmark,
+  withmarkOptions,
   profileColorOptions,
   saveProfileColor,
+  saveProfileWithmark,
   saveProfileName,
   openGoalsEdit,
   fmtGoalDate,
@@ -125,7 +130,7 @@ export default function ProfileTab({
         {!editingProfile ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-              <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: "50%", background: profileColor(activeUser), flexShrink: 0 }} />
+              <WithMark id={profileWithmark(activeUser)} size={22} color={profileColor(activeUser)} />
               <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profileNameInput || activeUser}</div>
             </div>
             <button onClick={() => { clearAccountError(); setEditingProfile(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Edit</button>
@@ -148,6 +153,37 @@ export default function ProfileTab({
                     onClick={() => saveProfileColor(c.value)}
                     style={{ width: 34, height: 34, borderRadius: "50%", background: c.value, border: selected ? `3px solid ${TEXT}` : `2px solid ${SURFACE}`, boxShadow: selected ? `0 0 0 2px ${BORDER}` : `0 0 0 1px ${BORDER}`, padding: 0 }}
                   />
+                );
+              })}
+            </div>
+
+            <div style={fieldLabel}>Your Withmark</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.4, marginBottom: 9 }}>
+              A little mark that represents you in your With.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 7, marginBottom: 16 }}>
+              {withmarkOptions.map((option) => {
+                const selected = (profileWithmarks[profileNameInput || activeUser] || profileWithmark(profileNameInput || activeUser)) === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    title={option.name}
+                    aria-label={`Choose ${option.name} Withmark`}
+                    onClick={() => saveProfileWithmark(option.id)}
+                    style={{
+                      minWidth: 0,
+                      aspectRatio: "1",
+                      display: "grid",
+                      placeItems: "center",
+                      background: selected ? SURFACE_2 : SURFACE,
+                      border: selected ? `2px solid ${TEXT}` : `1px solid ${BORDER}`,
+                      borderRadius: 10,
+                      padding: 5,
+                    }}
+                  >
+                    <WithMark id={option.id} size={22} color={selected ? profileColor(activeUser) : TEXT_MUTED} />
+                  </button>
                 );
               })}
             </div>
