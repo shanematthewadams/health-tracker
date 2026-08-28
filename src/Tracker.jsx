@@ -231,6 +231,9 @@ function AuthScreen({ initialMessage = "" }) {
 
         {mode === "signin" && <button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Forgot password?</button>}
         {mode === "forgot" && <button type="button" onClick={() => { setMode("signin"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Back to sign in</button>}
+        <div style={{ textAlign: "center", marginTop: 14 }}>
+          <a href="/privacy" style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>Privacy policy</a>
+        </div>
       </form>
     </div>
   );
