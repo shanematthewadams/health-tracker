@@ -2,8 +2,9 @@ import { brand, metricColors } from "../brand.jsx";
 import { useEffect, useState } from "react";
 import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
 
-function greeting() {
-  const h = new Date().getHours();
+function greeting(timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === "hour")?.value || 0);
   if (h < 12) return "Good morning";
   if (h < 18) return "Good afternoon";
   return "Good evening";
@@ -15,8 +16,8 @@ function fullDateLabel(dateStr) {
 }
 
 function shiftDate(dateStr, delta) {
-  const d = new Date(dateStr + "T12:00:00");
-  d.setDate(d.getDate() + delta);
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + delta);
   return d.toISOString().slice(0, 10);
 }
 
@@ -51,6 +52,7 @@ export default function TodayTab({
   activeCanEdit,
   data,
   today,
+  timeZone,
   todayStats,
   activeFasts,
   fastPromptDismissedToday,
@@ -87,6 +89,7 @@ export default function TodayTab({
   const [editingIntention, setEditingIntention] = useState(false);
   const [intentionDraft, setIntentionDraft] = useState(intention);
   const [selectedDate, setSelectedDate] = useState(today);
+  useEffect(() => { setSelectedDate(today); }, [today]);
   const [foodDetailOpen, setFoodDetailOpen] = useState(false);
   const isToday = selectedDate === today;
 
