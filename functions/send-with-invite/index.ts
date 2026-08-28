@@ -86,17 +86,21 @@ Deno.serve(async (req) => {
     const subject = `${inviterName} invited you to With`;
     const html = `
       <div style="display:none;max-height:0;overflow:hidden;opacity:0">Track your health with ${safeInviter}.</div>
-      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#252422;line-height:1.55">
-        <h1 style="font-size:28px;margin-bottom:18px">${safeInviter} invited you to With.</h1>
-        <p>With is a simple, private way to track your health alongside the people you care about.</p>
-        <p>Track the things that matter to you, like nutrition, movement, water and weight, while ${safeInviter} works toward their own goals too.</p>
-        <p>Your goals are yours. Their goals are theirs. You’re just doing it alongside each other.</p>
-        <p style="margin:28px 0">
-          <a href="${safeInviteUrl}" style="display:inline-block;background:#F06A24;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">Join ${safeInviter} on With</a>
-        </p>
-        <div style="font-weight:700;margin-top:30px">With</div>
-        <div style="font-style:italic;color:#746F68">We’re in this together.</div>
-        <p style="font-size:12px;color:#8A857F;margin-top:24px">If the button doesn’t work, use this link:<br><a href="${safeInviteUrl}">${safeInviteUrl}</a></p>
+      <div style="margin:0;padding:28px 14px;background:#1F5E57;font-family:Arial,sans-serif;color:#171816;">
+        <div style="max-width:560px;margin:0 auto;background:#FCFBF8;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(17,50,46,.18);">
+          <div style="padding:28px 30px 18px;background:#1F5E57;color:#fff;">
+            <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;">With</div>
+            <div style="margin-top:7px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
+          </div>
+          <div style="padding:30px;">
+            <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.12;margin-bottom:16px;">${safeInviter} invited you to With.</div>
+            <p style="margin:0 0 14px;line-height:1.6;color:#5D615F;">With is a simple, private place to take care of your health alongside people you trust.</p>
+            <p style="margin:0 0 14px;line-height:1.6;color:#5D615F;">Track the things that matter to you, like nutrition, movement, water and weight, while ${safeInviter} works toward their own goals too.</p>
+            <p style="margin:0 0 24px;line-height:1.6;color:#171816;"><strong>Your goals are yours. Their goals are theirs.</strong> You’re just doing life alongside each other.</p>
+            <a href="${safeInviteUrl}" style="display:inline-block;background:#1F5E57;color:#fff;text-decoration:none;padding:13px 18px;border-radius:10px;font-weight:700;">Join ${safeInviter} on With</a>
+            <p style="font-size:12px;line-height:1.5;color:#8A8F94;margin:26px 0 0;">If the button doesn’t work, use this link:<br><a href="${safeInviteUrl}" style="color:#174E49;word-break:break-all;">${safeInviteUrl}</a></p>
+          </div>
+        </div>
       </div>
     `;
     const text = `Track your health with ${inviterName}.
