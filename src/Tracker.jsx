@@ -1358,7 +1358,10 @@ export default function Tracker() {
 
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: brand.teal, borderBottom: `1px solid ${brand.tealDark}`, paddingTop: "env(safe-area-inset-top)", boxShadow: "0 2px 10px rgba(23,78,73,.12)" }}>
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "0.72rem 1rem 0.68rem", display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <BrandLogo compact style={{ width: 96, flexShrink: 0, backgroundColor: brand.inkOn }} />
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1 }}>
+            <BrandLogo compact style={{ width: 96, backgroundColor: brand.inkOn }} />
+            <div style={{ color: "rgba(255,255,255,.72)", fontSize: 9, fontWeight: 500, letterSpacing: ".01em", lineHeight: 1.15, whiteSpace: "nowrap" }}>We’re in this together.</div>
+          </div>
           <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: "rgba(255,255,255,.10)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 12, padding: "7px 9px 8px" }}>
             <div title={householdName} style={{ fontSize: 11, color: "rgba(255,255,255,.72)", fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "right", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {householdName}
