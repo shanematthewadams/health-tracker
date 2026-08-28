@@ -218,7 +218,7 @@ export default function TodayTab({
         </div>
       </div>
 
-      {isToday && <section style={{ marginBottom: 28, paddingBottom: 22 }}>
+      {isToday && <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
