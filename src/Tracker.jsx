@@ -199,9 +199,9 @@ function AuthScreen({ initialMessage = "" }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
-      <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
+      <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
         <BrandLogo style={{ marginBottom: 10 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginBottom: 8 }}>We’re in this together.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
@@ -268,8 +268,8 @@ function ResetPasswordScreen({ onDone }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <form onSubmit={updatePassword} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
         <BrandLogo style={{ marginBottom: 12 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginBottom: 20 }}>Choose a new password.</div>
         <div style={fieldLabel}>New password</div>
@@ -305,8 +305,8 @@ function Onboarding({ onComplete }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
         <BrandLogo style={{ marginBottom: 12 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 28, lineHeight: 1.05, marginBottom: 8 }}>Welcome to With</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>Who are you with?</div>
@@ -349,7 +349,7 @@ function ClaimProfile({ profiles, onClaim }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <div style={{ ...cardStyle, width: "100%", maxWidth: 440, marginBottom: 0 }}>
         <BrandLogo style={{ marginBottom: 10 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 16 }}>We’re in this together.</div>
