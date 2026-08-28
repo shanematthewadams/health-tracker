@@ -77,7 +77,7 @@ export default function TodayTab({
   saveIntention,
   styles,
 }) {
-  const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, fieldLabel, inputStyle, bigButton } = styles;
+  const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, fieldLabel, inputStyle, bigButton } = styles;
   const u = data[activeUser];
   const targets = u.targets;
   const goalWeeks = weeksUntil(u.goalDate);
