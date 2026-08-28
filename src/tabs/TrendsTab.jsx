@@ -12,14 +12,15 @@ function shortDate(dateStr) {
   return d.toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
 }
 
-function lastNDays(n) {
+function addCalendarDays(dateStr, amount) {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + amount);
+  return d.toISOString().slice(0, 10);
+}
+
+function lastNDays(n, today) {
   const days = [];
-  const now = new Date();
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    days.push(dateKey(d));
-  }
+  for (let i = n - 1; i >= 0; i--) days.push(addCalendarDays(today, -i));
   return days;
 }
 
@@ -37,8 +38,8 @@ function fastingTouchesDate(fast, dateStr) {
   return started <= dayEnd && ended >= dayStart;
 }
 
-function buildTrendData(user) {
-  const days = lastNDays(14);
+function buildTrendData(user, today) {
+  const days = lastNDays(14, today);
   const recent = days.map((date) => {
     const foods = user.foods.filter((f) => f.date === date);
     const activities = user.activities.filter((a) => a.date === date);
@@ -97,8 +98,8 @@ function MetricCard({ icon: Icon, label, value, sub, data, dataKey, color, suffi
   );
 }
 
-function TrendSummary({ name, user, profileColor }) {
-  const trend = buildTrendData(user);
+function TrendSummary({ name, user, profileColor, today }) {
+  const trend = buildTrendData(user, today);
   return (
     <div style={{ display: "grid", gridTemplateColumns: "70px repeat(4, minmax(0, 1fr))", alignItems: "center", gap: 7, padding: "10px 0", borderTop: `1px solid ${brand.border}` }}>
       <div style={{ minWidth: 0 }}>
@@ -124,7 +125,7 @@ function TrendSummary({ name, user, profileColor }) {
   );
 }
 
-function CombinedTrends({ names, data, goalInfo, profileColor, styles }) {
+function CombinedTrends({ names, data, today, goalInfo, profileColor, styles }) {
   const { BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle } = styles;
   const allDates = [...new Set(names.flatMap((name) => data[name].weights.map((w) => w.date)))].sort();
   const weightRows = allDates.map((date) => {
@@ -185,12 +186,12 @@ function CombinedTrends({ names, data, goalInfo, profileColor, styles }) {
           <div style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 9, fontWeight: 800 }}><Dumbbell style={{ width: 13, height: 13, color: metricColors.activity, display: "block", margin: "0 auto 3px" }} />Activity</div>
           <div style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 9, fontWeight: 800 }}><Utensils style={{ width: 13, height: 13, color: metricColors.food, display: "block", margin: "0 auto 3px" }} />Nutrition</div>
         </div>
-        {names.map((name) => <TrendSummary key={name} name={name} user={data[name]} profileColor={profileColor} />)}
+        {names.map((name) => <TrendSummary key={name} name={name} user={data[name]} profileColor={profileColor} today={today} />)}
       </div>
     </>
   );
 }
-export default function TrendsTab({ activeUser, data, goalInfo, profileColor, styles }) {
+export default function TrendsTab({ activeUser, data, today, goalInfo, profileColor, styles }) {
   const { TEXT_MUTED } = styles;
   const profileNames = Object.keys(data);
   const [view, setView] = useState("with");
@@ -251,6 +252,7 @@ export default function TrendsTab({ activeUser, data, goalInfo, profileColor, st
       <CombinedTrends
         names={view === "with" ? profileNames : [selectedName]}
         data={data}
+        today={today}
         goalInfo={goalInfo}
         profileColor={profileColor}
         styles={styles}
