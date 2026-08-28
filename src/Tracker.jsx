@@ -502,10 +502,6 @@ export default function Tracker() {
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (event === "SIGNED_IN" && nextSession?.user) {
-        setLoading(true);
-        setSaveError(null);
-      }
       if (event === "SIGNED_OUT") {
         sessionStorage.removeItem("with-password-recovery");
         setPasswordRecovery(false);
@@ -535,7 +531,9 @@ export default function Tracker() {
 
   async function loadAll() {
     if (!session?.user) return;
-    setLoading(true); setSaveError(null);
+    const shouldBlock = !householdId || !Object.keys(profiles).length;
+    if (shouldBlock) setLoading(true);
+    setSaveError(null);
     try {
       const { data: memberships, error: memberError } = await supabase
         .from("household_members").select("household_id, role").eq("user_id", session.user.id).limit(1);
