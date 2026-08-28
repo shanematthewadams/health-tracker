@@ -194,7 +194,7 @@ export default function GoalsTab({
             )}
           </section>
 
-          <section style={{ padding: "4px 2px 8px" }}>
+          <section style={{ padding: "4px 1.15rem 8px" }}>
             <details>
               <summary style={{ cursor: "pointer", color: brand.tealDark, fontWeight: 800, fontSize: 12, listStylePosition: "outside" }}>
                 About your targets
