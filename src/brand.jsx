@@ -53,32 +53,24 @@ export function BrandLogo({ compact = false, style = {} }) {
 export function BrandLoading({ children = "Getting your With ready…" }) {
   return (
     <div
+      role="status"
+      aria-live="polite"
       style={{
         minHeight: "100vh",
-        background: brand.bg,
-        color: brand.textMuted,
+        minHeight: "100dvh",
+        background: brand.teal,
+        color: "rgba(255,255,255,.76)",
         display: "grid",
         placeItems: "center",
         padding: 24,
+        paddingTop: "calc(24px + env(safe-area-inset-top))",
+        paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
         fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <div
-        role="status"
-        aria-live="polite"
-        style={{
-          width: "100%",
-          maxWidth: 260,
-          textAlign: "center",
-          background: brand.surface,
-          border: `1px solid ${brand.border}`,
-          borderRadius: 18,
-          padding: "25px 21px 22px",
-          boxShadow: "0 10px 34px rgba(17,17,17,.055)",
-        }}
-      >
-        <BrandLogo style={{ width: 116, margin: "0 auto 13px" }} />
-        <div style={{ fontSize: 13, lineHeight: 1.45 }}>{children}</div>
+      <div style={{ width: "100%", maxWidth: 280, textAlign: "center" }}>
+        <BrandLogo style={{ width: 132, margin: "0 auto 14px", backgroundColor: brand.inkOn }} />
+        <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>{children}</div>
       </div>
     </div>
   );
