@@ -199,8 +199,8 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
 
   return (
     <>
-      <div style={{ padding: "0.25rem 0.1rem 0.8rem" }}>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
+      <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>
           {view === "with" ? "See how the people you’re With are doing, together." : `A closer look at how things are changing for ${selectedName}.`}
         </div>
