@@ -163,7 +163,7 @@ export default function GoalsTab({
             )}
           </section>
 
-          <section style={{ ...cardStyle, padding: "1.15rem" }}>
+          <section style={{ padding: "0.2rem 1.15rem 0.55rem", marginBottom: "0.35rem" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <div>
                 <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, lineHeight: 1.08 }}>Daily targets</div>
