@@ -219,12 +219,17 @@ export default function ProfileTab({
               ))}
             </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 14 }}>
-              {inviteCode && <button onClick={() => setInviting((v) => !v)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: 0 }}>Invite someone</button>}
-              {householdRole === "owner" && (
-                <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); clearAccountError(); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: 0 }}>Edit With name</button>
-              )}
-            </div>
+            {householdRole === "owner" && (
+              <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); clearAccountError(); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "12px 0 0" }}>Edit With name</button>
+            )}
+
+            {inviteCode && (
+              <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Invite someone to your With</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>Add someone you know to this With so you can support each other.</div>
+                <button onClick={() => setInviting((v) => !v)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{inviting ? "Close invite" : "Invite someone"}</button>
+              </div>
+            )}
           </>
         ) : (
           <div>
@@ -239,7 +244,7 @@ export default function ProfileTab({
         )}
 
         {inviteCode && inviting && !renamingWith && (
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ marginTop: 12, padding: 14, background: SURFACE_2, borderRadius: 12 }}>
             <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Who would you like to invite? They’ll create their own account and health profile.</div>
             <div style={fieldLabel}>Email address</div>
             <div style={{ display: "flex", gap: 8, marginBottom: 9 }}>
@@ -254,10 +259,21 @@ export default function ProfileTab({
             <details style={{ marginTop: 10 }}>
               <summary style={{ color: TEXT_MUTED, fontSize: 11, cursor: "pointer" }}>Use invite code instead</summary>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                <div style={{ flex: 1, background: SURFACE_2, borderRadius: 8, padding: "9px 10px", fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>{inviteCode}</div>
+                <div style={{ flex: 1, background: SURFACE, borderRadius: 8, padding: "9px 10px", fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>{inviteCode}</div>
                 <button type="button" onClick={copyInviteCode} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 700, fontSize: 12 }}>Copy</button>
               </div>
             </details>
+          </div>
+        )}
+
+        {!renamingWith && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Share With</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>Know someone who might like With? Send them a link.</div>
+            <button onClick={shareWith} style={{ background: "none", border: "none", color: brand.tealDark, padding: "8px 0 0", fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {shareStatus === "Link copied" ? <Check style={{ width: 14, height: 14 }} /> : <Share2 style={{ width: 14, height: 14 }} />}
+              {shareStatus || "Share With"}
+            </button>
           </div>
         )}
       </section>
@@ -334,17 +350,13 @@ export default function ProfileTab({
         {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 8 }}>{accountError}</div>}
         {accountMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountMessage}</div>}
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16 }}>
-          <a href="/privacy" style={{ color: brand.tealDark, fontWeight: 800, fontSize: 12, textDecoration: "none" }}>Privacy policy</a>
+        <div style={{ marginTop: 16 }}>
           <button onClick={signOut} style={{ background: "none", border: "none", color: TEXT, padding: 0, fontWeight: 800, fontSize: 12 }}>Sign out</button>
-          <button onClick={shareWith} style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
-            {shareStatus === "Link copied" ? <Check style={{ width: 14, height: 14 }} /> : <Share2 style={{ width: 14, height: 14 }} />}
-            {shareStatus || "Share With"}
-          </button>
         </div>
       </section>
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 18, paddingBottom: 8 }}>
+        <a href="/privacy" style={{ display: "inline-block", color: TEXT_MUTED, fontWeight: 700, fontSize: 12, textDecoration: "none", marginBottom: 16 }}>Privacy policy</a>
         <details>
           <summary style={{ cursor: "pointer", color: WARN, fontWeight: 700, fontSize: 12 }}>Delete account</summary>
           <div style={{ marginTop: 12 }}>
