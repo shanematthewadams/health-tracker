@@ -195,7 +195,7 @@ export default function TodayTab({
     <div style={{ background: "#FEFDF9" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 31, lineHeight: 1.08, color: PEN.ink }}>
-          {isToday ? (isMine ? `${greeting()}, ${activeUser}.` : `${activeUser} today`) : activeUser}
+          {isToday ? (isMine ? `${greeting(timeZone)}, ${activeUser}.` : `${activeUser} today`) : activeUser}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
           <button
