@@ -74,6 +74,16 @@ function rollingAvgSeries(weightsSorted, windowSize) {
   return out;
 }
 function num(v) { return v == null ? 0 : Number(v); }
+function friendlyError(error, fallback = "Something went wrong. Try again.") {
+  const raw = String(error?.message || error || "").toLowerCase();
+  if (raw.includes("invalid login credentials")) return "That email or password doesn’t look right.";
+  if (raw.includes("email not confirmed")) return "Confirm your email before signing in.";
+  if (raw.includes("user already registered")) return "An account already exists for that email.";
+  if (raw.includes("network") || raw.includes("fetch")) return "We couldn’t connect to With. Check your connection and try again.";
+  if (raw.includes("jwt") || raw.includes("expired")) return "Your session has expired. Sign in again.";
+  if (raw.includes("duplicate key") || raw.includes("unique constraint")) return "That’s already in use.";
+  return fallback;
+}
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -138,18 +148,18 @@ function AuthScreen({ initialMessage = "" }) {
       const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin,
       });
-      if (authError) setError(authError.message);
+      if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
       else setMessage("Check your email for a password reset link.");
     } else if (mode === "signin") {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) setError(authError.message);
+      if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
     } else {
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: window.location.origin },
       });
-      if (authError) setError(authError.message);
+      if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
       else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
       else setMessage("Account created. Setting up your group…");
     }
@@ -208,7 +218,7 @@ function ResetPasswordScreen({ onDone }) {
     setBusy(true);
     const { error: authError } = await supabase.auth.updateUser({ password });
     if (authError) {
-      setError(authError.message);
+      setError(friendlyError(authError, "We couldn’t complete that. Try again."));
       setBusy(false);
       return;
     }
@@ -252,13 +262,13 @@ function Onboarding({ onComplete }) {
   async function createHousehold(e) {
     e.preventDefault(); setBusy(true); setError("");
     const { error } = await supabase.rpc("create_household", { household_name: householdName.trim(), profile_name: profileName.trim() });
-    if (error) setError(error.message); else await onComplete();
+    if (error) setError(friendlyError(error, "We couldn’t create your With. Try again.")); else await onComplete();
     setBusy(false);
   }
   async function joinHousehold(e) {
     e.preventDefault(); setBusy(true); setError("");
     const { error } = await supabase.rpc("join_household", { invite_code_input: inviteCode.trim().toUpperCase(), profile_name: profileName.trim() });
-    if (error) setError(error.message); else await onComplete();
+    if (error) setError(friendlyError(error, "We couldn’t join that With. Check the invite and try again.")); else await onComplete();
     setBusy(false);
   }
 
@@ -302,7 +312,7 @@ function ClaimProfile({ profiles, onClaim }) {
     if (!selected) return;
     setBusy(true); setError("");
     const { error } = await supabase.rpc("claim_profile", { profile_id_input: selected });
-    if (error) setError(error.message); else await onClaim();
+    if (error) setError(friendlyError(error, "We couldn’t connect that profile. Try again.")); else await onClaim();
     setBusy(false);
   }
 
@@ -398,14 +408,18 @@ export default function Tracker() {
   const [foodError, setFoodError] = useState("");
 
   const [stepsInput, setStepsInput] = useState("");
+  const [stepsError, setStepsError] = useState("");
   const [stepsDate, setStepsDate] = useState(todayStr());
   const [waterOz, setWaterOz] = useState("");
+  const [waterError, setWaterError] = useState("");
   const [waterDate, setWaterDate] = useState(todayStr());
   const [actName, setActName] = useState("");
+  const [activityError, setActivityError] = useState("");
   const [actCals, setActCals] = useState("");
   const [actDate, setActDate] = useState(todayStr());
 
   const [goalInput, setGoalInput] = useState("");
+  const [goalError, setGoalError] = useState("");
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalDateInput, setGoalDateInput] = useState("");
   const [tBmr, setTBmr] = useState("");
@@ -485,7 +499,8 @@ export default function Tracker() {
       }
       setNeedsOnboarding(false);
       setHouseholdId(hid);
-      const { data: householdRow } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
+      const { data: householdRow, error: householdError } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
+      if (householdError) throw householdError;
       setHouseholdName(householdRow?.name || "Your household");
       setWithNameInput(householdRow?.name || "Your household");
       setInviteCode(householdRow?.invite_code || "");
@@ -549,7 +564,7 @@ export default function Tracker() {
       });
       setActiveFasts(fastMap);
     } catch (e) {
-      setSaveError(e.message || "Could not load your household data.");
+      setSaveError(friendlyError(e, "We couldn’t load your With. Refresh and try again."));
     } finally { setLoading(false); }
   }
 
@@ -576,7 +591,7 @@ export default function Tracker() {
     if (!ownedProfileId) return;
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.from("profiles").update({ profile_color: color }).eq("id", ownedProfileId);
-    if (error) setAccountError(error.message);
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else {
       setProfileColors((prev) => ({ ...prev, [profileNameInput || activeUser]: color }));
       setAccountMessage("Your color is updated.");
@@ -733,7 +748,7 @@ export default function Tracker() {
     if (nextName.length > 40) { setAccountError("Keep your With name to 40 characters or fewer."); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.rpc("rename_household", { new_name: nextName });
-    if (error) setAccountError(error.message);
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else {
       setHouseholdName(nextName);
       setRenamingWith(false);
@@ -754,7 +769,7 @@ export default function Tracker() {
     if (nextName === currentName) { setAccountError(""); setAccountMessage("Your profile name is already up to date."); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.from("profiles").update({ name: nextName }).eq("id", ownedProfileId);
-    if (error) setAccountError(error.message);
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else { setAccountMessage("Profile name updated."); await loadAll(); }
     setAccountBusy(false);
   }
@@ -772,7 +787,7 @@ export default function Tracker() {
       { email: nextEmail },
       { emailRedirectTo: window.location.origin }
     );
-    if (error) setAccountError(error.message);
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else setAccountMessage("Email update requested. Check your inbox to confirm the change.");
     setAccountBusy(false);
   }
@@ -783,7 +798,7 @@ export default function Tracker() {
     if (newPasswordInput !== confirmPasswordInput) { setAccountError("Those passwords don't match."); return; }
     setAccountBusy(true);
     const { error } = await supabase.auth.updateUser({ password: newPasswordInput });
-    if (error) setAccountError(error.message);
+    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else { setAccountMessage("Password updated."); setNewPasswordInput(""); setConfirmPasswordInput(""); }
     setAccountBusy(false);
   }
@@ -816,7 +831,7 @@ export default function Tracker() {
       body: { email, inviteCode, inviteUrl: inviteUrl() },
     });
     if (error) {
-      setInviteError(error.message || "The invite email could not be sent.");
+      setInviteError(friendlyError(error, "We couldn’t send that invitation. Try again."));
     } else {
       setInviteMessage(`Invite sent to ${email}.`);
       setInviteEmail("");
@@ -879,7 +894,7 @@ export default function Tracker() {
   async function runWrite(work) {
     setSaveError(null);
     try { await work(); await loadAll(); return true; }
-    catch (e) { setSaveError(e.message || "Save failed. Try again."); return false; }
+    catch (e) { setSaveError(friendlyError(e, "We couldn’t save that. Try again.")); return false; }
   }
 
   function showSuccess(message, kind) {
@@ -1074,21 +1089,25 @@ export default function Tracker() {
 
   async function saveSteps() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) return;
+    const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) { setStepsError("Enter a valid step total."); return; }
+    setStepsError("");
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
     if (ok) { setStepsInput(""); showSuccess(`${val.toLocaleString()} steps saved`, "steps"); }
   }
   async function addWater(amount) {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) return;
+    const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) { setWaterError("Enter an amount greater than 0."); return; }
+    setWaterError("");
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
     if (ok) { setWaterOz(""); showSuccess(`${val} oz water added`, "water"); }
   }
   async function addActivity() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    if (!actName.trim()) return; const cals = parseFloat(actCals) || 0; if (!cals) return;
+    if (!actName.trim()) { setActivityError("Add an activity name."); return; }
+    const cals = parseFloat(actCals) || 0; if (!cals || cals <= 0) { setActivityError("Enter calories burned."); return; }
+    setActivityError("");
     const p = profileFor(activeUser); if (!p) return;
     const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
     if (ok) { const loggedActivity = actName.trim(); setActName(""); setActCals(""); showSuccess(`${loggedActivity} added`, "activity"); }
@@ -1098,13 +1117,19 @@ export default function Tracker() {
 
   async function saveGoal() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) return;
-    await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null }).eq("id", p.id); if (error) throw error; });
+    const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) { setGoalError("We couldn’t find your profile. Refresh and try again."); return false; }
+    if (goalInput && (!Number.isFinite(val) || val <= 0)) { setGoalError("Enter a valid goal weight."); return false; }
+    setGoalError("");
+    return await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null }).eq("id", p.id); if (error) throw error; });
   }
   async function saveTargets() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
-    const p = profileFor(activeUser); if (!p) return;
-    await runWrite(async () => {
+    const p = profileFor(activeUser); if (!p) { setGoalError("We couldn’t find your profile. Refresh and try again."); return false; }
+    const nums = [tBmr, tCal, tProtein, tCarbs, tFat, tFiberMin, tFiberMax].map((v) => v === "" ? 0 : Number(v));
+    if (nums.some((v) => !Number.isFinite(v) || v < 0)) { setGoalError("Check your daily targets and use numbers 0 or higher."); return false; }
+    if (Number(tFiberMax || 0) && Number(tFiberMin || 0) > Number(tFiberMax || 0)) { setGoalError("Fiber max should be higher than fiber min."); return false; }
+    setGoalError("");
+    return await runWrite(async () => {
       const { error } = await supabase.from("profiles").update({ bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0, carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0, fiber_min: parseFloat(tFiberMin) || 0, fiber_max: parseFloat(tFiberMax) || 0 }).eq("id", p.id);
       if (error) throw error;
     });
@@ -1414,6 +1439,7 @@ export default function Tracker() {
             addWeight={addWeight}
             deleteWeight={deleteWeight}
             actName={actName}
+            activityError={activityError}
             setActName={setActName}
             actCals={actCals}
             setActCals={setActCals}
@@ -1421,11 +1447,13 @@ export default function Tracker() {
             setActDate={setActDate}
             addActivity={addActivity}
             waterOz={waterOz}
+            waterError={waterError}
             setWaterOz={setWaterOz}
             waterDate={waterDate}
             setWaterDate={setWaterDate}
             addWater={addWater}
             stepsInput={stepsInput}
+            stepsError={stepsError}
             setStepsInput={setStepsInput}
             stepsDate={stepsDate}
             setStepsDate={setStepsDate}
@@ -1457,6 +1485,7 @@ export default function Tracker() {
             goalInput={goalInput}
             setGoalInput={setGoalInput}
             goalDateInput={goalDateInput}
+            goalError={goalError}
             setGoalDateInput={setGoalDateInput}
             tBmr={tBmr}
             setTBmr={setTBmr}
@@ -1477,7 +1506,7 @@ export default function Tracker() {
             profileColor={profileColor}
             profileText={profileText}
             fmtGoalDate={fmtGoalDate}
-            styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
+            styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
           />
         )}
 
