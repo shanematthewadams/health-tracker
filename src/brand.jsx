@@ -6,13 +6,13 @@ export const brand = {
   sage: "#B7C8BF",
   clay: "#E08A6A",
   sun: "#F2C96D",
-  stone: "#F0ECE4",
-  bg: "#FFFBF5",
+  stone: "#F1EEE8",
+  bg: "#FCFBF8",
   surface: "#FFFFFF",
-  surfaceSoft: "#F7F3EC",
-  border: "#E9E4DA",
-  text: "#111111",
-  textMuted: "#53565A",
+  surfaceSoft: "#F5F3EE",
+  border: "#E7E3DB",
+  text: "#171816",
+  textMuted: "#5D615F",
   textSoft: "#8A8F94",
   warn: "#C83D34",
   inkOn: "#FFFFFF",
@@ -33,7 +33,7 @@ export function BrandLogo({ compact = false, style = {} }) {
       role="img"
       style={{
         display: "inline-block",
-        width: compact ? 78 : 146,
+        width: compact ? 76 : 138,
         aspectRatio: "1170 / 519",
         backgroundColor: brand.teal,
         WebkitMaskImage: `url(${withLogo})`,
@@ -72,9 +72,9 @@ export function BrandLoading({ children = "Getting your With ready…" }) {
           textAlign: "center",
           background: brand.surface,
           border: `1px solid ${brand.border}`,
-          borderRadius: 16,
-          padding: "24px 20px 21px",
-          boxShadow: "0 8px 28px rgba(17,17,17,.05)",
+          borderRadius: 18,
+          padding: "25px 21px 22px",
+          boxShadow: "0 10px 34px rgba(17,17,17,.055)",
         }}
       >
         <BrandLogo style={{ width: 116, margin: "0 auto 13px" }} />
