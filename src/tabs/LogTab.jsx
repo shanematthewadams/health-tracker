@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { brand } from "../brand.jsx";
+import { brand, metricColors } from "../brand.jsx";
 import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints } from "lucide-react";
 
 function fmtDate(d) {
@@ -73,12 +73,12 @@ export default function LogTab(props) {
 
       <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 0 8px", marginBottom: 6 }}>
         {[
-          ["food", "Food", Utensils],
-          ["weight", "Weight", Scale],
-          ["activity", "Activity", Dumbbell],
-          ["water", "Water", Droplet],
-          ["steps", "Steps", Footprints],
-        ].map(([id, label, Icon]) => {
+          ["food", "Food", Utensils, metricColors.food],
+          ["weight", "Weight", Scale, metricColors.weight],
+          ["activity", "Activity", Dumbbell, metricColors.activity],
+          ["water", "Water", Droplet, metricColors.water],
+          ["steps", "Steps", Footprints, metricColors.steps],
+        ].map(([id, label, Icon, metricColor]) => {
           const active = logTab === id;
           return (
             <button
@@ -105,7 +105,7 @@ export default function LogTab(props) {
                 overflow: "hidden",
               }}
             >
-              <Icon style={{ width: 14, height: 14, flexShrink: 0 }} strokeWidth={2} />
+              <Icon style={{ width: 14, height: 14, flexShrink: 0, color: metricColor }} strokeWidth={2.2} />
               {active && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
             </button>
           );
