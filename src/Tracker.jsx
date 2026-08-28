@@ -1409,14 +1409,20 @@ export default function Tracker() {
                     color: brand.inkOn,
                     borderRadius: 999,
                     padding: "5px 9px",
+                    minHeight: 30,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    lineHeight: 1,
                     fontFamily: "'DM Sans', -apple-system, sans-serif",
                     fontWeight: activeUser === u ? 700 : 500,
                     fontSize: 11,
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <WithMark id={profileWithmark(u)} size={15} color={activeUser === u ? brand.inkOn : "rgba(255,255,255,.72)"} style={{ marginRight: 5 }} />
-                  {u}
+                  <WithMark id={profileWithmark(u)} size={15} color={activeUser === u ? brand.inkOn : "rgba(255,255,255,.72)"} />
+                  <span style={{ display: "block", lineHeight: 1 }}>{u}</span>
                 </button>
               ))}
             </div>
