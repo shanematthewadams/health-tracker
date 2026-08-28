@@ -205,7 +205,7 @@ export default function TodayTab({
           >
             <ChevronLeft style={{ width: 14, height: 14 }} strokeWidth={1.8} />
           </button>
-          <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{fullDateLabel(selectedDate)}</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13 }}>{isToday ? `It’s ${fullDateLabel(selectedDate)}` : fullDateLabel(selectedDate)}</div>
           {!isToday && (
             <button
               onClick={() => { setSelectedDate(shiftDate(selectedDate, 1)); setFoodDetailOpen(false); }}
