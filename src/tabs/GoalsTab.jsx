@@ -18,6 +18,7 @@ export default function GoalsTab({
   goalInput,
   setGoalInput,
   goalDateInput,
+  goalError,
   setGoalDateInput,
   tBmr,
   setTBmr,
@@ -159,9 +160,10 @@ export default function GoalsTab({
             <div><div style={fieldLabel}>Fiber max (g)</div><input type="number" step="0.1" inputMode="decimal" value={tFiberMax} onChange={(e) => setTFiberMax(e.target.value)} style={inputStyle} /></div>
           </div>
 
+          {goalError && <div style={{ color: styles.WARN || brand.warn, fontSize: 12, marginBottom: 10 }}>{goalError}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button onClick={() => setEditingGoals(false)} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-            <button onClick={async () => { await saveGoal(); await saveTargets(); setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>Save changes</button>
+            <button onClick={async () => { const goalOk = await saveGoal(); if (goalOk === false) return; const targetsOk = await saveTargets(); if (targetsOk === false) return; setEditingGoals(false); }} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>Save changes</button>
           </div>
         </div>
       )}
