@@ -7,6 +7,7 @@ import TrendsTab from "./tabs/TrendsTab.jsx";
 import GoalsTab from "./tabs/GoalsTab.jsx";
 import ProfileTab from "./tabs/ProfileTab.jsx";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import { CheckMark } from "./WithMarks.jsx";
 
 const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
@@ -199,7 +200,7 @@ function AuthScreen({ initialMessage = "" }) {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
       <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0 }}>
         <BrandLogo style={{ marginBottom: 10 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginBottom: 8 }}>We’re in this together.</div>
@@ -1336,7 +1337,7 @@ export default function Tracker() {
   return (
     <div style={{ background: BG, color: TEXT, minHeight: "100vh", fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap');
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; }
         input, select, textarea, button { font-family: inherit; }
@@ -1361,7 +1362,7 @@ export default function Tracker() {
             <div style={{ color: "rgba(255,255,255,.72)", fontSize: 9, fontWeight: 500, letterSpacing: ".01em", lineHeight: 1.15, whiteSpace: "nowrap" }}>We’re in this together.</div>
           </div>
           <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: "rgba(255,255,255,.10)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 12, padding: "7px 9px 8px" }}>
-            <div title={householdName} style={{ fontSize: 11, color: "rgba(255,255,255,.72)", fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "right", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div title={householdName} style={{ fontSize: 11, color: "rgba(255,255,255,.76)", fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "center", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {householdName}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
@@ -1383,7 +1384,7 @@ export default function Tracker() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <span aria-hidden="true" style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: profileColor(u), marginRight: 5 }} />
+                  <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: profileColor(u), marginRight: 6, boxShadow: "0 0 0 2px rgba(255,255,255,.88)" }} />
                   {u}
                 </button>
               ))}
@@ -1652,7 +1653,10 @@ export default function Tracker() {
 
       {toast && (
         <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(28,36,48,.16)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
-          ✓ {toast}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <CheckMark size={15} color={SURFACE} />
+            {toast}
+          </span>
         </div>
       )}
 
