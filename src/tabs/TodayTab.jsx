@@ -72,6 +72,7 @@ export default function TodayTab({
   fastElapsed,
   openLog,
   deleteFood,
+  editLoggedFood,
   profileColor,
   profileText,
   intentions,
