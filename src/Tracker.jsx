@@ -40,7 +40,19 @@ const TEXT_MUTED = brand.textMuted;
 const WARN = brand.warn;
 const NAV_H = 64;
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function dateKeyInTimeZone(date = new Date(), timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+function todayStr(timeZone) { return dateKeyInTimeZone(new Date(), timeZone); }
+function addCalendarDays(dateStr, amount) {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + amount);
+  return d.toISOString().slice(0, 10);
+}
 function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -346,6 +358,8 @@ export default function Tracker() {
   const [accountError, setAccountError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [accountBusy, setAccountBusy] = useState(false);
+  const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const [timeZone, setTimeZone] = useState(deviceTimeZone);
   const [householdId, setHouseholdId] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [householdRole, setHouseholdRole] = useState(null);
@@ -366,7 +380,7 @@ export default function Tracker() {
   const [fastPromptDismissedDate, setFastPromptDismissedDate] = useState(null);
   const [clockNow, setClockNow] = useState(Date.now());
   const [fastEditorOpen, setFastEditorOpen] = useState(false);
-  const [fastStartDate, setFastStartDate] = useState(todayStr());
+  const [fastStartDate, setFastStartDate] = useState(() => todayStr());
   const [fastStartTime, setFastStartTime] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
@@ -393,7 +407,7 @@ export default function Tracker() {
   const [foodLibraryTab, setFoodLibraryTab] = useState("recent");
 
   const [weightInput, setWeightInput] = useState("");
-  const [weightDate, setWeightDate] = useState(todayStr());
+  const [weightDate, setWeightDate] = useState(() => todayStr());
   const [weightError, setWeightError] = useState("");
 
   const [foodName, setFoodName] = useState("");
@@ -404,19 +418,19 @@ export default function Tracker() {
   const [foodFiber, setFoodFiber] = useState("");
   const [foodMeal, setFoodMeal] = useState("Breakfast");
   const [foodNotes, setFoodNotes] = useState("");
-  const [foodDate, setFoodDate] = useState(todayStr());
+  const [foodDate, setFoodDate] = useState(() => todayStr());
   const [foodError, setFoodError] = useState("");
 
   const [stepsInput, setStepsInput] = useState("");
   const [stepsError, setStepsError] = useState("");
-  const [stepsDate, setStepsDate] = useState(todayStr());
+  const [stepsDate, setStepsDate] = useState(() => todayStr());
   const [waterOz, setWaterOz] = useState("");
   const [waterError, setWaterError] = useState("");
-  const [waterDate, setWaterDate] = useState(todayStr());
+  const [waterDate, setWaterDate] = useState(() => todayStr());
   const [actName, setActName] = useState("");
   const [activityError, setActivityError] = useState("");
   const [actCals, setActCals] = useState("");
-  const [actDate, setActDate] = useState(todayStr());
+  const [actDate, setActDate] = useState(() => todayStr());
 
   const [goalInput, setGoalInput] = useState("");
   const [goalError, setGoalError] = useState("");
@@ -449,6 +463,7 @@ export default function Tracker() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.user) setTimeZone(session.user.user_metadata?.timezone || deviceTimeZone);
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
@@ -472,6 +487,7 @@ export default function Tracker() {
         setLoading(false);
       }
       setSession(nextSession);
+      if (nextSession?.user) setTimeZone(nextSession.user.user_metadata?.timezone || deviceTimeZone);
       if (event === "PASSWORD_RECOVERY") {
         sessionStorage.setItem("with-password-recovery", "1");
         setPasswordRecovery(true);
@@ -521,7 +537,7 @@ export default function Tracker() {
       });
       setProfiles(pmap);
       setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
-      setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr() ? (p.current_intention || "") : ""])));
+      setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr(timeZone) ? (p.current_intention || "") : ""])));
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
       if (owned) {
@@ -611,7 +627,7 @@ export default function Tracker() {
     setSaveError(null);
     const { error } = await supabase
       .from("profiles")
-      .update({ current_intention: next || null, intention_date: todayStr() })
+      .update({ current_intention: next || null, intention_date: todayStr(timeZone) })
       .eq("id", p.id);
     if (error) {
       setSaveError(friendlyError(error, "We couldn’t save your intention. Try again."));
@@ -622,11 +638,11 @@ export default function Tracker() {
     return true;
   }
 
-  const fastPromptDismissedToday = fastPromptDismissedDate === todayStr();
+  const fastPromptDismissedToday = fastPromptDismissedDate === todayStr(timeZone);
 
   async function dismissFastPromptToday() {
     if (!ownedProfileId) return;
-    const date = todayStr();
+    const date = todayStr(timeZone);
     setFastPromptDismissedDate(date);
     const { error } = await supabase
       .from("profiles")
@@ -806,6 +822,22 @@ export default function Tracker() {
     return true;
   }
 
+  async function saveTimeZone(nextZone) {
+    if (!nextZone) return false;
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const currentData = session?.user?.user_metadata || {};
+    const { data: updated, error } = await supabase.auth.updateUser({ data: { ...currentData, timezone: nextZone } });
+    if (error) {
+      setAccountError(friendlyError(error, "We couldn’t update your time zone. Try again."));
+      setAccountBusy(false);
+      return false;
+    }
+    setTimeZone(updated?.user?.user_metadata?.timezone || nextZone);
+    setAccountMessage("Time zone updated.");
+    setAccountBusy(false);
+    return true;
+  }
+
   async function deleteAccount() {
     if (deleteConfirm !== "DELETE") { setAccountError('Type DELETE to confirm.'); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
@@ -917,7 +949,7 @@ export default function Tracker() {
     return "Snack";
   }
 
-  function openLog(kind = logTab, date = todayStr(), meal = null) {
+  function openLog(kind = logTab, date = todayStr(timeZone), meal = null) {
     setLogTab(kind);
     localStorage.setItem("with-log-tab", kind);
     if (kind === "food") {
@@ -1053,7 +1085,7 @@ export default function Tracker() {
     setFoodProtein(String(food.protein ?? ""));
     setFoodMeal(food.meal || defaultMealForNow());
     setFoodNotes(food.notes || "");
-    setFoodDate(food.date || todayStr());
+    setFoodDate(food.date || todayStr(timeZone));
     setLogTab("food");
     setTab("log");
   }
@@ -1189,7 +1221,7 @@ export default function Tracker() {
 
   const streaks = useMemo(() => {
     const days = [];
-    for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
+    for (let i = 13; i >= 0; i--) days.push(addCalendarDays(todayStr(timeZone), -i));
     const result = {};
     profileNames.forEach((u) => {
       const logged = new Set([
@@ -1201,7 +1233,7 @@ export default function Tracker() {
     return { days, result };
   }, [data]);
 
-  const today = todayStr();
+  const today = todayStr(timeZone);
   const todayStats = useMemo(() => {
     const out = {};
     profileNames.forEach((u) => {
@@ -1334,6 +1366,7 @@ export default function Tracker() {
             data={data}
             profileNames={profileNames}
             today={today}
+            timeZone={timeZone}
             todayStats={todayStats}
             activeFasts={activeFasts}
             fastPromptDismissedToday={fastPromptDismissedToday}
@@ -1471,6 +1504,7 @@ export default function Tracker() {
           <TrendsTab
             activeUser={activeUser}
             data={data}
+            today={today}
             goalInfo={goalInfo}
             profileColor={profileColor}
             styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle }}
@@ -1518,6 +1552,9 @@ export default function Tracker() {
             activeUser={activeUser}
             data={data}
             session={session}
+            timeZone={timeZone}
+            deviceTimeZone={deviceTimeZone}
+            saveTimeZone={saveTimeZone}
             householdName={householdName}
             householdRole={householdRole}
             inviteCode={inviteCode}
