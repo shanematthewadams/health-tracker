@@ -327,7 +327,24 @@ export default function OnboardingGate({ children }) {
         return;
       }
 
-      checkMembership(nextSession);
+      if (event === "SIGNED_OUT") {
+        checkMembership(nextSession);
+        return;
+      }
+
+      if (event === "SIGNED_IN") {
+        const changedUser = session?.user?.id && nextSession?.user?.id && session.user.id !== nextSession.user.id;
+        if (changedUser || !session) {
+          checkMembership(nextSession);
+        } else {
+          setSession(nextSession);
+        }
+        return;
+      }
+
+      // TOKEN_REFRESHED, USER_UPDATED and other routine auth events should not
+      // blank the app or re-run onboarding checks. Keep the session current silently.
+      setSession(nextSession);
     });
 
     return () => {
