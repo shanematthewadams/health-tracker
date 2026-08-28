@@ -8,6 +8,7 @@ function weeksUntil(dateStr) {
 }
 
 import { brand } from "../brand.jsx";
+import { AsteriskMark, StarMark } from "../WithMarks.jsx";
 
 export default function GoalsTab({
   activeUser,
@@ -140,8 +141,9 @@ export default function GoalsTab({
                     </div>
 
                     <div style={{ marginBottom: 7, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                      <div style={{ color: TEXT, fontSize: 13, fontWeight: 700 }}>
-                        {gi.progressAmount > 0 ? `${gi.progressAmount.toFixed(1)} lb closer than where you started` : "This is where you’re starting."}
+                      <div style={{ color: TEXT, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                        {gi.progressAmount > 0 && <StarMark size={15} color={brand.sun} />}
+                        <span>{gi.progressAmount > 0 ? `${gi.progressAmount.toFixed(1)} lb closer than where you started` : "This is where you’re starting."}</span>
                       </div>
                       <div style={{ color: TEXT_MUTED, fontSize: 12, flexShrink: 0 }}>{Math.round(gi.progressPct)}%</div>
                     </div>
@@ -196,7 +198,8 @@ export default function GoalsTab({
 
           <section style={{ padding: "4px 1.15rem 8px" }}>
             <details>
-              <summary style={{ cursor: "pointer", color: brand.tealDark, fontWeight: 800, fontSize: 12, listStylePosition: "outside" }}>
+              <summary style={{ cursor: "pointer", color: brand.tealDark, fontWeight: 800, fontSize: 12, listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
+                <AsteriskMark size={13} color={brand.teal} />
                 About your targets
               </summary>
               <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.55, padding: "10px 0 4px 2px" }}>
