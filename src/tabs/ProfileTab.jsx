@@ -335,6 +335,7 @@ export default function ProfileTab({
         {accountMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountMessage}</div>}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16 }}>
+          <a href="/privacy" style={{ color: brand.tealDark, fontWeight: 800, fontSize: 12, textDecoration: "none" }}>Privacy policy</a>
           <button onClick={signOut} style={{ background: "none", border: "none", color: TEXT, padding: 0, fontWeight: 800, fontSize: 12 }}>Sign out</button>
           <button onClick={shareWith} style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
             {shareStatus === "Link copied" ? <Check style={{ width: 14, height: 14 }} /> : <Share2 style={{ width: 14, height: 14 }} />}
