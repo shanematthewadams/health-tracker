@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Zap, Footprints, Droplet, Home, PlusCircle, TrendingUp, Target, Search, BookmarkPlus, Pencil, Trash2, Star, UserCircle, Utensils, Scale, Dumbbell, CheckCircle2, ChevronRight } from "lucide-react";
 import { supabase } from "./supabase";
 import TodayTab from "./tabs/TodayTab.jsx";
@@ -48,6 +48,25 @@ function dateKeyInTimeZone(date = new Date(), timeZone = Intl.DateTimeFormat().r
   return `${map.year}-${map.month}-${map.day}`;
 }
 function todayStr(timeZone) { return dateKeyInTimeZone(new Date(), timeZone); }
+function zonedParts(date = new Date(), timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map((p) => [p.type, p.value]));
+}
+function zonedDateTimeToDate(dateStr, timeStr, timeZone) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = timeStr.split(":").map(Number);
+  const desired = Date.UTC(year, month - 1, day, hour, minute, 0);
+  let guess = desired;
+  for (let i = 0; i < 2; i++) {
+    const p = zonedParts(new Date(guess), timeZone);
+    const shownAsUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), 0);
+    guess += desired - shownAsUtc;
+  }
+  return new Date(guess);
+}
 function addCalendarDays(dateStr, amount) {
   const d = new Date(dateStr + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + amount);
@@ -431,6 +450,22 @@ export default function Tracker() {
   const [activityError, setActivityError] = useState("");
   const [actCals, setActCals] = useState("");
   const [actDate, setActDate] = useState(() => todayStr());
+  const previousTodayRef = useRef(todayStr(deviceTimeZone));
+
+  useEffect(() => {
+    const nextToday = todayStr(timeZone);
+    const previousToday = previousTodayRef.current;
+    if (nextToday !== previousToday) {
+      const moveIfToday = (setter) => setter((value) => value === previousToday ? nextToday : value);
+      moveIfToday(setWeightDate);
+      moveIfToday(setFoodDate);
+      moveIfToday(setStepsDate);
+      moveIfToday(setWaterDate);
+      moveIfToday(setActDate);
+      moveIfToday(setFastStartDate);
+      previousTodayRef.current = nextToday;
+    }
+  }, [timeZone]);
 
   const [goalInput, setGoalInput] = useState("");
   const [goalError, setGoalError] = useState("");
@@ -584,7 +619,7 @@ export default function Tracker() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady]);
+  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady, timeZone]);
 
   useEffect(() => {
     if (loading) return;
@@ -656,10 +691,9 @@ export default function Tracker() {
 
   function openFastEditor(existing = null) {
     const d = existing?.started_at ? new Date(existing.started_at) : new Date();
-    const localDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    const localTime = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-    setFastStartDate(localDate);
-    setFastStartTime(localTime);
+    const p = zonedParts(d, timeZone);
+    setFastStartDate(`${p.year}-${p.month}-${p.day}`);
+    setFastStartTime(`${p.hour}:${p.minute}`);
     setFastEditorOpen(true);
   }
 
@@ -671,7 +705,7 @@ export default function Tracker() {
     const p = profileFor(activeUser);
     if (!p) { setSaveError("Your profile could not be found."); return; }
 
-    const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
+    const started = zonedDateTimeToDate(fastStartDate, fastStartTime, timeZone);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
 
@@ -702,7 +736,7 @@ export default function Tracker() {
     const fast = activeFasts[activeUser];
     if (!fast) { setSaveError("No active fast was found."); return; }
 
-    const started = new Date(`${fastStartDate}T${fastStartTime}:00`);
+    const started = zonedDateTimeToDate(fastStartDate, fastStartTime, timeZone);
     if (Number.isNaN(started.getTime())) { setSaveError("Choose a valid start date and time."); return; }
     if (started.getTime() > Date.now()) { setSaveError("A fast can’t start in the future."); return; }
 
@@ -942,7 +976,7 @@ export default function Tracker() {
   }
 
   function defaultMealForNow() {
-    const h = new Date().getHours();
+    const h = Number(zonedParts(new Date(), timeZone).hour);
     if (h < 11) return "Breakfast";
     if (h < 15) return "Lunch";
     if (h < 21) return "Dinner";
