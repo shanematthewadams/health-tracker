@@ -1356,11 +1356,11 @@ export default function Tracker() {
         }
       `}</style>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(252,251,248,.96)", borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", backdropFilter: "blur(10px)" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: brand.teal, borderBottom: `1px solid ${brand.tealDark}`, paddingTop: "env(safe-area-inset-top)", boxShadow: "0 2px 10px rgba(23,78,73,.12)" }}>
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "0.72rem 1rem 0.68rem", display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <BrandLogo compact style={{ width: 96, flexShrink: 0 }} />
-          <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "7px 9px 8px", boxShadow: "0 2px 7px rgba(17,17,17,.03)" }}>
-            <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "right", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <BrandLogo compact style={{ width: 96, flexShrink: 0, backgroundColor: brand.inkOn }} />
+          <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: "rgba(255,255,255,.10)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 12, padding: "7px 9px 8px" }}>
+            <div title={householdName} style={{ fontSize: 11, color: "rgba(255,255,255,.72)", fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "right", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {householdName}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
@@ -1371,9 +1371,9 @@ export default function Tracker() {
                   onClick={() => { setActiveUser(u); setFastEditorOpen(false); if (tab === "profile") setTab("today"); }}
                   style={{
                     flexShrink: 0,
-                    border: activeUser === u ? `1px solid ${profileColor(u)}` : `1px solid ${BORDER}`,
-                    background: activeUser === u ? brand.surfaceSoft : "transparent",
-                    color: activeUser === u ? TEXT : TEXT_MUTED,
+                    border: activeUser === u ? "1px solid rgba(255,255,255,.78)" : "1px solid rgba(255,255,255,.22)",
+                    background: activeUser === u ? "rgba(255,255,255,.16)" : "transparent",
+                    color: brand.inkOn,
                     borderRadius: 999,
                     padding: "5px 9px",
                     fontFamily: "'DM Sans', -apple-system, sans-serif",
@@ -1656,8 +1656,8 @@ export default function Tracker() {
       )}
 
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(252,251,248,.96)", borderTop: `1px solid ${BORDER}`,
-        paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10,
+        position: "fixed", bottom: 0, left: 0, right: 0, background: brand.teal, borderTop: `1px solid ${brand.tealDark}`,
+        paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10, boxShadow: "0 -2px 10px rgba(23,78,73,.10)",
       }}>
         <div style={{ maxWidth: 520, margin: "0 auto", display: "flex", height: NAV_H }}>
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
@@ -1666,7 +1666,7 @@ export default function Tracker() {
               <button key={id} onClick={() => id === "log" ? openLog(logTab) : setTab(id)} style={{
                 flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 3,
-                color: active ? brand.teal : TEXT_MUTED,
+                color: active ? brand.inkOn : "rgba(255,255,255,.62)",
               }}>
                 <Icon style={{ width: 20, height: 20 }} strokeWidth={active ? 2.4 : 1.8} />
                 <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal" }}>{label}</span>
