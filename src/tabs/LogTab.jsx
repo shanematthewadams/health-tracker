@@ -66,8 +66,8 @@ export default function LogTab(props) {
 
   return (
     <>
-      <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
+      <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
 
@@ -112,20 +112,20 @@ export default function LogTab(props) {
         })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F7F3EC", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
         <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
       </div>
 
       {logTab === "food" && <>
         {activeFasts[activeUser] ? (
-          <div style={{ ...cardStyle, background: brand.surface, borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
+          <div style={{ ...cardStyle, background: brand.surface, borderColor: BORDER, borderRadius: 14, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div></div>
               {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
             </div>
           </div>
         ) : activeCanEdit && !fastPromptDismissedToday ? (
-          <div style={{ ...cardStyle, background: brand.surface, borderColor: "#E6E1D8", borderRadius: 10, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
+          <div style={{ ...cardStyle, background: brand.surface, borderColor: BORDER, borderRadius: 14, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div></div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
