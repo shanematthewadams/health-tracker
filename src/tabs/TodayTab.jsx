@@ -512,23 +512,43 @@ export default function TodayTab({
                   <div key={meal} style={{ marginBottom: 18 }}>
                     <div style={{ ...sectionLabel, marginBottom: 6 }}>{meal}</div>
                     {foodGroups[meal].map((food) => (
-                      <button
+                      <div
                         key={food.id}
-                        onClick={() => { if (isMine) { setFoodDetailOpen(false); editLoggedFood(food); } }}
-                        disabled={!isMine}
-                        style={{ width: "100%", textAlign: "left", border: "none", borderBottom: `1px solid ${PEN.rule}`, background: "transparent", color: TEXT, padding: "10px 0", cursor: isMine ? "pointer" : "default" }}
+                        style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", borderBottom: `1px solid ${PEN.rule}`, padding: "10px 0" }}
                       >
-                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontWeight: 800, fontSize: 14, color: PEN.ink }}>{food.name}</div>
-                            <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4, lineHeight: 1.45 }}>
-                              {Math.round(food.calories)} cal · {Math.round(food.fat)}g fat · {Math.round(food.carbs)}g carbs · {Math.round(food.fiber || 0)}g fiber · {Math.round(food.protein)}g protein
-                            </div>
-                            {food.notes && <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4 }}>{food.notes}</div>}
+                        <button
+                          onClick={() => { if (isMine) { setFoodDetailOpen(false); editLoggedFood(food); } }}
+                          disabled={!isMine}
+                          style={{ flex: 1, minWidth: 0, textAlign: "left", border: "none", background: "transparent", color: TEXT, padding: 0, cursor: isMine ? "pointer" : "default" }}
+                        >
+                          <div style={{ fontWeight: 800, fontSize: 14, color: PEN.ink }}>{food.name}</div>
+                          <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4, lineHeight: 1.45 }}>
+                            {Math.round(food.calories)} cal · {Math.round(food.fat)}g fat · {Math.round(food.carbs)}g carbs · {Math.round(food.fiber || 0)}g fiber · {Math.round(food.protein)}g protein
                           </div>
-                          {isMine && <Pencil style={{ width: 15, height: 15, color: TEXT_MUTED, flexShrink: 0, marginTop: 2 }} strokeWidth={1.8} />}
-                        </div>
-                      </button>
+                          {food.notes && <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 4 }}>{food.notes}</div>}
+                        </button>
+                        {isMine && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                            <button
+                              onClick={() => { setFoodDetailOpen(false); editLoggedFood(food); }}
+                              aria-label={`Edit ${food.name}`}
+                              style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 7, display: "grid", placeItems: "center" }}
+                            >
+                              <Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`Remove ${food.name} from this day?`)) return;
+                                await deleteFood(food.id);
+                              }}
+                              aria-label={`Delete ${food.name}`}
+                              style={{ border: "none", background: "transparent", color: "#A64B43", padding: 7, display: "grid", placeItems: "center" }}
+                            >
+                              <Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 ))}
