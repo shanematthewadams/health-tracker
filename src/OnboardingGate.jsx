@@ -67,7 +67,7 @@ function ScreenShell({ children }) {
     <div
       style={{
         minHeight: "100vh",
-        background: BG,
+        background: brand.teal,
         color: TEXT,
         display: "grid",
         placeItems: "center",
@@ -75,16 +75,16 @@ function ScreenShell({ children }) {
         fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap'); * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; } body { margin: 0; } input, select, textarea, button { font-family: inherit; } button { cursor: pointer; } button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(31,94,87,.18); outline-offset: 2px; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; } body { margin: 0; } input, select, textarea, button { font-family: inherit; } button { cursor: pointer; } button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(31,94,87,.18); outline-offset: 2px; }`}</style>
       <div
         style={{
-          background: SURFACE,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 18,
+          background: brand.bg,
+          border: "1px solid rgba(255,255,255,.16)",
+          borderRadius: 20,
           padding: "1.5rem",
           width: "100%",
           maxWidth: 440,
-          boxShadow: "0 10px 34px rgba(37,36,34,.055)",
+          boxShadow: "0 18px 48px rgba(17,50,46,.22)",
         }}
       >
         {children}
