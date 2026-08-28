@@ -24,10 +24,11 @@ const inputStyle = {
   background: SURFACE,
   border: `1px solid ${BORDER}`,
   color: TEXT,
-  borderRadius: 8,
+  borderRadius: 10,
   padding: "12px 14px",
   fontSize: 16,
   width: "100%",
+  minHeight: 46,
   boxShadow: "0 1px 0 rgba(45,35,25,.03)",
 };
 
@@ -44,8 +45,9 @@ const primaryButton = {
   background: ACCENT,
   color: ACCENT_TEXT,
   border: "none",
-  borderRadius: 8,
-  padding: "13px 18px",
+  borderRadius: 10,
+  padding: "12px 18px",
+  minHeight: 46,
   fontWeight: 700,
   fontSize: 15,
   width: "100%",
@@ -73,16 +75,16 @@ function ScreenShell({ children }) {
         fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; } button { cursor: pointer; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap'); * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; } body { margin: 0; } input, select, textarea, button { font-family: inherit; } button { cursor: pointer; } button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(31,94,87,.18); outline-offset: 2px; }`}</style>
       <div
         style={{
           background: SURFACE,
           border: `1px solid ${BORDER}`,
-          borderRadius: 14,
+          borderRadius: 18,
           padding: "1.5rem",
           width: "100%",
           maxWidth: 440,
-          boxShadow: "0 4px 18px rgba(37,36,34,.045)",
+          boxShadow: "0 10px 34px rgba(37,36,34,.055)",
         }}
       >
         {children}
@@ -94,7 +96,7 @@ function ScreenShell({ children }) {
 function BrandIntro({ eyebrow }) {
   return (
     <>
-      <BrandLogo style={{ marginBottom: 10 }} />
+      <BrandLogo style={{ width: 132, marginBottom: 12 }} />
       {eyebrow && <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 22 }}>{eyebrow}</div>}
     </>
   );
