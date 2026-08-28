@@ -226,7 +226,11 @@ export default function ProfileTab({
             {inviteCode && (
               <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
                 <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Invite someone to your With</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>Add someone you know to this With so you can support each other.</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>
+                  {profileNames.length === 1
+                    ? "With is better with others. Add someone you know to this With so you can support each other in your goals."
+                    : "Add someone else to your With so you can support each other in your goals."}
+                </div>
                 <button onClick={() => setInviting((v) => !v)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{inviting ? "Close invite" : "Invite someone"}</button>
               </div>
             )}
