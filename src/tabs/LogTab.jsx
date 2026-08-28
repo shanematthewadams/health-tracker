@@ -25,9 +25,9 @@ export default function LogTab(props) {
     foodFat, setFoodFat, foodFiber, setFoodFiber, foodNotes, setFoodNotes, setFoodServingLabel,
     foodError, addFood, deleteFood,
     weightInput, setWeightInput, weightDate, setWeightDate, weightError, addWeight, deleteWeight,
-    actName, setActName, actCals, setActCals, actDate, setActDate, addActivity,
-    waterOz, setWaterOz, waterDate, setWaterDate, addWater,
-    stepsInput, setStepsInput, stepsDate, setStepsDate, saveSteps,
+    actName, setActName, activityError, actCals, setActCals, actDate, setActDate, addActivity,
+    waterOz, setWaterOz, waterError, waterDate, setWaterDate, addWater,
+    stepsInput, setStepsInput, stepsError, stepsDate, setStepsDate, saveSteps,
     profileColor, profileText,
     styles,
   } = props;
@@ -304,6 +304,7 @@ export default function LogTab(props) {
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: "12px" }}>
           <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
+        {activityError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{activityError}</div>}
         <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
       </div>}
 
@@ -314,6 +315,7 @@ export default function LogTab(props) {
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: "12px" }}>
           <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
+        {waterError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{waterError}</div>}
         <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
       </div>}
 
@@ -323,6 +325,7 @@ export default function LogTab(props) {
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: "12px" }}>
           <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
+        {stepsError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{stepsError}</div>}
         <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
       </div>}
     </>
