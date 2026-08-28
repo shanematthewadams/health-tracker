@@ -614,7 +614,7 @@ export default function Tracker() {
       .update({ current_intention: next || null, intention_date: todayStr() })
       .eq("id", p.id);
     if (error) {
-      setSaveError(`Could not save intention: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t save your intention. Try again."));
       return false;
     }
     setIntentions((prev) => ({ ...prev, [activeUser]: next }));
@@ -633,7 +633,7 @@ export default function Tracker() {
       .update({ fasting_prompt_dismissed_date: date })
       .eq("id", ownedProfileId);
     if (error) {
-      setSaveError(`Could not dismiss fasting prompt: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t save that preference. Try again."));
       setFastPromptDismissedDate(null);
     }
   }
@@ -649,7 +649,7 @@ export default function Tracker() {
 
   async function startFast() {
     if (!activeCanEdit || fastBusy) {
-      setSaveError(`Fasting unavailable: activeCanEdit=${activeCanEdit}, fastBusy=${fastBusy}`);
+      setSaveError(activeCanEdit ? "Fasting is already being updated. Give it a moment and try again." : "Only the owner of this profile can manage fasting.");
       return;
     }
     const p = profileFor(activeUser);
@@ -671,7 +671,7 @@ export default function Tracker() {
       .single();
 
     if (error) {
-      setSaveError(`Could not start fast: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t start your fast. Try again."));
     } else {
       setActiveFasts((prev) => ({ ...prev, [activeUser]: created }));
       setFastEditorOpen(false);
@@ -699,7 +699,7 @@ export default function Tracker() {
       .single();
 
     if (error) {
-      setSaveError(`Could not update fast: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t update your fast. Try again."));
     } else {
       setActiveFasts((prev) => ({ ...prev, [activeUser]: updated }));
       setFastEditorOpen(false);
@@ -721,7 +721,7 @@ export default function Tracker() {
       .eq("id", fast.id);
 
     if (error) {
-      setSaveError(`Could not end fast: ${error.message}`);
+      setSaveError(friendlyError(error, "We couldn’t end your fast. Try again."));
     } else {
       setActiveFasts((prev) => {
         const next = { ...prev };
@@ -759,55 +759,58 @@ export default function Tracker() {
 
   async function saveProfileName() {
     const nextName = profileNameInput.trim();
-    if (!ownedProfileId || !nextName) { setAccountError("Your profile needs a name."); return; }
-    if (nextName.length > 40) { setAccountError("Keep your profile name to 40 characters or fewer."); return; }
+    if (!ownedProfileId || !nextName) { setAccountError("Your profile needs a name."); return false; }
+    if (nextName.length > 40) { setAccountError("Keep your profile name to 40 characters or fewer."); return false; }
     const currentName = Object.values(profiles).find((p) => p.id === ownedProfileId)?.name || activeUser;
     const duplicate = Object.values(profiles).some((p) =>
       p.id !== ownedProfileId && String(p.name || "").trim().toLowerCase() === nextName.toLowerCase()
     );
-    if (duplicate) { setAccountError("Someone in this With already uses that name."); return; }
-    if (nextName === currentName) { setAccountError(""); setAccountMessage("Your profile name is already up to date."); return; }
+    if (duplicate) { setAccountError("Someone in this With already uses that name."); return false; }
+    if (nextName === currentName) { setAccountError(""); setAccountMessage("Your profile name is already up to date."); return true; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.from("profiles").update({ name: nextName }).eq("id", ownedProfileId);
-    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
-    else { setAccountMessage("Profile name updated."); await loadAll(); }
+    if (error) { setAccountError(friendlyError(error, "We couldn’t update your profile name. Try again.")); setAccountBusy(false); return false; }
+    setAccountMessage("Profile name updated."); await loadAll();
     setAccountBusy(false);
+    return true;
   }
 
   async function saveEmail() {
     const nextEmail = emailInput.trim();
-    if (!nextEmail) { setAccountError("Enter an email address."); return; }
+    if (!nextEmail) { setAccountError("Enter an email address."); return false; }
     if (nextEmail.toLowerCase() === String(session?.user?.email || "").toLowerCase()) {
       setAccountError("");
       setAccountMessage("That’s already your account email.");
-      return;
+      return true;
     }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.auth.updateUser(
       { email: nextEmail },
       { emailRedirectTo: window.location.origin }
     );
-    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
-    else setAccountMessage("Email update requested. Check your inbox to confirm the change.");
+    if (error) { setAccountError(friendlyError(error, "We couldn’t update your email. Try again.")); setAccountBusy(false); return false; }
+    setAccountMessage("Email update requested. Check your inbox to confirm the change.");
     setAccountBusy(false);
+    return true;
   }
 
   async function savePassword() {
     setAccountError(""); setAccountMessage("");
-    if (newPasswordInput.length < 6) { setAccountError("Use at least 6 characters."); return; }
-    if (newPasswordInput !== confirmPasswordInput) { setAccountError("Those passwords don't match."); return; }
+    if (newPasswordInput.length < 6) { setAccountError("Use at least 6 characters."); return false; }
+    if (newPasswordInput !== confirmPasswordInput) { setAccountError("Those passwords don't match."); return false; }
     setAccountBusy(true);
     const { error } = await supabase.auth.updateUser({ password: newPasswordInput });
-    if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
-    else { setAccountMessage("Password updated."); setNewPasswordInput(""); setConfirmPasswordInput(""); }
+    if (error) { setAccountError(friendlyError(error, "We couldn’t update your password. Try again.")); setAccountBusy(false); return false; }
+    setAccountMessage("Password updated."); setNewPasswordInput(""); setConfirmPasswordInput("");
     setAccountBusy(false);
+    return true;
   }
 
   async function deleteAccount() {
     if (deleteConfirm !== "DELETE") { setAccountError('Type DELETE to confirm.'); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
     const { error } = await supabase.functions.invoke("delete-account");
-    if (error) { setAccountError(error.message || "Could not delete account."); setAccountBusy(false); return; }
+    if (error) { setAccountError(friendlyError(error, "We couldn’t delete your account. Nothing was removed. Try again.")); setAccountBusy(false); return false; }
     await supabase.auth.signOut();
     setAccountBusy(false);
   }
