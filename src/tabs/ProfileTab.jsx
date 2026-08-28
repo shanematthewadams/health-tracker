@@ -118,7 +118,7 @@ export default function ProfileTab({
               <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: "50%", background: profileColor(activeUser), flexShrink: 0 }} />
               <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 29, fontWeight: 600, lineHeight: 1.05, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profileNameInput || activeUser}</div>
             </div>
-            <button onClick={() => setEditingProfile(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Edit</button>
+            <button onClick={() => { clearAccountError(); setEditingProfile(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Edit</button>
           </div>
         ) : (
           <div>
@@ -142,9 +142,11 @@ export default function ProfileTab({
               })}
             </div>
 
+            {accountError && <div style={{ color: WARN, fontSize: 12, marginBottom: 10 }}>{accountError}</div>}
+            {accountMessage && <div style={{ color: successColor, fontSize: 12, marginBottom: 10 }}>{accountMessage}</div>}
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setEditingProfile(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-              <button onClick={async () => { await saveProfileName(); setEditingProfile(false); }} disabled={accountBusy} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>Save</button>
+              <button onClick={async () => { const ok = await saveProfileName(); if (ok !== false) setEditingProfile(false); }} disabled={accountBusy} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>Save</button>
             </div>
           </div>
         )}
@@ -182,6 +184,7 @@ export default function ProfileTab({
           <div>
             <div style={fieldLabel}>With name</div>
             <input type="text" maxLength={40} value={withNameInput} onChange={(e) => setWithNameInput(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+            {accountError && <div style={{ color: WARN, fontSize: 12, marginBottom: 10 }}>{accountError}</div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <button onClick={() => { setRenamingWith(false); setWithNameInput(householdName); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
               <button onClick={renameWith} disabled={accountBusy} style={bigButton(brand.teal, brand.inkOn)}>{accountBusy ? "Saving…" : "Save name"}</button>
@@ -225,7 +228,7 @@ export default function ProfileTab({
         {!editingEmail ? (
           <div style={{ marginBottom: 14 }}>
             <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>You sign in with <strong style={{ color: TEXT }}>{session?.user?.email}</strong>.</div>
-            <button onClick={() => setEditingEmail(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change email</button>
+            <button onClick={() => { clearAccountError(); setEditingEmail(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change email</button>
           </div>
         ) : (
           <div style={{ marginBottom: 14 }}>
@@ -233,7 +236,7 @@ export default function ProfileTab({
             <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setEditingEmail(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-              <button onClick={async () => { await saveEmail(); setEditingEmail(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Update email</button>
+              <button onClick={async () => { const ok = await saveEmail(); if (ok !== false) setEditingEmail(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Update email</button>
             </div>
           </div>
         )}
@@ -241,7 +244,7 @@ export default function ProfileTab({
         {!changingPassword ? (
           <div style={{ marginBottom: 14 }}>
             <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Your account is protected by a password.</div>
-            <button onClick={() => setChangingPassword(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change password</button>
+            <button onClick={() => { clearAccountError(); setChangingPassword(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change password</button>
           </div>
         ) : (
           <div style={{ marginBottom: 14 }}>
@@ -251,7 +254,7 @@ export default function ProfileTab({
             <input type="password" minLength={6} value={confirmPasswordInput} onChange={(e) => setConfirmPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setChangingPassword(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-              <button onClick={async () => { await savePassword(); setChangingPassword(false); }} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save password</button>
+              <button onClick={async () => { const ok = await savePassword(); if (ok !== false) setChangingPassword(false); }} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save password</button>
             </div>
           </div>
         )}
