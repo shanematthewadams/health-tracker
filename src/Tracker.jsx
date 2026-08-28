@@ -127,15 +127,15 @@ function fullTodayLabel() {
 
 const inputStyle = {
   background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT,
-  borderRadius: 8, padding: "12px 14px", fontSize: 16, width: "100%",
-  boxShadow: "0 1px 0 rgba(45,35,25,.03)",
+  borderRadius: 10, padding: "12px 14px", fontSize: 16, width: "100%", minHeight: 46,
+  boxShadow: "0 1px 0 rgba(45,35,25,.025)",
 };
-const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "1.25rem", marginBottom: "1rem", boxShadow: "0 2px 8px rgba(28,36,48,.045)" };
-const headingStyle = { fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 21, letterSpacing: "-0.015em", lineHeight: 1.08, marginBottom: "0.9rem" };
-const fieldLabel = { fontSize: 12, color: TEXT_MUTED, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
+const cardStyle = { background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "1.15rem", marginBottom: "0.9rem", boxShadow: "0 3px 12px rgba(28,36,48,.04)" };
+const headingStyle = { fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 22, letterSpacing: "-0.015em", lineHeight: 1.1, marginBottom: "0.85rem" };
+const fieldLabel = { fontSize: 11, color: TEXT_MUTED, marginBottom: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.055em" };
 const bigButton = (color, textColor) => ({
-  background: color, color: textColor, border: "none", borderRadius: 8,
-  padding: "13px 18px", fontWeight: 800, fontSize: 15, width: "100%",
+  background: color, color: textColor, border: "none", borderRadius: 10,
+  padding: "12px 18px", minHeight: 46, fontWeight: 700, fontSize: 15, width: "100%",
   fontFamily: "'DM Sans', -apple-system, sans-serif", letterSpacing: "-0.01em",
 });
 
@@ -1344,14 +1344,22 @@ export default function Tracker() {
         input, select, textarea, button { font-family: inherit; }
         .num { font-family: 'DM Sans', -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
         button { cursor: pointer; -webkit-appearance: none; }
-        ::placeholder { color: #5A5E60; }
+        button:disabled { cursor: default; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+          outline: 3px solid rgba(31,94,87,.18);
+          outline-offset: 2px;
+        }
+        ::placeholder { color: #747875; }
         textarea { resize: vertical; }
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+        }
       `}</style>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(255,251,245,.97)", borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", backdropFilter: "blur(10px)" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0.65rem 1rem 0.6rem", display: "grid", gridTemplateColumns: "auto auto", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <BrandLogo compact style={{ width: 110, flexShrink: 0 }} />
-          <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "8px 10px 9px", boxShadow: "0 2px 8px rgba(17,17,17,.035)" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(252,251,248,.96)", borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", backdropFilter: "blur(10px)" }}>
+        <div style={{ maxWidth: 520, margin: "0 auto", padding: "0.72rem 1rem 0.68rem", display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <BrandLogo compact style={{ width: 96, flexShrink: 0 }} />
+          <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "7px 9px 8px", boxShadow: "0 2px 7px rgba(17,17,17,.03)" }}>
             <div title={householdName} style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "right", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {householdName}
             </div>
@@ -1383,7 +1391,7 @@ export default function Tracker() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "1rem 1rem", paddingBottom: NAV_H + 32 }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "1.05rem 1rem", paddingBottom: NAV_H + 36 }}>
         {saveError && (
           <div style={{ background: "#FFF1F0", border: `1px solid ${WARN}`, color: WARN, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 13 }}>{saveError}</div>
         )}
@@ -1648,10 +1656,10 @@ export default function Tracker() {
       )}
 
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255,253,249,.96)", borderTop: `1px solid ${BORDER}`,
+        position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(252,251,248,.96)", borderTop: `1px solid ${BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10,
       }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", height: NAV_H }}>
+        <div style={{ maxWidth: 520, margin: "0 auto", display: "flex", height: NAV_H }}>
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
