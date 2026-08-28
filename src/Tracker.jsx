@@ -865,14 +865,14 @@ export default function Tracker() {
   }
 
   async function copyInviteCode() {
-    if (!inviteCode) { setAccountError("Invite code isn’t available yet. Refresh and try again."); return; }
+    setInviteError(""); setInviteMessage("");
+    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
     try {
       await navigator.clipboard.writeText(inviteUrl());
-      setAccountError("");
-      setAccountMessage("Invite link copied.");
+      setInviteMessage("Invite link copied.");
       showSuccess("Invite link copied");
     } catch {
-      setAccountError(`Invite code: ${inviteCode}. Copy it manually if needed.`);
+      setInviteError(`We couldn’t copy the link. You can still use invite code ${inviteCode}.`);
     }
   }
 
@@ -1557,7 +1557,7 @@ export default function Tracker() {
             setWithNameInput={setWithNameInput}
             renameWith={renameWith}
             clearAccountError={() => setAccountError("")}
-            signOut={() => supabase.auth.signOut()}
+            signOut={async () => { const { error } = await supabase.auth.signOut(); if (error) setAccountError(friendlyError(error, "We couldn’t sign you out. Try again.")); }}
             deleteConfirm={deleteConfirm}
             setDeleteConfirm={setDeleteConfirm}
             deleteAccount={deleteAccount}
