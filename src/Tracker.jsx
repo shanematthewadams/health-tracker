@@ -465,7 +465,7 @@ export default function Tracker() {
       moveIfToday(setFastStartDate);
       previousTodayRef.current = nextToday;
     }
-  }, [timeZone]);
+  }, [timeZone, clockNow]);
 
   const [goalInput, setGoalInput] = useState("");
   const [goalError, setGoalError] = useState("");
@@ -619,7 +619,7 @@ export default function Tracker() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady, timeZone]);
+  useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady, timeZone, todayStr(timeZone)]);
 
   useEffect(() => {
     if (loading) return;
