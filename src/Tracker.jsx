@@ -7,7 +7,7 @@ import TrendsTab from "./tabs/TrendsTab.jsx";
 import GoalsTab from "./tabs/GoalsTab.jsx";
 import ProfileTab from "./tabs/ProfileTab.jsx";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
-import { CheckMark } from "./WithMarks.jsx";
+import { CheckMark, WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
 const USERS = ["Alli", "Shane"];
 const PROFILE_COLORS = [
@@ -394,6 +394,7 @@ export default function Tracker() {
   const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
   const [profileColors, setProfileColors] = useState({});
+  const [profileWithmarks, setProfileWithmarks] = useState({});
   const [intentions, setIntentions] = useState({});
   const [activeFasts, setActiveFasts] = useState({});
   const [fastBusy, setFastBusy] = useState(false);
@@ -512,6 +513,7 @@ export default function Tracker() {
         setInviteCode("");
         setProfiles({});
         setProfileColors({});
+        setProfileWithmarks({});
         setIntentions({});
         setActiveFasts({});
         setOwnedProfileId(null);
@@ -571,6 +573,7 @@ export default function Tracker() {
       });
       setProfiles(pmap);
       setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
+      setProfileWithmarks(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_withmark || null])));
       setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr(timeZone) ? (p.current_intention || "") : ""])));
       const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
@@ -648,6 +651,26 @@ export default function Tracker() {
       await loadAll();
     }
     setAccountBusy(false);
+  }
+
+  async function saveProfileWithmark(withmark) {
+    if (!ownedProfileId) return false;
+    const allowed = WITHMARK_OPTIONS.some((option) => option.id === withmark);
+    if (!allowed) {
+      setAccountError("Choose one of the available Withmarks.");
+      return false;
+    }
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const { error } = await supabase.from("profiles").update({ profile_withmark: withmark }).eq("id", ownedProfileId);
+    if (error) {
+      setAccountError(friendlyError(error, "We couldn’t save your Withmark. Try again."));
+      setAccountBusy(false);
+      return false;
+    }
+    setProfileWithmarks((prev) => ({ ...prev, [profileNameInput || activeUser]: withmark }));
+    setAccountMessage("Your Withmark is updated.");
+    setAccountBusy(false);
+    return true;
   }
 
   async function saveIntention(text) {
@@ -954,6 +977,14 @@ export default function Tracker() {
     const chosen = profileColors[name];
     const match = PROFILE_COLORS.find((c) => c.value === chosen);
     return match?.text || userText(name);
+  }
+  function profileWithmark(name) {
+    const chosen = profileWithmarks[name];
+    if (WITHMARK_OPTIONS.some((option) => option.id === chosen)) return chosen;
+    const ids = WITHMARK_OPTIONS.map((option) => option.id);
+    let total = 0;
+    for (const char of String(name || "")) total += char.charCodeAt(0);
+    return ids[total % ids.length] || "star";
   }
 
   function profileFor(name) { return profiles[name]; }
@@ -1384,7 +1415,7 @@ export default function Tracker() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: profileColor(u), marginRight: 6, boxShadow: "0 0 0 2px rgba(255,255,255,.88)" }} />
+                  <WithMark id={profileWithmark(u)} size={15} color={activeUser === u ? brand.inkOn : "rgba(255,255,255,.72)"} style={{ marginRight: 5 }} />
                   {u}
                 </button>
               ))}
@@ -1616,8 +1647,12 @@ export default function Tracker() {
             profileColors={profileColors}
             profileColor={profileColor}
             profileText={profileText}
+            profileWithmarks={profileWithmarks}
+            profileWithmark={profileWithmark}
+            withmarkOptions={WITHMARK_OPTIONS}
             profileColorOptions={PROFILE_COLORS}
             saveProfileColor={saveProfileColor}
+            saveProfileWithmark={saveProfileWithmark}
             saveProfileName={saveProfileName}
             openGoalsEdit={openGoalsEdit}
             fmtGoalDate={fmtGoalDate}
