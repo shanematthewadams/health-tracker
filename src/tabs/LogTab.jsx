@@ -151,7 +151,7 @@ export default function LogTab(props) {
           </div>
         )}
 
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ ...cardStyle, marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <div style={{ ...headingStyle, marginBottom: 0 }}>{editingFoodId ? "Edit Logged Food" : "Food"}</div>
             {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "Done" : `Manage My Foods (${savedFoods.length})`}</button>}
