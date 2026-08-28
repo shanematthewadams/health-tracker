@@ -2,7 +2,6 @@ import { useState } from "react";
 import { brand } from "../brand.jsx";
 import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints } from "lucide-react";
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
 function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
