@@ -1,6 +1,7 @@
 import { brand, metricColors } from "../brand.jsx";
 import { useEffect, useState } from "react";
 import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
+import { SunMark, WaveMark } from "../WithMarks.jsx";
 
 function greeting(timeZone) {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
@@ -221,7 +222,10 @@ export default function TodayTab({
       {isToday && <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <WaveMark size={14} color={brand.teal} />
+              <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
+            </div>
             <div style={straightRule(brand.teal)} />
           </div>
           {isMine && !editingIntention && (
@@ -267,7 +271,8 @@ export default function TodayTab({
             marginTop: 12,
             fontFamily: intention ? "'Newsreader', Georgia, serif" : "'DM Sans', -apple-system, sans-serif",
             fontStyle: intention ? "italic" : "normal",
-            fontWeight: intention ? 500 : 600,
+            fontWeight: intention ? 600 : 600,
+            fontSynthesis: intention ? "none" : "auto",
             fontSize: intention ? 20 : 15,
             lineHeight: 1.4,
             color: intention ? profileColor(activeUser) : TEXT_MUTED,
@@ -358,8 +363,11 @@ export default function TodayTab({
 
       {!hasAnything ? (
         <section style={{ padding: "24px 0 28px" }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: PEN.ink }}>
-            {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <SunMark size={18} color={PEN.orange} />
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: PEN.ink }}>
+              {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
+            </div>
           </div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginTop: 6, maxWidth: 390 }}>
             {isMine
