@@ -1,11 +1,14 @@
 import { brand } from "../brand.jsx";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Share2, Check } from "lucide-react";
 
 export default function ProfileTab({
   activeUser,
   data,
   session,
+  timeZone,
+  deviceTimeZone,
+  saveTimeZone,
   householdName,
   householdRole,
   inviteCode,
@@ -56,6 +59,13 @@ export default function ProfileTab({
   const [editingEmail, setEditingEmail] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [editingTimeZone, setEditingTimeZone] = useState(false);
+
+  const timeZoneOptions = useMemo(() => {
+    const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
+    const fallback = ["America/New_York","America/Chicago","America/Denver","America/Los_Angeles","America/Phoenix","Pacific/Honolulu","America/Anchorage","UTC"];
+    return supported.length ? supported : fallback;
+  }, []);
 
   const {
     SURFACE,
@@ -240,6 +250,32 @@ export default function ProfileTab({
             </div>
           </div>
         )}
+
+        <div style={{ marginBottom: 14 }}>
+          {!editingTimeZone ? (
+            <>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>
+                Your day follows <strong style={{ color: TEXT }}>{timeZone}</strong>.
+              </div>
+              <button onClick={() => { clearAccountError(); setEditingTimeZone(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change time zone</button>
+            </>
+          ) : (
+            <>
+              <div style={fieldLabel}>Time zone</div>
+              <select defaultValue={timeZone} id="with-timezone-select" style={{ ...inputStyle, marginBottom: 8 }}>
+                {timeZoneOptions.map((zone) => <option key={zone} value={zone}>{zone}{zone === deviceTimeZone ? " · device" : ""}</option>)}
+              </select>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setEditingTimeZone(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
+                <button onClick={async () => {
+                  const nextZone = document.getElementById("with-timezone-select")?.value;
+                  const ok = await saveTimeZone(nextZone);
+                  if (ok !== false) setEditingTimeZone(false);
+                }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save time zone</button>
+              </div>
+            </>
+          )}
+        </div>
 
         {!changingPassword ? (
           <div style={{ marginBottom: 14 }}>
