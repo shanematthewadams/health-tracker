@@ -48,13 +48,13 @@ export default function GoalsTab({
 
   return (
     <>
-      <div style={{ padding: "0.25rem 0.1rem 0.9rem" }}>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
+      <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What you’re working toward.</div>
       </div>
 
       {!hasGoals ? (
-        <div style={{ ...cardStyle, background: "#FBF7F0", borderColor: "#E6E1D8" }}>
+        <div style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, marginBottom: 6 }}>What are you working toward?</div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Set a goal and daily targets when you’re ready. They’re yours, and you can change them anytime.</div>
           {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>Set your goals</button>}
@@ -140,7 +140,7 @@ export default function GoalsTab({
           <div style={fieldLabel}>Goal weight (lb)</div>
           <input type="number" step="0.1" inputMode="decimal" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
           <div style={fieldLabel}>Goal date</div>
-          <div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}>
+          <div style={{ width: "100%", height: 48, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}>
             <input
               type="date"
               value={goalDateInput}
