@@ -451,6 +451,7 @@ export default function Tracker() {
   const [waterOz, setWaterOz] = useState("");
   const [waterError, setWaterError] = useState("");
   const [waterDate, setWaterDate] = useState(() => todayStr());
+  const [waterShortcuts, setWaterShortcuts] = useState([8, 16, 24]);
   const [actName, setActName] = useState("");
   const [activityError, setActivityError] = useState("");
   const [actCals, setActCals] = useState("");
@@ -503,7 +504,13 @@ export default function Tracker() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.user) setTimeZone(session.user.user_metadata?.timezone || deviceTimeZone);
+      if (session?.user) {
+        setTimeZone(session.user.user_metadata?.timezone || deviceTimeZone);
+        const savedWater = session.user.user_metadata?.water_shortcuts;
+        if (Array.isArray(savedWater) && savedWater.length === 3 && savedWater.every((n) => Number.isFinite(Number(n)) && Number(n) > 0)) {
+          setWaterShortcuts(savedWater.map(Number));
+        }
+      }
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
@@ -524,7 +531,13 @@ export default function Tracker() {
         setLoading(false);
       }
       setSession(nextSession);
-      if (nextSession?.user) setTimeZone(nextSession.user.user_metadata?.timezone || deviceTimeZone);
+      if (nextSession?.user) {
+        setTimeZone(nextSession.user.user_metadata?.timezone || deviceTimeZone);
+        const savedWater = nextSession.user.user_metadata?.water_shortcuts;
+        if (Array.isArray(savedWater) && savedWater.length === 3 && savedWater.every((n) => Number.isFinite(Number(n)) && Number(n) > 0)) {
+          setWaterShortcuts(savedWater.map(Number));
+        }
+      }
       if (event === "PASSWORD_RECOVERY") {
         sessionStorage.setItem("with-password-recovery", "1");
         setPasswordRecovery(true);
@@ -893,6 +906,28 @@ export default function Tracker() {
     }
     setTimeZone(updated?.user?.user_metadata?.timezone || nextZone);
     setAccountMessage("Time zone updated.");
+    setAccountBusy(false);
+    return true;
+  }
+
+  async function saveWaterShortcuts(nextShortcuts) {
+    const parsed = (nextShortcuts || []).map((value) => Number(value));
+    if (parsed.length !== 3 || parsed.some((value) => !Number.isFinite(value) || value <= 0 || value > 999)) {
+      setAccountError("Use three water amounts between 1 and 999 oz.");
+      return false;
+    }
+    setAccountBusy(true); setAccountError(""); setAccountMessage("");
+    const currentData = session?.user?.user_metadata || {};
+    const clean = parsed.map((value) => Math.round(value * 10) / 10);
+    const { data: updated, error } = await supabase.auth.updateUser({ data: { ...currentData, water_shortcuts: clean } });
+    if (error) {
+      setAccountError(friendlyError(error, "We couldn’t update your water shortcuts. Try again."));
+      setAccountBusy(false);
+      return false;
+    }
+    const saved = updated?.user?.user_metadata?.water_shortcuts || clean;
+    setWaterShortcuts(saved.map(Number));
+    setAccountMessage("Water shortcuts updated.");
     setAccountBusy(false);
     return true;
   }
@@ -1571,6 +1606,7 @@ export default function Tracker() {
             setWaterOz={setWaterOz}
             waterDate={waterDate}
             setWaterDate={setWaterDate}
+            waterShortcuts={waterShortcuts}
             addWater={addWater}
             stepsInput={stepsInput}
             stepsError={stepsError}
@@ -1639,6 +1675,8 @@ export default function Tracker() {
             timeZone={timeZone}
             deviceTimeZone={deviceTimeZone}
             saveTimeZone={saveTimeZone}
+            waterShortcuts={waterShortcuts}
+            saveWaterShortcuts={saveWaterShortcuts}
             householdName={householdName}
             householdRole={householdRole}
             inviteCode={inviteCode}
