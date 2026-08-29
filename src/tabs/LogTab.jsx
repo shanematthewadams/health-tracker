@@ -25,7 +25,7 @@ export default function LogTab(props) {
     foodError, addFood, deleteFood,
     weightInput, setWeightInput, weightDate, setWeightDate, weightError, addWeight, deleteWeight,
     actName, setActName, activityError, actCals, setActCals, actDate, setActDate, addActivity,
-    waterOz, setWaterOz, waterError, waterDate, setWaterDate, addWater,
+    waterOz, setWaterOz, waterError, waterDate, setWaterDate, waterShortcuts, addWater,
     stepsInput, setStepsInput, stepsError, stepsDate, setStepsDate, saveSteps,
     profileColor, profileText,
     styles,
@@ -309,7 +309,7 @@ export default function LogTab(props) {
 
       {logTab === "water" && <div style={cardStyle}>
         <div style={headingStyle}>Water</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{[8,16,24].map((oz) => <button key={oz} onClick={() => addWater(oz)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => <button key={`${oz}-${index}`} onClick={() => addWater(oz)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>)}</div>
         <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: "12px" }}>
           <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
