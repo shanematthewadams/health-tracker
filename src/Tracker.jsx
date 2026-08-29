@@ -40,6 +40,7 @@ const TEXT = brand.text;
 const TEXT_MUTED = brand.textMuted;
 const WARN = brand.warn;
 const NAV_H = 64;
+const IS_STAGING = typeof window !== "undefined" && (window.location.hostname.includes("staging--") || window.location.hostname.startsWith("staging."));
 
 function dateKeyInTimeZone(date = new Date(), timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -1425,6 +1426,11 @@ export default function Tracker() {
       `}</style>
 
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: brand.teal, borderBottom: `1px solid ${brand.tealDark}`, paddingTop: "env(safe-area-inset-top)", boxShadow: "0 2px 10px rgba(23,78,73,.12)" }}>
+        {IS_STAGING && (
+          <div style={{ height: 18, background: WARN, color: brand.inkOn, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, letterSpacing: ".16em", lineHeight: 1, textTransform: "uppercase" }}>
+            Staging
+          </div>
+        )}
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "0.72rem 1rem 0.68rem", display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1 }}>
             <BrandLogo compact style={{ width: 96, backgroundColor: brand.inkOn }} />
