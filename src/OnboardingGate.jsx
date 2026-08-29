@@ -173,12 +173,15 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>Who are you with?</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 22 }}>
-          With is a private place to track your own health alongside people you trust. Your goals and health information stay yours.
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>Take care of yourself. With people who care about you.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>
+          With is a private place to track things like food, movement, water, weight and everyday intentions alongside people you trust.
         </div>
-        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 10 }}>Start your With</button>
-        <button type="button" onClick={() => setMode("join")} style={secondaryButton}>Join someone</button>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
+          Everyone has their own goals. You’re simply doing life together.
+        </div>
+        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 10 }}>Start a new With</button>
+        <button type="button" onClick={() => setMode("join")} style={secondaryButton}>I have an invite code</button>
       </ScreenShell>
     );
   }
@@ -189,14 +192,14 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     <ScreenShell>
       <BrandIntro eyebrow={isCreate ? "Start with yourself. Add your people when you’re ready." : "Your goals are still yours. You’ll just have company."} />
       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>
-        {isCreate ? "Create your With" : inviterName ? `Join ${inviterName}’s With` : "Join a With"}
+        {isCreate ? "Who are you with?" : inviterName ? `${inviterName} invited you to With.` : "Join a With"}
       </div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
         {isCreate
-          ? "Give your private space a name, then create your own health profile."
+          ? "A With is your private space with the people you choose. Give it a name, then tell us what to call you."
           : initialInviteCode
             ? inviterName
-              ? `${inviterName} invited you to join their With. Create your own health profile to continue.`
+              ? `You’ll each track your own health and goals. With gives you a private place to share the experience and support each other.`
               : "You’ve been invited to join this With. Create your own health profile to continue."
             : "Enter the invite code you received, then create your own health profile."}
       </div>
@@ -204,13 +207,13 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
       <form onSubmit={isCreate ? createHousehold : joinHousehold}>
         {isCreate ? (
           <>
-            <div style={fieldLabel}>Name your With</div>
+            <div style={fieldLabel}>What should we call your With?</div>
             <input
               type="text"
               maxLength={40}
               required
               autoFocus
-              placeholder="e.g. Shane & Alli"
+              placeholder="e.g. Shane & Alli, The Adamses, Morning Crew"
               value={householdName}
               onChange={(event) => setHouseholdName(event.target.value)}
               style={{ ...inputStyle, marginBottom: 14 }}
@@ -243,7 +246,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
           style={{ ...inputStyle, marginBottom: 8 }}
         />
         <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>
-          This creates your personal profile. Your goals, nutrition targets, activity and other health information belong to you.
+          Your profile is yours. Your goals don’t have to match anyone else’s, even when you’re doing this together.
         </div>
 
         {error && (
