@@ -10,6 +10,8 @@ export default function ProfileTab({
   timeZone,
   deviceTimeZone,
   saveTimeZone,
+  waterShortcuts,
+  saveWaterShortcuts,
   householdName,
   householdRole,
   inviteCode,
@@ -65,6 +67,8 @@ export default function ProfileTab({
   const [changingPassword, setChangingPassword] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [editingTimeZone, setEditingTimeZone] = useState(false);
+  const [editingWaterShortcuts, setEditingWaterShortcuts] = useState(false);
+  const [waterShortcutDraft, setWaterShortcutDraft] = useState(() => (waterShortcuts || [8, 16, 24]).map(String));
 
   const timeZoneOptions = useMemo(() => {
     const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
@@ -286,6 +290,37 @@ export default function ProfileTab({
         <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Goals</div>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.25 }}>{goalSentence}</div>
         <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{goal?.goalWeight ? "Manage goals" : "Set a goal"}</button>
+      </section>
+
+      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
+        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Water</div>
+        {!editingWaterShortcuts ? (
+          <>
+            <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>
+              Your quick-add buttons are <strong style={{ color: TEXT }}>{waterShortcuts.join(" oz, ")} oz</strong>.
+            </div>
+            <button onClick={() => { clearAccountError(); setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change water shortcuts</button>
+          </>
+        ) : (
+          <>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 10 }}>Set the three amounts you use most often.</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              {waterShortcutDraft.map((value, index) => (
+                <div key={index}>
+                  <div style={fieldLabel}>Shortcut {index + 1}</div>
+                  <div style={{ position: "relative" }}>
+                    <input type="number" min="1" max="999" step="0.1" inputMode="decimal" value={value} onChange={(e) => setWaterShortcutDraft((prev) => prev.map((item, i) => i === index ? e.target.value : item))} style={{ ...inputStyle, paddingRight: 34 }} />
+                    <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, fontSize: 12, pointerEvents: "none" }}>oz</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(false); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
+              <button onClick={async () => { const ok = await saveWaterShortcuts(waterShortcutDraft); if (ok !== false) setEditingWaterShortcuts(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save shortcuts</button>
+            </div>
+          </>
+        )}
       </section>
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
