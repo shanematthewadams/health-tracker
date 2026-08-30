@@ -10,7 +10,7 @@ function fmtDate(d) {
 export default function LogTab(props) {
   const {
     activeUser, activeCanEdit, data, today, ts,
-    logTab, setLogTab, buttonSuccess,
+    logTab, setLogTab, buttonSuccess, logBusy,
     activeFasts, fastPromptDismissedToday, fastEditorOpen, fastBusy,
     fastStartDate, fastStartTime, setFastStartDate, setFastStartTime,
     setFastEditorOpen, dismissFastPromptToday, openFastEditor, startFast, updateFastStart, fastElapsed,
@@ -279,7 +279,7 @@ export default function LogTab(props) {
             <button onClick={clearFoodForm} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
             <button onClick={saveSavedFoodOnly} style={bigButton(brand.teal, brand.inkOn)}>Save changes</button>
           </div> : <>
-            <button onClick={addFood} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "food" ? "✓ Saved" : editingFoodId ? "Save changes" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>
+            <button onClick={addFood} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "food"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "food" ? (editingFoodId ? "Saving…" : "Logging…") : buttonSuccess === "food" ? "✓ Saved" : editingFoodId ? "Save changes" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>
             {editingFoodId && <button onClick={async () => { await deleteFood(editingFoodId); clearFoodForm(); }} style={{ width: "100%", marginTop: 10, padding: 10, background: "transparent", border: "none", color: WARN, fontSize: 12, fontWeight: 700 }}>Delete logged food</button>}
           </>}
         </div>
@@ -292,7 +292,7 @@ export default function LogTab(props) {
           <input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
         {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-        <button onClick={addWeight} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
+        <button onClick={addWeight} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "weight"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "weight" ? "Saving…" : buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
         {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
       </div>}
 
@@ -304,18 +304,18 @@ export default function LogTab(props) {
           <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
         {activityError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{activityError}</div>}
-        <button onClick={addActivity} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
+        <button onClick={addActivity} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "activity"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "activity" ? "Logging…" : buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
       </div>}
 
       {logTab === "water" && <div style={cardStyle}>
         <div style={headingStyle}>Water</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => <button key={`${oz}-${index}`} onClick={() => addWater(oz)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => { const pendingKey = `water-shortcut-${index}`; return <button key={`${oz}-${index}`} onClick={() => addWater(oz, pendingKey)} disabled={!!logBusy} aria-busy={logBusy === pendingKey} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600, opacity: logBusy ? 0.62 : 1 }}>{logBusy === pendingKey ? "Adding…" : `+${oz} oz`}</button>; })}</div>
         <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: "12px" }}>
           <input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
         {waterError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{waterError}</div>}
-        <button onClick={() => addWater()} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
+        <button onClick={() => addWater()} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "water"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "water" ? "Adding…" : buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
       </div>}
 
       {logTab === "steps" && <div style={cardStyle}>
@@ -325,7 +325,7 @@ export default function LogTab(props) {
           <input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
         {stepsError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{stepsError}</div>}
-        <button onClick={saveSteps} disabled={!activeCanEdit} style={bigButton(brand.teal, brand.inkOn)}>{buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
+        <button onClick={saveSteps} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "steps"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "steps" ? "Saving…" : buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
       </div>}
     </>
   );
