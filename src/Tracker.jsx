@@ -415,6 +415,8 @@ export default function Tracker() {
   const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
   const [toast, setToast] = useState(null);
   const [buttonSuccess, setButtonSuccess] = useState(null);
+  const [logBusy, setLogBusy] = useState(null);
+  const logBusyRef = useRef(null);
   const [data, setData] = useState({ Alli: emptyData("Alli"), Shane: emptyData("Shane") });
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState(null);
@@ -1035,6 +1037,24 @@ export default function Tracker() {
     catch (e) { setSaveError(friendlyError(e, "We couldn’t save that. Try again.")); return false; }
   }
 
+  async function runLogWrite(kind, work) {
+    if (logBusyRef.current) return false;
+    logBusyRef.current = kind;
+    setLogBusy(kind);
+    setSaveError(null);
+    try {
+      await work();
+      await loadAll();
+      return true;
+    } catch (e) {
+      setSaveError(friendlyError(e, "We couldn’t save that. Try again."));
+      return false;
+    } finally {
+      logBusyRef.current = null;
+      setLogBusy(null);
+    }
+  }
+
   function showSuccess(message, kind) {
     setToast(message);
     setButtonSuccess(kind);
@@ -1078,7 +1098,7 @@ export default function Tracker() {
     if (!weightInput || isNaN(val) || val <= 0) { setWeightError("Enter a real weight first."); return; }
     setWeightError("");
     const p = profileFor(activeUser); if (!p) return;
-    const ok = await runWrite(async () => {
+    const ok = await runLogWrite("weight", async () => {
       const { error } = await supabase.from("weight_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: weightDate, weight: val }, { onConflict: "profile_id,entry_date" });
       if (error) throw error;
     });
@@ -1200,7 +1220,7 @@ export default function Tracker() {
     const carbs = parseFloat(foodCarbs) || 0, fat = parseFloat(foodFat) || 0, fiber = parseFloat(foodFiber) || 0;
     if (!foodCals && !foodProtein && !foodCarbs && !foodFat) { setFoodError("Add at least calories or a macro."); return; }
     setFoodError(""); const p = profileFor(activeUser); if (!p) return;
-    const ok = await runWrite(async () => {
+    const ok = await runLogWrite("food", async () => {
       let savedId = null;
       const [selectedSource, selectedId] = String(selectedSavedFoodId || "").split(":");
       if (saveAsSaved && !selectedSavedFoodId) {
@@ -1230,15 +1250,15 @@ export default function Tracker() {
     const val = parseInt(stepsInput, 10); if (!stepsInput || isNaN(val) || val < 0) { setStepsError("Enter a valid step total."); return; }
     setStepsError("");
     const p = profileFor(activeUser); if (!p) return;
-    const ok = await runWrite(async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
+    const ok = await runLogWrite("steps", async () => { const { error } = await supabase.from("step_entries").upsert({ household_id: householdId, profile_id: p.id, entry_date: stepsDate, step_count: val }, { onConflict: "profile_id,entry_date" }); if (error) throw error; });
     if (ok) { setStepsInput(""); showSuccess(`${val.toLocaleString()} steps saved`, "steps"); }
   }
-  async function addWater(amount) {
+  async function addWater(amount, pendingKey = "water") {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const val = amount != null ? amount : parseFloat(waterOz); if (!val || isNaN(val) || val <= 0) { setWaterError("Enter an amount greater than 0."); return; }
     setWaterError("");
     const p = profileFor(activeUser); if (!p) return;
-    const ok = await runWrite(async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
+    const ok = await runLogWrite(pendingKey, async () => { const { error } = await supabase.from("water_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: waterDate, ounces: val }); if (error) throw error; });
     if (ok) { setWaterOz(""); showSuccess(`${val} oz water added`, "water"); }
   }
   async function addActivity() {
@@ -1247,7 +1267,7 @@ export default function Tracker() {
     const cals = parseFloat(actCals) || 0; if (!cals || cals <= 0) { setActivityError("Enter calories burned."); return; }
     setActivityError("");
     const p = profileFor(activeUser); if (!p) return;
-    const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
+    const ok = await runLogWrite("activity", async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
     if (ok) { const loggedActivity = actName.trim(); setActName(""); setActCals(""); showSuccess(`${loggedActivity} added`, "activity"); }
   }
   async function deleteActivity(id) {
@@ -1530,6 +1550,7 @@ export default function Tracker() {
             logTab={logTab}
             setLogTab={setLogTab}
             buttonSuccess={buttonSuccess}
+            logBusy={logBusy}
             activeFasts={activeFasts}
             fastPromptDismissedToday={fastPromptDismissedToday}
             fastEditorOpen={fastEditorOpen}
