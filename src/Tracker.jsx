@@ -1377,13 +1377,22 @@ export default function Tracker() {
     const w = data[u].weights;
     if (w.length === 0) return null;
     const start = w[0].weight;
-    const latest = w[w.length - 1].weight;
+    const latestEntry = w[w.length - 1];
+    const windowStart = new Date(latestEntry.date + "T12:00:00Z");
+    windowStart.setUTCDate(windowStart.getUTCDate() - 6);
+    const windowStartStr = windowStart.toISOString().slice(0, 10);
+    const recentWeights = w.filter((entry) => entry.date >= windowStartStr && entry.date <= latestEntry.date);
+    const latest = recentWeights.reduce((sum, entry) => sum + entry.weight, 0) / recentWeights.length;
+    const latestActual = latestEntry.weight;
+    const averageCount = recentWeights.length;
     const goal = data[u].goalWeight;
 
     if (goal == null || goal === start) {
       return {
         start,
         latest,
+        latestActual,
+        averageCount,
         goal,
         plannedChange: goal == null ? null : 0,
         progressAmount: 0,
@@ -1399,7 +1408,7 @@ export default function Tracker() {
     const progressPct = plannedChange ? (progressAmount / plannedChange) * 100 : 100;
     const remaining = Math.max(0, plannedChange - progressAmount);
 
-    return { start, latest, goal, plannedChange, progressAmount, progressPct, remaining };
+    return { start, latest, latestActual, averageCount, goal, plannedChange, progressAmount, progressPct, remaining };
   }
 
   if (!authReady) {
