@@ -131,8 +131,12 @@ function CombinedTrends({ names, data, today, goalInfo, profileColor, styles }) 
   const weightRows = allDates.map((date) => {
     const row = { date, label: shortDate(date) };
     names.forEach((name) => {
-      const entry = data[name].weights.find((w) => w.date === date);
-      if (entry) row[name] = entry.weight;
+      const end = new Date(date + "T12:00:00Z");
+      const start = new Date(end);
+      start.setUTCDate(start.getUTCDate() - 6);
+      const startStr = start.toISOString().slice(0, 10);
+      const entries = data[name].weights.filter((w) => w.date >= startStr && w.date <= date);
+      if (entries.length) row[name] = Number((entries.reduce((sum, w) => sum + w.weight, 0) / entries.length).toFixed(1));
     });
     return row;
   });
@@ -141,7 +145,8 @@ function CombinedTrends({ names, data, today, goalInfo, profileColor, styles }) 
   return (
     <>
       <div style={{ ...cardStyle, marginBottom: 14 }}>
-        <div style={{ ...headingStyle, marginBottom: 10 }}>Weight</div>
+        <div style={{ ...headingStyle, marginBottom: 3 }}>Weight</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 10, marginBottom: 10 }}>Rolling 7-day average · one day is a data point, the trend is the story.</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "7px 13px", marginBottom: 12 }}>
           {names.map((name) => {
             const gi = goalInfo(name);
@@ -149,7 +154,7 @@ function CombinedTrends({ names, data, today, goalInfo, profileColor, styles }) 
               <div key={name} style={{ display: "flex", alignItems: "center", gap: 5, color: TEXT_MUTED, fontSize: 10 }}>
                 <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColor(name) }} />
                 <strong style={{ color: TEXT }}>{name}</strong>
-                {gi ? `${gi.latest} lb${gi.progressPct != null ? ` · ${Math.round(gi.progressPct)}%` : ""}` : "No weigh-ins"}
+                {gi ? `${gi.latest.toFixed(1)} lb avg${gi.progressPct != null ? ` · ${Math.round(gi.progressPct)}%` : ""}` : "No weigh-ins"}
               </div>
             );
           })}
