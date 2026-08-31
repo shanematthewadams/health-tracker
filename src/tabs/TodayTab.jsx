@@ -99,6 +99,12 @@ export default function TodayTab({
   const dayActivities = u.activities.filter((a) => a.date === selectedDate);
   const dayWeight = u.weights.filter((w) => w.date === selectedDate);
   const latestDayWeight = dayWeight.length ? dayWeight[dayWeight.length - 1].weight : null;
+  const weightWindowStart = shiftDate(selectedDate, -6);
+  const recentWeights = u.weights.filter((w) => w.date >= weightWindowStart && w.date <= selectedDate);
+  const averageWeight = recentWeights.length
+    ? recentWeights.reduce((sum, w) => sum + w.weight, 0) / recentWeights.length
+    : null;
+  const averageLabel = recentWeights.length >= 7 ? "7-day average" : "Average weight";
   const prevWeightEntry = u.weights.filter((w) => w.date < selectedDate).slice().sort((a, b) => b.date.localeCompare(a.date))[0] || null;
   const totalActivityCals = dayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
   const dayWater = u.water.filter((w) => w.date === selectedDate).reduce((sum, w) => sum + w.ounces, 0);
@@ -161,11 +167,10 @@ export default function TodayTab({
       icon: Scale,
       color: PEN.red,
       show: latestDayWeight != null,
-      value: latestDayWeight != null ? `${latestDayWeight} lb` : "",
+      value: averageWeight != null ? `${averageWeight.toFixed(1)} lb` : "",
       sub: [
-        latestDayWeight != null && prevWeightEntry
-          ? `${latestDayWeight < prevWeightEntry.weight ? "↓" : latestDayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestDayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
-          : isToday ? "Logged today" : "Logged that day",
+        averageWeight != null ? averageLabel : null,
+        latestDayWeight != null ? `Latest: ${latestDayWeight} lb` : null,
         isToday && goalTiming ? goalTiming : null,
       ].filter(Boolean).join(" · "),
     },
