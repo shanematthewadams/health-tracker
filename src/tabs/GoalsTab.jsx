@@ -130,7 +130,7 @@ export default function GoalsTab({
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
                       {[
                         ["Started", `${gi.start} lb`],
-                        ["Now", `${gi.latest} lb`],
+                        ["7-day avg", `${gi.latest.toFixed(1)} lb`],
                         ["To go", gi.remaining > 0 ? `${gi.remaining.toFixed(1)} lb` : "You’re there"],
                       ].map(([label, value]) => (
                         <div key={label} style={{ background: SURFACE_2, borderRadius: 12, padding: "10px 9px" }}>
@@ -146,6 +146,11 @@ export default function GoalsTab({
                         <span>{gi.progressAmount > 0 ? `${gi.progressAmount.toFixed(1)} lb closer than where you started` : "This is where you’re starting."}</span>
                       </div>
                       <div style={{ color: TEXT_MUTED, fontSize: 12, flexShrink: 0 }}>{Math.round(gi.progressPct)}%</div>
+                    </div>
+
+                    <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginBottom: 12 }}>
+                      Progress uses your rolling 7-day average so a single weigh-in doesn’t tell the whole story.
+                      {gi.latestActual != null && <> Latest weigh-in: <strong style={{ color: TEXT }}>{gi.latestActual} lb</strong>.</>}
                     </div>
 
                     <div style={{ height: 7, background: SURFACE_2, borderRadius: 999, overflow: "hidden" }}>
