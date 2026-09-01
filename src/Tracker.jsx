@@ -499,6 +499,24 @@ export default function Tracker() {
   const [data, setData] = useState({ Alli: emptyData("Alli"), Shane: emptyData("Shane") });
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState(null);
+  const [walkthrough, setWalkthrough] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("with-walkthrough-state") || "null");
+      return saved?.active ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+
+  function updateWalkthrough(patch) {
+    setWalkthrough((prev) => {
+      if (!prev?.active) return prev;
+      const next = { ...prev, ...patch };
+      if (next.todaySoFarSeen) next.active = false;
+      localStorage.setItem("with-walkthrough-state", JSON.stringify(next));
+      return next;
+    });
+  }
   const [savedFoods, setSavedFoods] = useState([]);
   const [globalFoods, setGlobalFoods] = useState([]);
   const [savedSearch, setSavedSearch] = useState("");
@@ -1124,6 +1142,12 @@ export default function Tracker() {
     try {
       await work();
       await loadAll();
+      if (walkthrough?.active && !walkthrough.firstLogDone) {
+        updateWalkthrough({ firstLogDone: true });
+        setToast("There it is. Today fills in as you go.");
+        window.clearTimeout(window.__withToastTimer);
+        window.__withToastTimer = window.setTimeout(() => setToast(null), 3200);
+      }
       return true;
     } catch (e) {
       setSaveError(friendlyError(e, "We couldn’t save that. Try again."));
@@ -1618,6 +1642,8 @@ export default function Tracker() {
             fastElapsed={fastElapsed}
             openLog={openLog}
             openGoals={() => setTab("goals")}
+            walkthrough={walkthrough}
+            updateWalkthrough={updateWalkthrough}
             deleteFood={deleteFood}
             editLoggedFood={editLoggedFood}
             setActiveUser={setActiveUser}
@@ -1732,6 +1758,8 @@ export default function Tracker() {
             saveSteps={saveSteps}
             profileColor={profileColor}
             profileText={profileText}
+            walkthrough={walkthrough}
+            updateWalkthrough={updateWalkthrough}
             styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
           />
         )}
@@ -1779,6 +1807,8 @@ export default function Tracker() {
             profileColor={profileColor}
             profileText={profileText}
             fmtGoalDate={fmtGoalDate}
+            walkthrough={walkthrough}
+            updateWalkthrough={updateWalkthrough}
             styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
           />
         )}
