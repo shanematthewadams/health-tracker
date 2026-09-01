@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
 const BG = brand.bg;
 const SURFACE = brand.surface;
@@ -11,6 +12,7 @@ const TEXT_MUTED = brand.textMuted;
 const WARN = brand.warn;
 const ACCENT = brand.teal;
 const ACCENT_TEXT = brand.inkOn;
+const PROFILE_COLORS = ["#F06A24","#7047EB","#4C6EF5","#E7685B","#D99524","#D95B83","#4658C9","#9B88D8"];
 
 function friendlyOnboardingError(error, fallback) {
   const raw = String(error?.message || error || "").toLowerCase();
@@ -109,6 +111,11 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
   const [inviteCode, setInviteCode] = useState(initialInviteCode);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState("membership");
+  const [profileId, setProfileId] = useState(null);
+  const [profileColor, setProfileColor] = useState(PROFILE_COLORS[2]);
+  const [profileWithmark, setProfileWithmark] = useState("star");
+  const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   function goBack() {
     setMode(null);
@@ -138,7 +145,10 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
       return;
     }
 
-    await onComplete();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: createdProfile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).limit(1).maybeSingle();
+    setProfileId(createdProfile?.id || null);
+    setStep("personalize");
     setBusy(false);
   }
 
@@ -165,8 +175,52 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
 
     localStorage.removeItem("with-pending-invite");
     localStorage.removeItem("with-pending-inviter");
-    await onComplete();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: joinedProfile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).limit(1).maybeSingle();
+    setProfileId(joinedProfile?.id || null);
+    setStep("personalize");
     setBusy(false);
+  }
+
+  async function finishPersonalization() {
+    setBusy(true); setError("");
+    try {
+      if (profileId) {
+        const { error: profileError } = await supabase.from("profiles").update({ profile_color: profileColor, profile_withmark: profileWithmark }).eq("id", profileId);
+        if (profileError) throw profileError;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentData = user?.user_metadata || {};
+      const { error: userError } = await supabase.auth.updateUser({ data: { ...currentData, timezone: deviceTimeZone } });
+      if (userError) throw userError;
+      await onComplete();
+    } catch (saveError) {
+      setError(friendlyOnboardingError(saveError, "We couldn’t save that. Try again.")); setBusy(false);
+    }
+  }
+
+  if (step === "personalize") {
+    return (
+      <ScreenShell>
+        <BrandIntro eyebrow="A little piece of With that’s yours." />
+        <div style={{ fontFamily: "\'Newsreader\', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>This is you in With.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>Pick a color and a Withmark, or keep what we chose. You can change either one later.</div>
+        <div style={{ ...fieldLabel, marginBottom: 9 }}>Your color</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 8, marginBottom: 20 }}>
+          {PROFILE_COLORS.map((color) => <button key={color} type="button" aria-label={"Choose " + color} onClick={() => setProfileColor(color)} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", background: color, border: profileColor === color ? "3px solid " + TEXT : "3px solid transparent", boxShadow: profileColor === color ? "0 0 0 2px " + SURFACE : "none" }} />)}
+        </div>
+        <div style={{ ...fieldLabel, marginBottom: 9 }}>Your Withmark</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginBottom: 20 }}>
+          {WITHMARK_OPTIONS.map(({ id, name }) => <button key={id} type="button" aria-label={name} title={name} onClick={() => setProfileWithmark(id)} style={{ minHeight: 42, display: "grid", placeItems: "center", borderRadius: 10, background: profileWithmark === id ? profileColor : SURFACE, color: profileWithmark === id ? "#fff" : TEXT, border: "1px solid " + (profileWithmark === id ? profileColor : BORDER) }}><WithMark id={id} size={20} /></button>)}
+        </div>
+        <div style={{ background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: profileColor, color: "#fff", display: "grid", placeItems: "center" }}><WithMark id={profileWithmark} size={23} /></div>
+          <div><div style={{ fontWeight: 700 }}>{profileName || "You"}</div><div style={{ color: TEXT_MUTED, fontSize: 12 }}>{deviceTimeZone.replaceAll("_", " ")}</div></div>
+        </div>
+        {error && <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 12 }}>{error}</div>}
+        <button type="button" disabled={busy} onClick={finishPersonalization} style={{ ...primaryButton, opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Continue to Today"}</button>
+      </ScreenShell>
+    );
   }
 
   if (!mode && !initialInviteCode) {
