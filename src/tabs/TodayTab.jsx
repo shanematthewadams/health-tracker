@@ -52,6 +52,7 @@ export default function TodayTab({
   activeUser,
   activeCanEdit,
   data,
+  profileNames,
   today,
   timeZone,
   todayStats,
