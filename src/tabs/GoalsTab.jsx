@@ -7,6 +7,7 @@ function weeksUntil(dateStr) {
   return Math.ceil(ms / (7 * 24 * 60 * 60 * 1000));
 }
 
+import { useEffect, useState } from "react";
 import { brand } from "../brand.jsx";
 import { AsteriskMark, StarMark } from "../WithMarks.jsx";
 
@@ -39,10 +40,19 @@ export default function GoalsTab({
   saveGoal,
   saveTargets,
   fmtGoalDate,
+  walkthrough,
+  updateWalkthrough,
   styles,
 }) {
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, fieldLabel, inputStyle, bigButton } = styles;
   const user = data[activeUser];
+  const [showWalkthroughIntro, setShowWalkthroughIntro] = useState(() => Boolean(walkthrough?.active && !walkthrough?.goalsIntroSeen));
+
+  useEffect(() => {
+    if (showWalkthroughIntro && walkthrough?.active && !walkthrough?.goalsIntroSeen) {
+      updateWalkthrough?.({ goalsIntroSeen: true });
+    }
+  }, []);
   const goalWeeks = weeksUntil(user.goalDate);
   const hasGoal = !!(user.goalWeight || user.goalDate);
   const hasTargets = !!(user.targets.calories || user.targets.protein || user.targets.carbs || user.targets.fat || user.targets.fiberMin || user.targets.fiberMax);
@@ -76,6 +86,16 @@ export default function GoalsTab({
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Where you’re headed, and what helps you get there.</div>
       </div>
+
+      {showWalkthroughIntro && (
+        <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>Choose what you’re working toward.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
+            Set the goals and targets that are useful to you. You can change them anytime, and the people you’re With can have completely different ones.
+          </div>
+          <button type="button" onClick={() => setShowWalkthroughIntro(false)} style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontSize: 12, fontWeight: 800 }}>Got it</button>
+        </section>
+      )}
 
       {!hasAnything ? (
         <div style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER }}>
