@@ -1617,6 +1617,7 @@ export default function Tracker() {
             endFast={endFast}
             fastElapsed={fastElapsed}
             openLog={openLog}
+            openGoals={() => setTab("goals")}
             deleteFood={deleteFood}
             editLoggedFood={editLoggedFood}
             setActiveUser={setActiveUser}
