@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { brand, metricColors } from "../brand.jsx";
 import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints } from "lucide-react";
 
@@ -28,11 +28,19 @@ export default function LogTab(props) {
     waterOz, setWaterOz, waterError, waterDate, setWaterDate, waterShortcuts, addWater,
     stepsInput, setStepsInput, stepsError, stepsDate, setStepsDate, saveSteps,
     profileColor, profileText,
+    walkthrough, updateWalkthrough,
     styles,
   } = props;
 
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
+  const [showWalkthroughIntro, setShowWalkthroughIntro] = useState(() => Boolean(walkthrough?.active && !walkthrough?.logIntroSeen));
+
+  useEffect(() => {
+    if (showWalkthroughIntro && walkthrough?.active && !walkthrough?.logIntroSeen) {
+      updateWalkthrough?.({ logIntroSeen: true });
+    }
+  }, []);
 
   const todayFoods = data[activeUser].foods.filter((f) => f.date === today);
   const todayActivities = data[activeUser].activities.filter((a) => a.date === today);
@@ -70,6 +78,16 @@ export default function LogTab(props) {
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
+
+      {showWalkthroughIntro && (
+        <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>Track what matters to you.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
+            Food, weight, activity, water and steps all live here. Use all of them, some of them, or just what’s useful today.
+          </div>
+          <button type="button" onClick={() => setShowWalkthroughIntro(false)} style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontSize: 12, fontWeight: 800 }}>Got it</button>
+        </section>
+      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 0 8px", marginBottom: 6 }}>
         {[
