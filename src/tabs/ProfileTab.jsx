@@ -1,6 +1,6 @@
 import { brand } from "../brand.jsx";
 import { useMemo, useState } from "react";
-import { Share2, Check } from "lucide-react";
+import { Share2, Check, LogOut } from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
 
 export default function ProfileTab({
@@ -390,7 +390,7 @@ export default function ProfileTab({
         {accountMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountMessage}</div>}
 
         <div style={{ marginTop: 16 }}>
-          <button onClick={signOut} style={{ background: "none", border: "none", color: TEXT, padding: 0, fontWeight: 800, fontSize: 12 }}>Sign out</button>
+          <button onClick={signOut} style={{ background: "none", border: "none", color: TEXT, padding: 0, fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}><LogOut style={{ width: 13, height: 13 }} strokeWidth={1.9} /> Sign out</button>
         </div>
       </section>
 
