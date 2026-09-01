@@ -72,6 +72,9 @@ export default function TodayTab({
   fastElapsed,
   openLog,
   openGoals,
+  openProfile,
+  walkthrough,
+  updateWalkthrough,
   deleteFood,
   editLoggedFood,
   profileColor,
@@ -300,6 +303,55 @@ export default function TodayTab({
           <button onClick={finishFirstToday} style={{ border: "none", background: "transparent", color: brand.tealDark, width: "100%", padding: "13px 4px 1px", fontSize: 12, fontWeight: 800 }}>
             Not now. I’ll explore on my own.
           </button>
+        </section>
+      )}
+
+      {isToday && isMine && !firstTodayVisible && walkthrough?.active && walkthrough?.firstLogDone && !walkthrough?.todaySoFarSeen && hasAnything && (
+        <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE_2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+            <SunMark size={16} color={profileColor(activeUser)} />
+            <div style={sectionLabel}>Your day at a glance</div>
+          </div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.12, marginBottom: 6 }}>This is where your day comes together.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
+            As you log things, Today fills in so you can see what’s happening without digging through every entry.
+          </div>
+          <button
+            type="button"
+            onClick={() => updateWalkthrough?.({ todaySoFarSeen: true, active: profileNames?.length === 1 })}
+            style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontSize: 12, fontWeight: 800 }}
+          >
+            Got it
+          </button>
+        </section>
+      )}
+
+      {isToday && isMine && !firstTodayVisible && walkthrough?.active && walkthrough?.todaySoFarSeen && (profileNames?.length || 0) === 1 && !walkthrough?.relationshipSeen && (
+        <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+            <WaveMark size={16} color={brand.teal} />
+            <div style={sectionLabel}>When you’re ready</div>
+          </div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.12, marginBottom: 6 }}>Want someone With you?</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+            With works just fine on your own. But you can invite someone you trust whenever sharing the experience feels useful.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => { updateWalkthrough?.({ relationshipSeen: true, active: false }); openProfile?.(); }}
+              style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 16 }}
+            >
+              Invite someone
+            </button>
+            <button
+              type="button"
+              onClick={() => updateWalkthrough?.({ relationshipSeen: true, active: false })}
+              style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", paddingInline: 14, border: "1px solid " + BORDER }}
+            >
+              Not yet
+            </button>
+          </div>
         </section>
       )}
 
