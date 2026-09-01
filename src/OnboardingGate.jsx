@@ -194,6 +194,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
       const { error: userError } = await supabase.auth.updateUser({ data: { ...currentData, timezone: deviceTimeZone } });
       if (userError) throw userError;
       localStorage.setItem("with-first-today-pending", "1");
+      localStorage.setItem("with-walkthrough-state", JSON.stringify({ active: true, logIntroSeen: false, goalsIntroSeen: false, firstLogDone: false, todaySoFarSeen: false }));
       await onComplete();
     } catch (saveError) {
       setError(friendlyOnboardingError(saveError, "We couldn’t save that. Try again.")); setBusy(false);
