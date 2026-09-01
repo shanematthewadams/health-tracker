@@ -1,6 +1,6 @@
 import { brand, metricColors } from "../brand.jsx";
 import { useEffect, useState } from "react";
-import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
+import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2, Target } from "lucide-react";
 import { SunMark, WaveMark } from "../WithMarks.jsx";
 
 function greeting(timeZone) {
@@ -71,6 +71,7 @@ export default function TodayTab({
   endFast,
   fastElapsed,
   openLog,
+  openGoals,
   deleteFood,
   editLoggedFood,
   profileColor,
@@ -93,7 +94,28 @@ export default function TodayTab({
   const [selectedDate, setSelectedDate] = useState(today);
   useEffect(() => { setSelectedDate(today); }, [today]);
   const [foodDetailOpen, setFoodDetailOpen] = useState(false);
+  const [firstTodayVisible, setFirstTodayVisible] = useState(() => localStorage.getItem("with-first-today-pending") === "1");
   const isToday = selectedDate === today;
+
+  function finishFirstToday() {
+    localStorage.removeItem("with-first-today-pending");
+    setFirstTodayVisible(false);
+  }
+
+  function startWithIntention() {
+    finishFirstToday();
+    setEditingIntention(true);
+  }
+
+  function startWithLog() {
+    finishFirstToday();
+    window.requestAnimationFrame(() => document.getElementById("today-quick-add")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function startWithSetup() {
+    finishFirstToday();
+    openGoals?.();
+  }
 
   const dayFoods = u.foods.filter((f) => f.date === selectedDate);
   const dayActivities = u.activities.filter((a) => a.date === selectedDate);
@@ -225,6 +247,62 @@ export default function TodayTab({
         </div>
       </div>
 
+      {isToday && isMine && firstTodayVisible && (
+        <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", borderTop: "3px solid " + profileColor(activeUser) }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <SunMark size={16} color={profileColor(activeUser)} />
+                <div style={sectionLabel}>Your first Today</div>
+              </div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, color: PEN.ink, lineHeight: 1.12, marginTop: 8 }}>Welcome to your Today.</div>
+            </div>
+            <button onClick={finishFirstToday} aria-label="Dismiss first-day welcome" style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 4, display: "grid", placeItems: "center" }}>
+              <X style={{ width: 17, height: 17 }} strokeWidth={1.8} />
+            </button>
+          </div>
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 14, maxWidth: 390 }}>
+            You don’t need to set everything up before you begin. Start with whatever feels useful today.
+          </div>
+
+          {[
+            ["intention", "Set an intention", "What would you like to keep in mind today?", WaveMark, brand.teal],
+            ["log", "Log something from today", "Food, water, movement, weight or steps.", SunMark, PEN.orange],
+            ["setup", "Set up what you want to track", "Add goals and targets when they’re useful to you.", Target, PEN.green],
+          ].map(([id, title, copy, Icon, color], index) => (
+            <button
+              key={id}
+              onClick={id === "intention" ? startWithIntention : id === "log" ? startWithLog : startWithSetup}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                borderTop: index === 0 ? "1px solid " + PEN.rule : "none",
+                borderBottom: "1px solid " + PEN.rule,
+                background: "transparent",
+                color: TEXT,
+                padding: "13px 0",
+                display: "grid",
+                gridTemplateColumns: "24px 1fr 18px",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Icon size={17} color={color} strokeWidth={1.9} />
+              <span>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: PEN.ink }}>{title}</span>
+                <span style={{ display: "block", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.4, marginTop: 2 }}>{copy}</span>
+              </span>
+              <ChevronRight style={{ width: 16, height: 16, color: TEXT_MUTED }} strokeWidth={1.8} />
+            </button>
+          ))}
+
+          <button onClick={finishFirstToday} style={{ border: "none", background: "transparent", color: brand.tealDark, width: "100%", padding: "13px 4px 1px", fontSize: 12, fontWeight: 800 }}>
+            Not now. I’ll explore on my own.
+          </button>
+        </section>
+      )}
+
       {isToday && <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
@@ -288,7 +366,7 @@ export default function TodayTab({
         )}
       </section>}
 
-      {isToday && isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
+      {isToday && isMine && !firstTodayVisible && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
         <section style={{ marginBottom: 28, paddingBottom: 22 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ minWidth: 0 }}>
@@ -336,7 +414,7 @@ export default function TodayTab({
       )}
 
       {isMine && (
-        <section style={{ marginBottom: 30 }}>
+        <section id="today-quick-add" style={{ marginBottom: 30 }}>
           <div style={sectionLabel}>Quick add</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7, marginTop: 10 }}>
             {quick.map(([label, kind, Icon, color]) => (
