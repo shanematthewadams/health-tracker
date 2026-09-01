@@ -512,7 +512,6 @@ export default function Tracker() {
     setWalkthrough((prev) => {
       if (!prev?.active) return prev;
       const next = { ...prev, ...patch };
-      if (next.todaySoFarSeen) next.active = false;
       localStorage.setItem("with-walkthrough-state", JSON.stringify(next));
       return next;
     });
@@ -1642,6 +1641,7 @@ export default function Tracker() {
             fastElapsed={fastElapsed}
             openLog={openLog}
             openGoals={() => setTab("goals")}
+            openProfile={() => setTab("profile")}
             walkthrough={walkthrough}
             updateWalkthrough={updateWalkthrough}
             deleteFood={deleteFood}
