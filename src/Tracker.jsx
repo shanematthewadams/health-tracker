@@ -162,8 +162,13 @@ function AuthScreen({ initialMessage = "" }) {
   const params = new URLSearchParams(window.location.search);
   const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
   const inviterFromUrl = params.get("inviter")?.trim() || "";
-  const [mode, setMode] = useState(inviteFromUrl ? "signup" : "signin");
+  const storedInvite = localStorage.getItem("with-pending-invite") || "";
+  const storedInviter = localStorage.getItem("with-pending-inviter") || "";
+  const hasInvite = Boolean(inviteFromUrl || storedInvite);
+  const inviterName = inviterFromUrl || storedInviter;
+  const [mode, setMode] = useState(hasInvite ? "signup" : "welcome");
   const [email, setEmail] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState(initialMessage);
@@ -173,6 +178,12 @@ function AuthScreen({ initialMessage = "" }) {
     if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
     if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
   }, [inviteFromUrl, inviterFromUrl]);
+
+  function changeMode(next) {
+    setMode(next);
+    setError("");
+    setMessage("");
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -193,45 +204,113 @@ function AuthScreen({ initialMessage = "" }) {
         options: { emailRedirectTo: window.location.origin },
       });
       if (authError) setError(friendlyError(authError, "We couldn’t complete that. Try again."));
-      else if (!data.session) setMessage("Check your email to confirm your account, then come back and sign in.");
-      else setMessage("Account created. Setting up your group…");
+      else if (!data.session) {
+        setConfirmationEmail(email);
+        setMode("confirm");
+      } else {
+        setMessage("Account created. Getting your With ready…");
+      }
     }
     setBusy(false);
   }
 
-  return (
-    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT, display: "grid", placeItems: "center", padding: 20, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
-      <form onSubmit={submit} style={{ ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" }}>
-        <BrandLogo style={{ marginBottom: 10 }} />
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginBottom: 8 }}>We’re in this together.</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 22 }}>
-          {mode === "forgot" ? "We’ll send you a link to choose a new password." : "Your health is personal, but you don't have to do it alone."}
-        </div>
+  const shell = {
+    minHeight: "100vh", minHeight: "100dvh", background: brand.teal, color: TEXT,
+    display: "grid", placeItems: "center", padding: 20,
+    fontFamily: "'DM Sans', -apple-system, sans-serif"
+  };
+  const panel = { ...cardStyle, width: "100%", maxWidth: 420, marginBottom: 0, background: brand.bg, borderRadius: 20, boxShadow: "0 18px 48px rgba(17,50,46,.22)" };
+  const linkButton = { background: "none", border: "none", color: brand.tealDark, width: "100%", padding: "13px 8px 2px", fontSize: 13, fontWeight: 700 };
 
-        {mode !== "forgot" && (
-          <div style={{ display: "flex", background: SURFACE_2, borderRadius: 9, padding: 3, marginBottom: 20 }}>
-            {["signin","signup"].map((m) => <button type="button" key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }} style={{ flex: 1, border: "none", borderRadius: 7, padding: 9, background: mode === m ? SURFACE : "transparent", color: mode === m ? TEXT : TEXT_MUTED, fontWeight: 700 }}>{m === "signin" ? "Sign in" : "Create account"}</button>)}
+  if (mode === "welcome") {
+    return (
+      <div style={shell}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+        <div style={panel}>
+          <BrandLogo style={{ width: 132, marginBottom: 14 }} />
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.06, marginBottom: 12 }}>
+            Take care of yourself. With people who care about you.
           </div>
-        )}
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
+            With is a private place to keep track of the things that matter to your health, alongside the people who matter to you. Start on your own or start with someone. Either way, your goals and your health are yours.
+          </div>
+          <button type="button" onClick={() => changeMode("signup")} style={{ ...bigButton(brand.teal, brand.inkOn), marginBottom: 8 }}>Get started</button>
+          <button type="button" onClick={() => changeMode("signin")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>I already have an account</button>
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <a href="/privacy" style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>Privacy policy</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "confirm") {
+    return (
+      <div style={shell}>
+        <div style={panel}>
+          <BrandLogo style={{ width: 132, marginBottom: 14 }} />
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.06, marginBottom: 10 }}>Check your email.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 8 }}>We sent a confirmation link to</div>
+          <div style={{ color: TEXT, fontSize: 15, fontWeight: 800, overflowWrap: "anywhere", marginBottom: 16 }}>{confirmationEmail}</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 20 }}>
+            {hasInvite && inviterName
+              ? `Confirm your email and we’ll keep going with ${inviterName}’s invitation.`
+              : "Confirm your email and we’ll keep setting up your With."}
+          </div>
+          <button type="button" onClick={() => { setEmail(confirmationEmail); changeMode("signin"); }} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, marginBottom: 6 }}>I’ve confirmed my email</button>
+          <button type="button" onClick={() => { setConfirmationEmail(""); setPassword(""); changeMode("signup"); }} style={linkButton}>Used the wrong email? Go back</button>
+        </div>
+      </div>
+    );
+  }
+
+  const isForgot = mode === "forgot";
+  const isSignup = mode === "signup";
+  const title = isForgot
+    ? "Reset your password."
+    : isSignup
+      ? (hasInvite && inviterName ? `${inviterName} invited you to With.` : "Create your account.")
+      : (hasInvite && inviterName ? `Sign in to join ${inviterName}.` : "Welcome back.");
+  const intro = isForgot
+    ? "We’ll send you a link to choose a new password."
+    : isSignup
+      ? (hasInvite && inviterName
+          ? "You’ll each have your own goals and health profile. With gives you a private place to share the experience and support each other."
+          : "Start with yourself. You can invite someone you trust whenever you’re ready.")
+      : (hasInvite && inviterName ? "Your invitation is waiting for you." : "Good to have you back.");
+
+  return (
+    <div style={shell}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
+      <form onSubmit={submit} style={panel}>
+        <BrandLogo style={{ width: 132, marginBottom: 14 }} />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 29, fontWeight: 600, lineHeight: 1.08, marginBottom: 8 }}>{title}</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>{intro}</div>
 
         <div style={fieldLabel}>Email</div>
         <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
 
-        {mode !== "forgot" && <>
+        {!isForgot && <>
           <div style={fieldLabel}>Password</div>
           <input type="password" minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         </>}
 
-        {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
-        {message && <div style={{ color: USER_COLOR.Alli, fontSize: 13, marginBottom: 10 }}>{message}</div>}
+        {isSignup && hasInvite && inviterName && (
+          <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, margin: "2px 0 14px" }}>Your goals don’t need to match {inviterName}’s.</div>
+        )}
+        {error && <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        {message && <div style={{ color: brand.tealDark, fontSize: 13, marginBottom: 10 }}>{message}</div>}
 
         <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? 0.65 : 1 }}>
-          {busy ? "Working…" : mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : "Create account"}
+          {busy ? "Working…" : isForgot ? "Send reset link" : mode === "signin" ? "Sign in" : hasInvite ? "Create my account and continue" : "Create my account"}
         </button>
 
-        {mode === "signin" && <button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Forgot password?</button>}
-        {mode === "forgot" && <button type="button" onClick={() => { setMode("signin"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: "13px 8px 2px", fontSize: 13 }}>Back to sign in</button>}
+        {mode === "signin" && <button type="button" onClick={() => changeMode("forgot")} style={linkButton}>Forgot password?</button>}
+        {isForgot && <button type="button" onClick={() => changeMode("signin")} style={linkButton}>Back to sign in</button>}
+        {isSignup && <button type="button" onClick={() => changeMode("signin")} style={linkButton}>{hasInvite && inviterName ? `Already use With? Sign in to join ${inviterName}.` : "Already have an account? Sign in"}</button>}
+        {mode === "signin" && !hasInvite && <button type="button" onClick={() => changeMode("signup")} style={linkButton}>New to With? Get started</button>}
+        {mode === "signin" && !hasInvite && <button type="button" onClick={() => changeMode("welcome")} style={{ ...linkButton, color: TEXT_MUTED, fontWeight: 600 }}>Back to welcome</button>}
+
         <div style={{ textAlign: "center", marginTop: 14 }}>
           <a href="/privacy" style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>Privacy policy</a>
         </div>
