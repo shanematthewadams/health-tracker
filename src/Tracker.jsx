@@ -306,6 +306,7 @@ function AuthScreen({ initialMessage = "" }) {
         </button>
 
         {mode === "signin" && <button type="button" onClick={() => changeMode("forgot")} style={linkButton}>Forgot password?</button>}
+        {mode === "signin" && hasInvite && <button type="button" onClick={() => changeMode("signup")} style={linkButton}>{inviterName ? `Need an account? Continue joining ${inviterName}.` : "Need an account? Continue with your invitation."}</button>}
         {isForgot && <button type="button" onClick={() => changeMode("signin")} style={linkButton}>Back to sign in</button>}
         {isSignup && <button type="button" onClick={() => changeMode("signin")} style={linkButton}>{hasInvite && inviterName ? `Already use With? Sign in to join ${inviterName}.` : "Already have an account? Sign in"}</button>}
         {mode === "signin" && !hasInvite && <button type="button" onClick={() => changeMode("signup")} style={linkButton}>New to With? Get started</button>}
