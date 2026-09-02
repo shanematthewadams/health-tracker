@@ -185,8 +185,8 @@ export default function TodayTab({
       value: dayActivities.length === 1 ? dayActivities[0].name : `${dayActivities.length} activities`,
       sub: `${Math.round(totalActivityCals)} cal burned`,
     },
-    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: `${Math.round(ts.water)} oz`, sub: isToday ? "Logged today" : "Logged that day" },
-    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? ts.steps.toLocaleString() : "", sub: isToday ? "Logged today" : "Logged that day" },
+    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: targets.water ? `${Math.round(ts.water)} / ${targets.water} oz` : `${Math.round(ts.water)} oz`, sub: targets.water ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
+    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? (targets.steps ? `${ts.steps.toLocaleString()} / ${targets.steps.toLocaleString()}` : ts.steps.toLocaleString()) : "", sub: targets.steps ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
     {
       id: "weight",
       label: "Weight",
@@ -569,12 +569,12 @@ export default function TodayTab({
                 <>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12 }}>
                     <div className="num" style={{ fontSize: 26, fontWeight: 800, color: PEN.ink }}>{Math.round(ts.calories)}</div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12 }}>/ {targets.calories} cal</div>
+                    {targets.calories ? <div style={{ color: TEXT_MUTED, fontSize: 12 }}>/ {targets.calories} cal</div> : <div style={{ color: TEXT_MUTED, fontSize: 12 }}>cal logged</div>}
                   </div>
 
-                  <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "8px 0 14px" }}>
-                    <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: PEN.blue }} />
-                  </div>
+                  {targets.calories && <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "8px 0 14px" }}>
+                    <div style={{ width: `${Math.min(100, ts.calories / targets.calories * 100)}%`, height: "100%", background: PEN.blue }} />
+                  </div>}
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
                     {[
@@ -587,7 +587,7 @@ export default function TodayTab({
                         <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
                         <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
                         <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
-                          {value} <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target || "—"}g</span>
+                          {value} {target ? <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target}g</span> : <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>g</span>}
                         </span>
                       </div>
                     ))}
