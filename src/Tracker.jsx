@@ -89,7 +89,7 @@ function defaultTargets(u) {
   return { bmr: 0, calories: 0, protein: 0, carbs: 0, fat: 0, fiberMin: 0, fiberMax: 0 };
 }
 function emptyData(u) {
-  return { weights: [], foods: [], activities: [], steps: [], water: [], fasts: [], goalWeight: null, goalDate: null, targets: defaultTargets(u) };
+  return { weights: [], foods: [], activities: [], steps: [], water: [], fasts: [], goalWeight: null, goalDate: null, goalStatement: "", targets: { ...defaultTargets(u), water: null, steps: null } };
 }
 function weeksUntil(dateStr) {
   const target = new Date(dateStr + "T00:00:00");
