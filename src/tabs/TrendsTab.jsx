@@ -337,12 +337,6 @@ function IndividualTrends({ name, user, today, range, goalInfo, profileColor, st
 
   return (
     <>
-      <section style={{ ...cardStyle, background: brand.surfaceSoft, borderColor: brand.border, borderTop: `3px solid ${profileColor(name)}`, marginBottom: 14, padding: "1.05rem 1.1rem" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 7 }}>Something worth noticing</div>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, fontStyle: "italic", lineHeight: 1.35, color: TEXT }}>{observation.text}</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 9 }}>A different useful observation can surface each day as your data changes.</div>
-      </section>
-
       <section style={{ ...cardStyle, marginBottom: 14 }}>
         <SectionHeading color={metricColors.weight} styles={styles}>Weight</SectionHeading>
         {gi ? (
