@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceLine } from "recharts";
-import { Footprints, Droplet, Dumbbell, Utensils } from "lucide-react";
+import { Footprints, Droplet, Dumbbell, Utensils, Scale } from "lucide-react";
 import { brand, metricColors } from "../brand.jsx";
 
 function shortDate(dateStr) {
@@ -292,9 +292,11 @@ function DailyObservation({ user, today, name, profileColor, styles }) {
 
 function SectionHeading({ icon: Icon, color, children, styles }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
-      {Icon && <Icon style={{ width: 15, height: 15, color }} strokeWidth={2} />}
-      <div style={{ ...styles.headingStyle, fontSize: 18 }}>{children}</div>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+      <span aria-hidden="true" style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "0 0 18px" }}>
+        <Icon style={{ width: 15, height: 15, color, display: "block" }} strokeWidth={2} />
+      </span>
+      <div style={{ ...styles.headingStyle, fontSize: 18, lineHeight: 1.1 }}>{children}</div>
     </div>
   );
 }
@@ -338,7 +340,7 @@ function IndividualTrends({ name, user, today, range, goalInfo, profileColor, st
   return (
     <>
       <section style={{ ...cardStyle, marginBottom: 14 }}>
-        <SectionHeading color={metricColors.weight} styles={styles}>Weight</SectionHeading>
+        <SectionHeading icon={Scale} color={metricColors.weight} styles={styles}>Weight</SectionHeading>
         {gi ? (
           <>
             <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "5px 9px" }}>
