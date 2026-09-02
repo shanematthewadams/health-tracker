@@ -293,10 +293,10 @@ function DailyObservation({ user, today, name, profileColor, styles }) {
 function SectionHeading({ icon: Icon, color, children, styles }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-      <span aria-hidden="true" style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "0 0 18px" }}>
+      <span aria-hidden="true" style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "0 0 18px", transform: "translateY(-1px)" }}>
         <Icon style={{ width: 15, height: 15, color, display: "block" }} strokeWidth={2} />
       </span>
-      <div style={{ ...styles.headingStyle, fontSize: 18, lineHeight: 1.1 }}>{children}</div>
+      <div style={{ ...styles.headingStyle, fontSize: 18, lineHeight: "18px" }}>{children}</div>
     </div>
   );
 }
