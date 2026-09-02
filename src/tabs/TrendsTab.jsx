@@ -119,80 +119,175 @@ function comparisonText(current, previous, unit = "", threshold = 0) {
   return `${diff > 0 ? "↑" : "↓"} ${formatted}${unit} from the previous period`;
 }
 
-function daySeed(today) {
-  return Number(today.replaceAll("-", "")) || 0;
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
-function chooseObservation(user, today, range, name) {
-  const trend = buildTrendData(user, today, range);
+const OBSERVATION_HEADINGS = [
+  "Something worth noticing",
+  "A pattern taking shape",
+  "Lately…",
+  "One thing that stood out",
+  "A little perspective",
+];
+
+function metricTarget(user, key) {
+  const targets = user.targets || {};
+  if (key === "steps") return targets.steps ?? null;
+  if (key === "water") return targets.water ?? null;
+  if (key === "calories") return targets.calories ?? null;
+  if (key === "protein") return targets.protein ?? null;
+  if (key === "carbs") return targets.carbs ?? null;
+  if (key === "fat") return targets.fat ?? null;
+  if (key === "fiber") return targets.fiberMin ?? null;
+  return null;
+}
+
+function observationCandidates(user, today) {
   const candidates = [];
-  const weightChange = weightPeriodChange(user, today, range);
-  const weightRows = rollingWeightRows(user, today, range);
-  const latestWeight = weightRows.at(-1)?.weight;
+  const windows = [7, 14, 30, 90];
 
-  if (weightChange != null && Math.abs(weightChange) >= 0.4) {
-    candidates.push({
-      key: "weight-change",
-      text: `Your rolling weight trend has moved ${Math.abs(weightChange).toFixed(1)} lb ${weightChange < 0 ? "down" : "up"} over this period. Daily weigh-ins may bounce around, but the longer pattern is moving.`,
-    });
-  }
+  windows.forEach((range) => {
+    const trend = buildTrendData(user, today, range);
+    const weightChange = weightPeriodChange(user, today, range);
+    const weightRows = rollingWeightRows(user, today, range);
+    const latestWeight = weightRows.at(-1)?.weight;
+    const latestActual = [...user.weights].sort((a, b) => a.date.localeCompare(b.date)).at(-1)?.weight;
 
-  const latestActual = user.weights.at(-1)?.weight;
-  if (latestWeight != null && latestActual != null && Math.abs(latestActual - latestWeight) >= 1) {
-    candidates.push({
-      key: "weight-vs-average",
-      text: `Your latest weigh-in is ${Math.abs(latestActual - latestWeight).toFixed(1)} lb ${latestActual > latestWeight ? "above" : "below"} your rolling average. One day can move around more than the trend does.`,
-    });
-  }
+    if (weightChange != null && Math.abs(weightChange) >= 0.4) {
+      candidates.push({
+        key: `weight-change-${range}`,
+        metric: "weight",
+        score: 74 + Math.min(18, Math.abs(weightChange) * 4) + (range === 30 ? 5 : 0),
+        text: `Your rolling weight trend has moved ${Math.abs(weightChange).toFixed(1)} lb ${weightChange < 0 ? "down" : "up"} over the last ${range} days. Daily weigh-ins may bounce around more than the longer pattern does.`,
+      });
+    }
 
-  if (trend.stepAvg != null && trend.previousStepAvg != null && Math.abs(trend.stepAvg - trend.previousStepAvg) >= 400) {
-    const diff = trend.stepAvg - trend.previousStepAvg;
-    candidates.push({
-      key: "steps",
-      text: `You’ve averaged about ${Math.round(trend.stepAvg).toLocaleString()} steps a day, ${Math.abs(Math.round(diff)).toLocaleString()} ${diff > 0 ? "more" : "fewer"} than the previous ${range} days.`,
-    });
-  }
+    if (latestWeight != null && latestActual != null && Math.abs(latestActual - latestWeight) >= 1 && range === 30) {
+      candidates.push({
+        key: "weight-perspective",
+        metric: "weight",
+        score: 92 + Math.min(6, Math.abs(latestActual - latestWeight)),
+        text: `Your latest weigh-in is ${Math.abs(latestActual - latestWeight).toFixed(1)} lb ${latestActual > latestWeight ? "above" : "below"} your rolling average. One day can move around more than the trend does.`,
+      });
+    }
 
-  if (trend.waterAvg != null && trend.previousWaterAvg != null && Math.abs(trend.waterAvg - trend.previousWaterAvg) >= 5) {
-    const diff = trend.waterAvg - trend.previousWaterAvg;
-    candidates.push({
-      key: "water",
-      text: `Your logged water has averaged ${Math.round(trend.waterAvg)} oz a day, about ${Math.abs(Math.round(diff))} oz ${diff > 0 ? "more" : "less"} than the previous period.`,
-    });
-  }
+    const configs = [
+      ["steps", trend.stepAvg, trend.previousStepAvg, 350, (v) => Math.round(v).toLocaleString(), "steps a day"],
+      ["water", trend.waterAvg, trend.previousWaterAvg, 4, (v) => `${Math.round(v)} oz`, "of water a day"],
+      ["protein", trend.proteinAvg, trend.previousProteinAvg, 7, (v) => `${Math.round(v)}g`, "of protein a day"],
+      ["calories", trend.calorieAvg, trend.previousCalorieAvg, 100, (v) => `${Math.round(v).toLocaleString()} calories`, "a day"],
+      ["carbs", trend.carbsAvg, trend.previousCarbsAvg, 15, (v) => `${Math.round(v)}g`, "of carbs a day"],
+      ["fat", trend.fatAvg, trend.previousFatAvg, 8, (v) => `${Math.round(v)}g`, "of fat a day"],
+      ["fiber", trend.fiberAvg, trend.previousFiberAvg, 4, (v) => `${Math.round(v)}g`, "of fiber a day"],
+    ];
 
-  if (trend.activeDaysPerWeek != null && trend.previousActiveDaysPerWeek != null && Math.abs(trend.activeDaysPerWeek - trend.previousActiveDaysPerWeek) >= 0.5) {
-    const diff = trend.activeDaysPerWeek - trend.previousActiveDaysPerWeek;
-    candidates.push({
-      key: "activity",
-      text: `You’ve logged activity about ${trend.activeDaysPerWeek.toFixed(1)} days a week lately, ${Math.abs(diff).toFixed(1)} ${diff > 0 ? "more" : "fewer"} days a week than the previous period.`,
+    configs.forEach(([key, current, previous, threshold, format, phrase]) => {
+      if (current == null || previous == null) return;
+      const diff = current - previous;
+      if (Math.abs(diff) < threshold) return;
+      const relative = Math.abs(diff) / Math.max(Math.abs(previous), 1);
+      const target = metricTarget(user, key);
+      candidates.push({
+        key: `${key}-change-${range}`,
+        metric: key,
+        score: 55 + Math.min(24, relative * 100) + (target ? 6 : 0) + (range === 14 || range === 30 ? 4 : 0),
+        text: `Over the last ${range} days, you’ve averaged about ${format(current)} ${phrase}. That’s ${format(Math.abs(diff))} ${diff > 0 ? "more" : "less"} than the ${range} days before.`,
+      });
     });
-  }
 
-  if (trend.proteinAvg != null && trend.previousProteinAvg != null && Math.abs(trend.proteinAvg - trend.previousProteinAvg) >= 8) {
-    const diff = trend.proteinAvg - trend.previousProteinAvg;
-    candidates.push({
-      key: "protein",
-      text: `Your average protein intake has moved from about ${Math.round(trend.previousProteinAvg)}g to ${Math.round(trend.proteinAvg)}g a day. That’s a change in the pattern worth noticing.`,
-    });
-  }
+    if (trend.activeDaysPerWeek != null && trend.previousActiveDaysPerWeek != null) {
+      const diff = trend.activeDaysPerWeek - trend.previousActiveDaysPerWeek;
+      if (Math.abs(diff) >= 0.45) {
+        candidates.push({
+          key: `activity-frequency-${range}`,
+          metric: "activity",
+          score: 66 + Math.min(18, Math.abs(diff) * 8) + (range === 14 || range === 30 ? 4 : 0),
+          text: `You’ve logged activity about ${trend.activeDaysPerWeek.toFixed(1)} days a week over the last ${range} days, compared with ${trend.previousActiveDaysPerWeek.toFixed(1)} days a week in the period before.`,
+        });
+      }
+    }
+  });
 
-  if (trend.calorieAvg != null && trend.previousCalorieAvg != null && Math.abs(trend.calorieAvg - trend.previousCalorieAvg) >= 120) {
-    const diff = trend.calorieAvg - trend.previousCalorieAvg;
+  const recent7 = buildTrendData(user, today, 7);
+  const recent30 = buildTrendData(user, today, 30);
+  [
+    ["steps", recent7.stepAvg, recent30.stepAvg, 500, (v) => Math.round(v).toLocaleString(), "steps"],
+    ["water", recent7.waterAvg, recent30.waterAvg, 6, (v) => `${Math.round(v)} oz`, "water"],
+    ["protein", recent7.proteinAvg, recent30.proteinAvg, 9, (v) => `${Math.round(v)}g`, "protein"],
+  ].forEach(([key, shortAvg, longAvg, threshold, format, label]) => {
+    if (shortAvg == null || longAvg == null || Math.abs(shortAvg - longAvg) < threshold) return;
     candidates.push({
-      key: "calories",
-      text: `Your logged calorie average is about ${Math.abs(Math.round(diff)).toLocaleString()} calories ${diff > 0 ? "higher" : "lower"} per day than the previous period.`,
+      key: `${key}-recent-vs-usual`,
+      metric: key,
+      score: 86,
+      text: `Your ${label} has been ${shortAvg > longAvg ? "higher" : "lower"} this week than your recent monthly pattern: about ${format(shortAvg)} a day versus ${format(longAvg)}.`,
     });
-  }
+  });
+
+  const consistencyConfigs = [
+    ["steps", recent30.recent.map((d) => d.steps).filter((v) => v != null), 0.16, (v) => Math.round(v).toLocaleString(), "steps"],
+    ["water", recent30.recent.map((d) => d.water).filter((v) => v != null), 0.14, (v) => `${Math.round(v)} oz`, "water"],
+    ["protein", recent30.recent.map((d) => d.protein).filter((v) => v != null), 0.16, (v) => `${Math.round(v)}g`, "protein"],
+  ];
+  consistencyConfigs.forEach(([key, values, maxCv, format, label]) => {
+    if (values.length < 8) return;
+    const avg = average(values);
+    const variance = average(values.map((v) => (v - avg) ** 2));
+    const cv = Math.sqrt(variance) / Math.max(Math.abs(avg), 1);
+    if (cv <= maxCv) {
+      candidates.push({
+        key: `${key}-consistency`,
+        metric: key,
+        score: 62 + Math.round((maxCv - cv) * 100),
+        text: `Your ${label} has been especially steady lately, averaging about ${format(avg)} on the days you logged it over the last 30 days.`,
+      });
+    }
+  });
+
+  return candidates;
+}
+
+function chooseDailyObservation(user, today, name) {
+  const candidates = observationCandidates(user, today);
+  const seed = stableHash(`${name}|${today}|with-trends-observation`);
 
   if (!candidates.length) {
-    if (latestWeight != null) candidates.push({ key: "steady-weight", text: `Your rolling weight average is ${latestWeight.toFixed(1)} lb. The pattern is fairly steady right now, which is still useful information.` });
-    else if (trend.stepAvg != null) candidates.push({ key: "steady-steps", text: `You’ve averaged about ${Math.round(trend.stepAvg).toLocaleString()} steps on the days you logged them. Keep adding days and the pattern will get clearer.` });
-    else if (trend.waterAvg != null) candidates.push({ key: "steady-water", text: `You’ve averaged about ${Math.round(trend.waterAvg)} oz of water on logged days. A little more history will make the pattern easier to see.` });
-    else candidates.push({ key: "new", text: `${name}, there isn’t quite enough history for a strong trend yet. Keep logging what matters to you and With will start noticing the patterns.` });
+    return {
+      heading: OBSERVATION_HEADINGS[seed % OBSERVATION_HEADINGS.length],
+      text: `There isn’t quite enough history for a strong pattern yet. Keep logging what matters to you and With will start noticing what changes.`,
+    };
   }
 
-  return candidates[daySeed(today) % candidates.length];
+  const sorted = [...candidates].sort((a, b) => b.score - a.score);
+  const topScore = sorted[0].score;
+  let pool = sorted.filter((candidate) => candidate.score >= topScore - 14).slice(0, 7);
+  const metricOrder = ["weight", "steps", "activity", "water", "protein", "calories", "fiber", "carbs", "fat"];
+  const preferredMetric = metricOrder[seed % metricOrder.length];
+  const preferred = pool.filter((candidate) => candidate.metric === preferredMetric);
+  if (preferred.length) pool = [...preferred, ...pool.filter((candidate) => candidate.metric !== preferredMetric)];
+
+  const observation = pool[seed % Math.min(pool.length, 4)];
+  return {
+    heading: OBSERVATION_HEADINGS[(seed >>> 4) % OBSERVATION_HEADINGS.length],
+    text: observation.text,
+  };
+}
+
+function DailyObservation({ user, today, name, profileColor, styles }) {
+  const { TEXT, TEXT_MUTED, cardStyle } = styles;
+  const observation = chooseDailyObservation(user, today, name);
+  return (
+    <section style={{ ...cardStyle, background: brand.surfaceSoft, borderColor: brand.border, borderTop: `3px solid ${profileColor(name)}`, marginBottom: 18, padding: "1.05rem 1.1rem" }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 7 }}>{observation.heading}</div>
+      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, fontStyle: "italic", lineHeight: 1.35, color: TEXT }}>{observation.text}</div>
+    </section>
+  );
 }
 
 function SectionHeading({ icon: Icon, color, children, styles }) {
@@ -404,21 +499,31 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
   const [view, setView] = useState(activeUser);
   const [range, setRange] = useState(30);
   const selectedName = profileNames.includes(view) ? view : activeUser;
+  const activeData = data[activeUser];
 
   return (
     <>
       <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Trends</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>{view === "with" ? "See what’s been happening for the people you’re With." : "Notice what’s changing over time."}</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Notice what’s changing over time.</div>
       </div>
 
-      <div style={{ display: "flex", gap: 4, overflowX: "auto", background: brand.stone, borderRadius: 12, padding: 4, marginBottom: 10, WebkitOverflowScrolling: "touch" }}>
-        <button onClick={() => setView("with")} style={{ border: "none", background: view === "with" ? brand.surface : "transparent", color: view === "with" ? brand.tealDark : brand.textMuted, boxShadow: view === "with" ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === "with" ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>With</button>
-        {profileNames.map((name) => <button key={name} onClick={() => setView(name)} style={{ border: "none", background: view === name ? brand.surface : "transparent", color: view === name ? brand.text : brand.textMuted, boxShadow: view === name ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === name ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}><span aria-hidden="true" style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: profileColor(name), marginRight: 6 }} />{name}</button>)}
+      {activeData && <DailyObservation user={activeData} today={today} name={activeUser} profileColor={profileColor} styles={styles} />}
+
+      <div style={{ padding: "0 2px", marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600 }}>Explore your trends</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>Choose whose data to see and how much history to explore.</div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 4, marginBottom: 18 }}>
-        {[14, 30, 90].map((days) => <button key={days} onClick={() => setRange(days)} style={{ border: `1px solid ${range === days ? brand.teal : brand.border}`, background: range === days ? brand.teal : brand.surface, color: range === days ? brand.inkOn : brand.textMuted, borderRadius: 999, padding: "6px 10px", fontSize: 10, fontWeight: 800 }}>{days} days</button>)}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+        <div style={{ display: "flex", gap: 4, overflowX: "auto", background: brand.stone, borderRadius: 12, padding: 4, WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
+          <button onClick={() => setView("with")} style={{ border: "none", background: view === "with" ? brand.surface : "transparent", color: view === "with" ? brand.tealDark : brand.textMuted, boxShadow: view === "with" ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === "with" ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>With</button>
+          {profileNames.map((name) => <button key={name} onClick={() => setView(name)} style={{ border: "none", background: view === name ? brand.surface : "transparent", color: view === name ? brand.text : brand.textMuted, boxShadow: view === name ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === name ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}><span aria-hidden="true" style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: profileColor(name), marginRight: 6 }} />{name}</button>)}
+        </div>
+
+        <div style={{ display: "flex", gap: 4 }}>
+          {[14, 30, 90].map((days) => <button key={days} onClick={() => setRange(days)} style={{ border: `1px solid ${range === days ? brand.teal : brand.border}`, background: range === days ? brand.teal : brand.surface, color: range === days ? brand.inkOn : brand.textMuted, borderRadius: 999, padding: "6px 10px", fontSize: 10, fontWeight: 800 }}>{days} days</button>)}
+        </div>
       </div>
 
       {view === "with" ? (
