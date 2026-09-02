@@ -24,7 +24,7 @@ export default function LogTab(props) {
     foodFat, setFoodFat, foodFiber, setFoodFiber, foodNotes, setFoodNotes, setFoodServingLabel,
     foodError, addFood, deleteFood,
     weightInput, setWeightInput, weightDate, setWeightDate, weightError, addWeight, deleteWeight,
-    actName, setActName, activityError, actCals, setActCals, actDate, setActDate, addActivity,
+    actName, setActName, editingActivityId, editActivity, cancelActivityEdit, activityError, actCals, setActCals, actDate, setActDate, addActivity, deleteActivity,
     waterOz, setWaterOz, waterError, waterDate, setWaterDate, waterShortcuts, addWater,
     stepsInput, setStepsInput, stepsError, stepsDate, setStepsDate, saveSteps,
     profileColor, profileText,
@@ -322,14 +322,42 @@ export default function LogTab(props) {
       </div>}
 
       {logTab === "activity" && <div style={cardStyle}>
-        <div style={headingStyle}>Activity</div><div style={fieldLabel}>Activity</div>
+        <div style={{ ...headingStyle, marginBottom: 6 }}>{editingActivityId ? "Edit activity" : "Activity"}</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>
+          {editingActivityId ? "Update the activity, calories burned, or date." : "Add movement from your day."}
+        </div>
+        <div style={fieldLabel}>Activity</div>
         <input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Calories burned</div><input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: "12px" }}>
           <input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} />
         </div>
         {activityError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{activityError}</div>}
-        <button onClick={addActivity} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "activity"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "activity" ? "Logging…" : buttonSuccess === "activity" ? "✓ Added" : "Log activity"}</button>
+        <div style={{ display: "grid", gridTemplateColumns: editingActivityId ? "1fr 1fr" : "1fr", gap: 8 }}>
+          {editingActivityId && <button type="button" onClick={cancelActivityEdit} disabled={!!logBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>}
+          <button onClick={addActivity} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "activity"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>
+            {logBusy === "activity" ? (editingActivityId ? "Saving…" : "Logging…") : buttonSuccess === "activity" ? "✓ Saved" : editingActivityId ? "Save activity" : "Log activity"}
+          </button>
+        </div>
+
+        {data[activeUser].activities.filter((a) => a.date === actDate).length > 0 && (
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
+            <div style={{ ...fieldLabel, marginBottom: 6 }}>Activities for {fmtDate(actDate)}</div>
+            {data[activeUser].activities.filter((a) => a.date === actDate).map((a) => (
+              <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{Math.round(a.caloriesBurned)} cal burned</div>
+                </div>
+                {activeCanEdit && <button type="button" onClick={() => editActivity(a)} aria-label={`Edit ${a.name}`} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 6, display: "grid", placeItems: "center" }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
+                {activeCanEdit && <button type="button" onClick={() => deleteActivity(a.id)} aria-label={`Delete ${a.name}`} style={{ background: "none", border: "none", color: WARN, padding: 6, display: "grid", placeItems: "center" }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
+              </div>
+            ))}
+            <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 9 }}>
+              {Math.round(data[activeUser].activities.filter((a) => a.date === actDate).reduce((sum, a) => sum + a.caloriesBurned, 0))} calories burned total
+            </div>
+          </div>
+        )}
       </div>}
 
       {logTab === "water" && <div style={cardStyle}>
