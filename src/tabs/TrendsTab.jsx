@@ -325,7 +325,7 @@ function IndividualTrends({ name, user, today, range, goalInfo, profileColor, st
   const weightRows = rollingWeightRows(user, today, range);
   const gi = goalInfo(name);
   const weightChange = weightPeriodChange(user, today, range);
-  const observation = chooseObservation(user, today, range, name);
+
   const targets = user.targets || {};
   const nutrition = [
     ["Calories", "calories", trend.calorieAvg, trend.previousCalorieAvg, targets.calories, " cal"],
