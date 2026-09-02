@@ -553,6 +553,7 @@ export default function Tracker() {
   const [waterDate, setWaterDate] = useState(() => todayStr());
   const [waterShortcuts, setWaterShortcuts] = useState([8, 16, 24]);
   const [actName, setActName] = useState("");
+  const [editingActivityId, setEditingActivityId] = useState(null);
   const [activityError, setActivityError] = useState("");
   const [actCals, setActCals] = useState("");
   const [actDate, setActDate] = useState(() => todayStr());
@@ -1370,11 +1371,44 @@ export default function Tracker() {
     const cals = parseFloat(actCals) || 0; if (!cals || cals <= 0) { setActivityError("Enter calories burned."); return; }
     setActivityError("");
     const p = profileFor(activeUser); if (!p) return;
-    const ok = await runLogWrite("activity", async () => { const { error } = await supabase.from("activity_entries").insert({ household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals }); if (error) throw error; });
-    if (ok) { const loggedActivity = actName.trim(); setActName(""); setActCals(""); showSuccess(`${loggedActivity} added`, "activity"); }
+    const payload = { household_id: householdId, profile_id: p.id, entry_date: actDate, name: actName.trim(), calories_burned: cals };
+    const ok = await runLogWrite("activity", async () => {
+      const query = editingActivityId
+        ? supabase.from("activity_entries").update(payload).eq("id", editingActivityId)
+        : supabase.from("activity_entries").insert(payload);
+      const { error } = await query;
+      if (error) throw error;
+    });
+    if (ok) {
+      const loggedActivity = actName.trim();
+      setActName(""); setActCals(""); setEditingActivityId(null);
+      showSuccess(editingActivityId ? `${loggedActivity} updated` : `${loggedActivity} added`, "activity");
+    }
   }
+
+  function editActivity(activity) {
+    if (!activeCanEdit) return;
+    setEditingActivityId(activity.id);
+    setActName(activity.name || "");
+    setActCals(String(activity.caloriesBurned || ""));
+    setActDate(activity.date || todayStr(timeZone));
+    setActivityError("");
+    setTab("log");
+    setLogTab("activity");
+  }
+
+  function cancelActivityEdit() {
+    setEditingActivityId(null);
+    setActName("");
+    setActCals("");
+    setActivityError("");
+  }
+
   async function deleteActivity(id) {
-    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; } await runWrite(async () => { const { error } = await supabase.from("activity_entries").delete().eq("id", id); if (error) throw error; }); }
+    if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
+    const ok = await runWrite(async () => { const { error } = await supabase.from("activity_entries").delete().eq("id", id); if (error) throw error; });
+    if (ok && editingActivityId === id) cancelActivityEdit();
+  }
 
   async function saveGoal() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
@@ -1737,6 +1771,9 @@ export default function Tracker() {
             addWeight={addWeight}
             deleteWeight={deleteWeight}
             actName={actName}
+            editingActivityId={editingActivityId}
+            editActivity={editActivity}
+            cancelActivityEdit={cancelActivityEdit}
             activityError={activityError}
             setActName={setActName}
             actCals={actCals}
@@ -1744,6 +1781,7 @@ export default function Tracker() {
             actDate={actDate}
             setActDate={setActDate}
             addActivity={addActivity}
+            deleteActivity={deleteActivity}
             waterOz={waterOz}
             waterError={waterError}
             setWaterOz={setWaterOz}
