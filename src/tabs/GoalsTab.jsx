@@ -97,7 +97,7 @@ export default function GoalsTab({
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What matters to you, and the things you want to keep an eye on.</div>
       </div>
 
-      {showWalkthroughIntro && (
+      {showWalkthroughIntro && hasAnything && (
         <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>Choose what you’re working toward.</div>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
@@ -110,12 +110,12 @@ export default function GoalsTab({
       {!hasAnything ? (
         <div style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Your goals</div>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 7 }}>What are you working toward?</div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 7 }}>Choose what you’re working toward.</div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 16 }}>
-            You don’t need a goal to use With. If something matters to you, put it here in your own words or add a number you’d like to track along the way.
+            Goals are optional. Put something here in your own words, add a number you want to track, or skip goals entirely. You can change any of it whenever you need to.
           </div>
           {activeCanEdit && (
-            <button onClick={() => setEditingGoals(true)} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>
+            <button onClick={() => { setShowWalkthroughIntro(false); setEditingGoals(true); }} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>
               Add a goal
             </button>
           )}
