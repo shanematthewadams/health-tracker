@@ -225,6 +225,13 @@ export default function LogTab(props) {
           )}
 
           {selectedSavedFoodId && <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 12px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Logging</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div>
+              </div>
+              <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0", flexShrink: 0 }}>Change</button>
+            </div>
             <div style={fieldLabel}>Quantity</div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginBottom: 10 }}>
               <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
