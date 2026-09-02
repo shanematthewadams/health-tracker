@@ -575,6 +575,7 @@ export default function Tracker() {
   }, [timeZone, clockNow]);
 
   const [goalInput, setGoalInput] = useState("");
+  const [goalStatementInput, setGoalStatementInput] = useState("");
   const [goalError, setGoalError] = useState("");
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalDateInput, setGoalDateInput] = useState("");
@@ -585,6 +586,8 @@ export default function Tracker() {
   const [tFat, setTFat] = useState("");
   const [tFiberMin, setTFiberMin] = useState("");
   const [tFiberMax, setTFiberMax] = useState("");
+  const [tWater, setTWater] = useState("");
+  const [tSteps, setTSteps] = useState("");
 
   useEffect(() => {
     const timer = window.setInterval(() => setClockNow(Date.now()), 60000);
@@ -685,7 +688,8 @@ export default function Tracker() {
           ...emptyData(p.name),
           goalWeight: p.goal_weight == null ? null : num(p.goal_weight),
           goalDate: p.goal_date || null,
-          targets: { bmr: num(p.bmr), calories: num(p.calories), protein: num(p.protein), carbs: num(p.carbs), fat: num(p.fat), fiberMin: num(p.fiber_min), fiberMax: num(p.fiber_max) },
+          goalStatement: p.goal_statement || "",
+          targets: { bmr: num(p.bmr), calories: num(p.calories), protein: num(p.protein), carbs: num(p.carbs), fat: num(p.fat), fiberMin: num(p.fiber_min), fiberMax: num(p.fiber_max), water: p.water_target == null ? null : num(p.water_target), steps: p.steps_target == null ? null : Number(p.steps_target) },
         };
       });
       setProfiles(pmap);
@@ -744,9 +748,11 @@ export default function Tracker() {
     if (loading) return;
     const u = data[activeUser];
     setGoalInput(u.goalWeight || "");
+    setGoalStatementInput(u.goalStatement || "");
     setGoalDateInput(u.goalDate || "");
     setTBmr(u.targets.bmr); setTCal(u.targets.calories); setTProtein(u.targets.protein);
     setTCarbs(u.targets.carbs); setTFat(u.targets.fat); setTFiberMin(u.targets.fiberMin); setTFiberMax(u.targets.fiberMax);
+    setTWater(u.targets.water ?? ""); setTSteps(u.targets.steps ?? "");
   }, [activeUser, loading, data]);
 
   const profileNames = Object.keys(profiles);
@@ -1415,17 +1421,17 @@ export default function Tracker() {
     const val = parseFloat(goalInput); const p = profileFor(activeUser); if (!p) { setGoalError("We couldn’t find your profile. Refresh and try again."); return false; }
     if (goalInput && (!Number.isFinite(val) || val <= 0)) { setGoalError("Enter a valid goal weight."); return false; }
     setGoalError("");
-    return await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null }).eq("id", p.id); if (error) throw error; });
+    return await runWrite(async () => { const { error } = await supabase.from("profiles").update({ goal_weight: isNaN(val) ? null : val, goal_date: goalDateInput || null, goal_statement: goalStatementInput.trim() || null }).eq("id", p.id); if (error) throw error; });
   }
   async function saveTargets() {
     if (!activeCanEdit) { setSaveError("You can view this profile, but only its owner can make changes."); return; }
     const p = profileFor(activeUser); if (!p) { setGoalError("We couldn’t find your profile. Refresh and try again."); return false; }
-    const nums = [tBmr, tCal, tProtein, tCarbs, tFat, tFiberMin, tFiberMax].map((v) => v === "" ? 0 : Number(v));
+    const nums = [tBmr, tCal, tProtein, tCarbs, tFat, tFiberMin, tFiberMax, tWater, tSteps].map((v) => v === "" ? 0 : Number(v));
     if (nums.some((v) => !Number.isFinite(v) || v < 0)) { setGoalError("Check your daily targets and use numbers 0 or higher."); return false; }
     if (Number(tFiberMax || 0) && Number(tFiberMin || 0) > Number(tFiberMax || 0)) { setGoalError("Fiber max should be higher than fiber min."); return false; }
     setGoalError("");
     return await runWrite(async () => {
-      const { error } = await supabase.from("profiles").update({ bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0, carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0, fiber_min: parseFloat(tFiberMin) || 0, fiber_max: parseFloat(tFiberMax) || 0 }).eq("id", p.id);
+      const { error } = await supabase.from("profiles").update({ bmr: parseFloat(tBmr) || 0, calories: parseFloat(tCal) || 0, protein: parseFloat(tProtein) || 0, carbs: parseFloat(tCarbs) || 0, fat: parseFloat(tFat) || 0, fiber_min: parseFloat(tFiberMin) || 0, fiber_max: parseFloat(tFiberMax) || 0, water_target: tWater === "" ? null : Number(tWater), steps_target: tSteps === "" ? null : Math.round(Number(tSteps)) }).eq("id", p.id);
       if (error) throw error;
     });
   }
@@ -1824,6 +1830,8 @@ export default function Tracker() {
             setEditingGoals={setEditingGoals}
             goalInput={goalInput}
             setGoalInput={setGoalInput}
+            goalStatementInput={goalStatementInput}
+            setGoalStatementInput={setGoalStatementInput}
             goalDateInput={goalDateInput}
             goalError={goalError}
             setGoalDateInput={setGoalDateInput}
@@ -1841,6 +1849,10 @@ export default function Tracker() {
             setTFiberMin={setTFiberMin}
             tFiberMax={tFiberMax}
             setTFiberMax={setTFiberMax}
+            tWater={tWater}
+            setTWater={setTWater}
+            tSteps={tSteps}
+            setTSteps={setTSteps}
             saveGoal={saveGoal}
             saveTargets={saveTargets}
             profileColor={profileColor}
