@@ -35,6 +35,7 @@ export default function LogTab(props) {
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
   const [foodSummaryOpen, setFoodSummaryOpen] = useState(false);
+  const [activitySummaryOpen, setActivitySummaryOpen] = useState(false);
   const [showWalkthroughIntro, setShowWalkthroughIntro] = useState(() => Boolean(walkthrough?.active && !walkthrough?.logIntroSeen));
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function LogTab(props) {
 
   useEffect(() => {
     setFoodSummaryOpen(false);
+    setActivitySummaryOpen(false);
   }, [activeUser, logTab]);
 
   const todayFoods = data[activeUser].foods.filter((f) => f.date === today);
@@ -95,6 +97,15 @@ export default function LogTab(props) {
     editLoggedFood(food);
     window.requestAnimationFrame(() => {
       document.getElementById("log-food-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const beginEditActivity = (activity) => {
+    if (!activeCanEdit) return;
+    setActivitySummaryOpen(false);
+    editActivity(activity);
+    window.requestAnimationFrame(() => {
+      document.getElementById("log-activity-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   };
 
@@ -198,6 +209,50 @@ export default function LogTab(props) {
                 </div>
               ))}
               {todayFoods.length > 0 && <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.4, paddingTop: 9 }}>{activeCanEdit ? "Tap a food to edit it." : `You’re viewing ${activeUser}’s food log.`}</div>}
+            </div>
+          )}
+        </div>
+      ) : logTab === "activity" ? (
+        <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+          <button
+            type="button"
+            aria-expanded={activitySummaryOpen}
+            aria-controls="log-activity-summary-detail"
+            onClick={() => setActivitySummaryOpen((open) => !open)}
+            style={{ width: "100%", minHeight: 42, display: "grid", gridTemplateColumns: "auto auto minmax(0, 1fr) auto", alignItems: "center", gap: 7, background: "transparent", border: "none", padding: "9px 11px", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35, textAlign: "left" }}
+          >
+            <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span>
+            <span>·</span>
+            <span>{context}</span>
+            <ChevronDown aria-hidden="true" style={{ width: 16, height: 16, color: TEXT_MUTED, transform: activitySummaryOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .16s ease", flexShrink: 0 }} strokeWidth={1.8} />
+          </button>
+
+          {activitySummaryOpen && (
+            <div id="log-activity-summary-detail" style={{ borderTop: `1px solid ${BORDER}`, padding: todayActivities.length ? "5px 11px 10px" : "10px 11px 11px" }}>
+              {todayActivities.length === 0 ? (
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45 }}>Nothing here yet. Activities you log today will show up here so you can get back to them quickly.</div>
+              ) : (
+                <>
+                  {todayActivities.map((activity) => (
+                    <div key={activity.id} style={{ display: "grid", gridTemplateColumns: activeCanEdit ? "minmax(0, 1fr) 32px 32px" : "minmax(0, 1fr)", gap: 4, alignItems: "center", borderBottom: `1px solid ${BORDER}`, minHeight: 48 }}>
+                      <button
+                        type="button"
+                        disabled={!activeCanEdit}
+                        onClick={() => beginEditActivity(activity)}
+                        style={{ minWidth: 0, textAlign: "left", background: "transparent", border: "none", color: TEXT, padding: "7px 4px 7px 0", cursor: activeCanEdit ? "pointer" : "default" }}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activity.name}</div>
+                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2 }}>{Math.round(activity.caloriesBurned)} calories burned</div>
+                      </button>
+                      {activeCanEdit && <button type="button" onClick={() => beginEditActivity(activity)} aria-label={`Edit ${activity.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: TEXT_MUTED, padding: 0 }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
+                      {activeCanEdit && <button type="button" onClick={async () => { if (window.confirm(`Remove ${activity.name} from today?`)) { await deleteActivity(activity.id); if (editingActivityId === activity.id) cancelActivityEdit(); } }} aria-label={`Delete ${activity.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: WARN, padding: 0 }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
+                    </div>
+                  ))}
+                  <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.4, paddingTop: 9 }}>
+                    {activeCanEdit ? "Tap an activity to edit it." : `You’re viewing ${activeUser}’s activity log.`}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -394,7 +449,7 @@ export default function LogTab(props) {
         {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
       </div>}
 
-      {logTab === "activity" && <div style={cardStyle}>
+      {logTab === "activity" && <div id="log-activity-form" style={{ ...cardStyle, scrollMarginTop: 112 }}>
         <div style={{ ...headingStyle, marginBottom: 6 }}>{editingActivityId ? "Edit activity" : "Activity"}</div>
         <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>
           {editingActivityId ? "Update the activity, calories burned, or date." : "Add movement from your day."}
@@ -413,7 +468,7 @@ export default function LogTab(props) {
           </button>
         </div>
 
-        {data[activeUser].activities.filter((a) => a.date === actDate).length > 0 && (
+        {actDate !== today && data[activeUser].activities.filter((a) => a.date === actDate).length > 0 && (
           <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
             <div style={{ ...fieldLabel, marginBottom: 6 }}>Activities for {fmtDate(actDate)}</div>
             {data[activeUser].activities.filter((a) => a.date === actDate).map((a) => (
