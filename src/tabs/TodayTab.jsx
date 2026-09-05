@@ -515,88 +515,95 @@ export default function TodayTab({
           </div>
         </section>
       ) : (
-        <>
-          <section style={{ marginBottom: 24 }}>
-            <div style={sectionLabel}>{isToday ? "Today so far" : "Day at a glance"}</div>
-            <div style={straightRule(PEN.blue)} />
-            <div style={{ marginTop: 10 }}>
-              {metricRows.filter((m) => m.show).map(({ id, label, icon: Icon, color, value, sub }) => (
-                <button
-                  key={id}
-                  onClick={() => openLog(id, selectedDate)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    background: "transparent",
-                    color: TEXT,
-                    border: "none",
-                    borderBottom: `1px solid ${PEN.rule}`,
-                    borderRadius: 0,
-                    padding: "12px 0",
-                    display: "grid",
-                    gridTemplateColumns: "22px 1fr auto",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <Icon style={{ width: 16, height: 16, color }} strokeWidth={2} />
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{sub}</div>
-                  </div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>{value}</div>
-                </button>
-              ))}
-            </div>
-          </section>
+        <section style={{ marginBottom: 24 }}>
+          <div style={sectionLabel}>{isToday ? "Today so far" : "Day at a glance"}</div>
+          <div style={straightRule(PEN.blue)} />
+          <div style={{ marginTop: 10 }}>
+            {metricRows.filter((m) => m.show).map(({ id, label, icon: Icon, color, value, sub }) => (
+              <button
+                key={id}
+                onClick={() => openLog(id, selectedDate)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  background: "transparent",
+                  color: TEXT,
+                  border: "none",
+                  borderBottom: `1px solid ${PEN.rule}`,
+                  borderRadius: 0,
+                  padding: "12px 0",
+                  display: "grid",
+                  gridTemplateColumns: "22px 1fr auto",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Icon style={{ width: 16, height: 16, color }} strokeWidth={2} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{sub}</div>
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>{value}</div>
+              </button>
+            ))}
 
-          <section style={{ marginBottom: 10 }}>
             <button
               onClick={() => setFoodDetailOpen(true)}
-              style={{ width: "100%", textAlign: "left", background: "transparent", color: TEXT, border: "none", padding: 0 }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                background: "transparent",
+                color: TEXT,
+                border: "none",
+                borderBottom: `1px solid ${PEN.rule}`,
+                borderRadius: 0,
+                padding: "12px 0",
+                display: "grid",
+                gridTemplateColumns: "22px 1fr auto",
+                alignItems: "center",
+                gap: 10,
+              }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <div>
-                  <div style={sectionLabel}>Food</div>
-                  <div style={straightRule(PEN.blue)} />
+              <Utensils style={{ width: 16, height: 16, color: PEN.blue }} strokeWidth={2} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>Food</div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>
+                  {dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged
                 </div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12 }}>{dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged →</div>
               </div>
-
-              {isToday && activeFasts[activeUser] && dayFoods.length === 0 ? (
-                <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 12 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
-              ) : (
-                <>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12 }}>
-                    <div className="num" style={{ fontSize: 26, fontWeight: 800, color: PEN.ink }}>{Math.round(ts.calories)}</div>
-                    {targets.calories ? <div style={{ color: TEXT_MUTED, fontSize: 12 }}>/ {targets.calories} cal</div> : <div style={{ color: TEXT_MUTED, fontSize: 12 }}>cal logged</div>}
-                  </div>
-
-                  {targets.calories && <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "8px 0 14px" }}>
-                    <div style={{ width: `${Math.min(100, ts.calories / targets.calories * 100)}%`, height: "100%", background: PEN.blue }} />
-                  </div>}
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
-                    {[
-                      ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
-                      ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
-                      ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
-                      ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
-                    ].map(([label, value, target, color]) => (
-                      <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
-                        <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
-                        <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
-                        <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
-                          {value} {target ? <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target}g</span> : <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>g</span>}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>
+                {Math.round(ts.calories)}{targets.calories ? ` / ${targets.calories}` : ""} cal
+              </div>
             </button>
-          </section>
-        </>
+
+            {isToday && activeFasts[activeUser] && dayFoods.length === 0 ? (
+              <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "12px 0 2px 32px" }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
+            ) : (
+              <div style={{ padding: "12px 0 2px 32px" }}>
+                {targets.calories && <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "0 0 14px" }}>
+                  <div style={{ width: `${Math.min(100, ts.calories / targets.calories * 100)}%`, height: "100%", background: PEN.blue }} />
+                </div>}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
+                  {[
+                    ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
+                    ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
+                    ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
+                    ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
+                  ].map(([label, value, target, color]) => (
+                    <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
+                      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                      <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
+                      <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
+                        {value} {target ? <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target}g</span> : <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>g</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {foodDetailOpen && (
