@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { brand, metricColors } from "../brand.jsx";
-import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints } from "lucide-react";
+import { Search, BookmarkPlus, Pencil, Trash2, Star, Utensils, Scale, Dumbbell, Droplet, Footprints, ChevronDown } from "lucide-react";
 
 function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
@@ -22,7 +22,7 @@ export default function LogTab(props) {
     foodName, setFoodName, foodMeal, setFoodMeal, foodDate, setFoodDate,
     foodCals, setFoodCals, foodProtein, setFoodProtein, foodCarbs, setFoodCarbs,
     foodFat, setFoodFat, foodFiber, setFoodFiber, foodNotes, setFoodNotes, setFoodServingLabel,
-    foodError, addFood, deleteFood,
+    foodError, addFood, deleteFood, editLoggedFood,
     weightInput, setWeightInput, weightDate, setWeightDate, weightError, addWeight, deleteWeight,
     actName, setActName, editingActivityId, editActivity, cancelActivityEdit, activityError, actCals, setActCals, actDate, setActDate, addActivity, deleteActivity,
     waterOz, setWaterOz, waterError, waterDate, setWaterDate, waterShortcuts, addWater,
@@ -34,6 +34,7 @@ export default function LogTab(props) {
 
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
+  const [foodSummaryOpen, setFoodSummaryOpen] = useState(false);
   const [showWalkthroughIntro, setShowWalkthroughIntro] = useState(() => Boolean(walkthrough?.active && !walkthrough?.logIntroSeen));
 
   useEffect(() => {
@@ -41,6 +42,10 @@ export default function LogTab(props) {
       updateWalkthrough?.({ logIntroSeen: true });
     }
   }, []);
+
+  useEffect(() => {
+    setFoodSummaryOpen(false);
+  }, [activeUser, logTab]);
 
   const todayFoods = data[activeUser].foods.filter((f) => f.date === today);
   const todayActivities = data[activeUser].activities.filter((a) => a.date === today);
@@ -53,6 +58,18 @@ export default function LogTab(props) {
     water: ts.water > 0 ? `${Math.round(ts.water)} oz logged today.` : "No water logged today.",
     steps: ts.steps != null ? `${ts.steps.toLocaleString()} steps logged today. Saving another total for today will update it.` : "No steps logged today.",
   }[logTab];
+
+  const foodGroups = todayFoods.reduce((groups, food) => {
+    const meal = food.meal || "Other";
+    if (!groups[meal]) groups[meal] = [];
+    groups[meal].push(food);
+    return groups;
+  }, {});
+  const mealOrder = ["Breakfast", "Lunch", "Dinner", "Snack"];
+  const orderedMeals = [
+    ...mealOrder.filter((meal) => foodGroups[meal]),
+    ...Object.keys(foodGroups).filter((meal) => !mealOrder.includes(meal)),
+  ];
 
   const currentLogDate = {
     food: foodDate,
@@ -70,6 +87,15 @@ export default function LogTab(props) {
     if (id === "steps") setStepsDate(currentLogDate);
     setLogTab(id);
     localStorage.setItem("with-log-tab", id);
+  };
+
+  const beginEditFood = (food) => {
+    if (!activeCanEdit) return;
+    setFoodSummaryOpen(false);
+    editLoggedFood(food);
+    window.requestAnimationFrame(() => {
+      document.getElementById("log-food-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   return (
@@ -130,9 +156,56 @@ export default function LogTab(props) {
         })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 7, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
-        <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
-      </div>
+      {logTab === "food" ? (
+        <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+          <button
+            type="button"
+            aria-expanded={foodSummaryOpen}
+            aria-controls="log-food-summary-detail"
+            onClick={() => setFoodSummaryOpen((open) => !open)}
+            style={{ width: "100%", minHeight: 42, display: "grid", gridTemplateColumns: "auto auto minmax(0, 1fr) auto", alignItems: "center", gap: 7, background: "transparent", border: "none", padding: "9px 11px", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35, textAlign: "left" }}
+          >
+            <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span>
+            <span>·</span>
+            <span>{context}</span>
+            <ChevronDown aria-hidden="true" style={{ width: 16, height: 16, color: TEXT_MUTED, transform: foodSummaryOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .16s ease", flexShrink: 0 }} strokeWidth={1.8} />
+          </button>
+
+          {foodSummaryOpen && (
+            <div id="log-food-summary-detail" style={{ borderTop: `1px solid ${BORDER}`, padding: todayFoods.length ? "5px 11px 10px" : "10px 11px 11px" }}>
+              {todayFoods.length === 0 ? (
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45 }}>Nothing here yet. Foods you log today will show up here so you can get back to them quickly.</div>
+              ) : orderedMeals.map((meal) => (
+                <div key={meal} style={{ paddingTop: 8 }}>
+                  <div style={{ color: TEXT_MUTED, fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 2 }}>{meal}</div>
+                  {foodGroups[meal].map((food) => (
+                    <div key={food.id} style={{ display: "grid", gridTemplateColumns: activeCanEdit ? "minmax(0, 1fr) 32px 32px" : "minmax(0, 1fr)", gap: 4, alignItems: "center", borderBottom: `1px solid ${BORDER}`, minHeight: 48 }}>
+                      <button
+                        type="button"
+                        disabled={!activeCanEdit}
+                        onClick={() => beginEditFood(food)}
+                        style={{ minWidth: 0, textAlign: "left", background: "transparent", border: "none", color: TEXT, padding: "7px 4px 7px 0", cursor: activeCanEdit ? "pointer" : "default" }}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.name}</div>
+                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {Math.round(food.calories)} cal · {Math.round(food.fat)}g fat · {Math.round(food.carbs)}g carbs · {Math.round(food.fiber || 0)}g fiber · {Math.round(food.protein)}g protein
+                        </div>
+                      </button>
+                      {activeCanEdit && <button type="button" onClick={() => beginEditFood(food)} aria-label={`Edit ${food.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: TEXT_MUTED, padding: 0 }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
+                      {activeCanEdit && <button type="button" onClick={async () => { if (window.confirm(`Remove ${food.name} from today?`)) { await deleteFood(food.id); if (editingFoodId === food.id) clearFoodForm(); } }} aria-label={`Delete ${food.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: WARN, padding: 0 }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {todayFoods.length > 0 && <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.4, paddingTop: 9 }}>{activeCanEdit ? "Tap a food to edit it." : `You’re viewing ${activeUser}’s food log.`}</div>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 7, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}>
+          <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
+        </div>
+      )}
 
       {logTab === "food" && <>
         {activeFasts[activeUser] ? (
@@ -169,7 +242,7 @@ export default function LogTab(props) {
           </div>
         )}
 
-        <div style={{ ...cardStyle, marginBottom: "1rem" }}>
+        <div id="log-food-form" style={{ ...cardStyle, marginBottom: "1rem", scrollMarginTop: 112 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <div style={{ ...headingStyle, marginBottom: 0 }}>{editingFoodId ? "Edit Logged Food" : "Food"}</div>
             {savedFoods.length > 0 && <button onClick={() => setShowManageSaved(!showManageSaved)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>{showManageSaved ? "Done" : `Manage My Foods (${savedFoods.length})`}</button>}

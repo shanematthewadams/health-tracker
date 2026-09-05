@@ -1769,6 +1769,7 @@ export default function Tracker() {
             foodError={foodError}
             addFood={addFood}
             deleteFood={deleteFood}
+            editLoggedFood={editLoggedFood}
             weightInput={weightInput}
             setWeightInput={setWeightInput}
             weightDate={weightDate}
