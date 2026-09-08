@@ -27,6 +27,12 @@ function round1(value: number) {
   return Math.round(value * 10) / 10;
 }
 
+function canonicalGtin(value: unknown) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (![8, 12, 13, 14].includes(digits.length)) return digits;
+  return digits.padStart(14, "0");
+}
+
 function nutrientPer100(food: any, key: keyof typeof nutrientNumbers) {
   const numberId = nutrientNumbers[key];
   const match = (food.foodNutrients || []).find((n: any) =>
@@ -111,9 +117,12 @@ Deno.serve(async (req) => {
     let foods = (payload.foods || []).map(normalizeBranded);
 
     if (upc) {
-      foods = foods.filter((food: any) => String(food.gtin_upc || "").replace(/\D/g, "") === upc);
-      // Duplicate UPCs represent historical product versions. Newest published
-      // version is returned first by the USDA sort above.
+      const requestedGtin = canonicalGtin(upc);
+      foods = foods.filter((food: any) => canonicalGtin(food.gtin_upc) === requestedGtin);
+      // UPC-A, EAN-13, and GTIN-14 can represent the same item with left-zero
+      // padding. Compare their canonical GTIN-14 forms so equivalent barcodes
+      // are treated as the same product. Duplicate USDA records still sort
+      // newest-first, so keep the latest published version only.
       foods = foods.slice(0, 1);
     }
 
