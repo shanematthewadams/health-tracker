@@ -95,20 +95,25 @@ export default function BarcodeScanner({ onDetected, disabled = false }) {
         aria-label="Scan barcode"
         title="Scan barcode"
         style={{
-          height: 46,
-          minWidth: 46,
-          display: "grid",
-          placeItems: "center",
+          height: 44,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 7,
           border: `1px solid ${brand.border}`,
-          borderRadius: 8,
+          borderRadius: 999,
           background: brand.surface,
           color: disabled ? brand.textSoft : brand.tealDark,
-          padding: 0,
+          padding: "0 13px",
           cursor: disabled ? "default" : "pointer",
-          flexShrink: 0,
+          fontSize: 12,
+          fontWeight: 800,
+          boxShadow: "0 4px 16px rgba(45,35,25,.10)",
+          whiteSpace: "nowrap",
         }}
       >
-        <ScanLine style={{ width: 19, height: 19 }} strokeWidth={2} />
+        <ScanLine style={{ width: 17, height: 17 }} strokeWidth={2} />
+        <span>Scan barcode</span>
       </button>
 
       {open && (
