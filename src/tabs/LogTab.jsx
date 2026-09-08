@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BarcodeScanner from "../components/BarcodeScanner.jsx";
 import LogTabCore from "./LogTabCore.jsx";
 import { importUsdaFood, looksLikeUpc, searchUsdaFoods } from "../foodSearch.js";
 
@@ -161,13 +162,35 @@ export default function LogTab(props) {
     setFoodFiber(round1(food.fiber));
   }
 
+  const handleBarcodeDetected = useCallback((digits) => {
+    props.clearFoodForm?.();
+    props.setSavedSearch?.(digits);
+
+    // The existing food picker opens on focus. Bring the scanned UPC into that
+    // same path so camera search behaves exactly like a typed barcode search.
+    window.setTimeout(() => {
+      const input = document.querySelector('input[placeholder="Search foods or type a new one"]');
+      input?.focus({ preventScroll: true });
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 60);
+  }, [props.clearFoodForm, props.setSavedSearch]);
+
+  const showScanner = props.logTab === "food" && props.activeCanEdit && !props.editingFoodId;
+
   return (
-    <LogTabCore
-      {...props}
-      activeCanEdit={props.activeCanEdit && !importing}
-      globalFoods={augmentedGlobalFoods}
-      chooseSavedFood={chooseFood}
-      changeQuantity={changeFoodQuantity}
-    />
+    <>
+      <LogTabCore
+        {...props}
+        activeCanEdit={props.activeCanEdit && !importing}
+        globalFoods={augmentedGlobalFoods}
+        chooseSavedFood={chooseFood}
+        changeQuantity={changeFoodQuantity}
+      />
+      {showScanner && (
+        <div style={{ position: "fixed", right: 14, bottom: "calc(82px + env(safe-area-inset-bottom))", zIndex: 80 }}>
+          <BarcodeScanner onDetected={handleBarcodeDetected} disabled={importing} />
+        </div>
+      )}
+    </>
   );
 }
