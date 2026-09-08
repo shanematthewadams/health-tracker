@@ -33,6 +33,26 @@ function canonicalGtin(value: unknown) {
   return digits.padStart(14, "0");
 }
 
+function gtinSearchTerms(value: unknown) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (![8, 12, 13, 14].includes(digits.length)) return digits ? [digits] : [];
+
+  const canonical = digits.padStart(14, "0");
+  const terms = new Set<string>([digits, canonical]);
+
+  // The same trade item may appear as UPC-A (12), EAN-13 (13), or GTIN-14
+  // depending on the source. USDA search is textual, so query the equivalent
+  // representations instead of only normalizing after results come back.
+  if (digits.length === 12) terms.add(`0${digits}`);
+  if (digits.length === 13 && digits.startsWith("0")) terms.add(digits.slice(1));
+  if (digits.length === 14) {
+    if (digits.startsWith("0")) terms.add(digits.slice(1));
+    if (digits.startsWith("00")) terms.add(digits.slice(2));
+  }
+
+  return [...terms].filter(Boolean);
+}
+
 function nutrientPer100(food: any, key: keyof typeof nutrientNumbers) {
   const numberId = nutrientNumbers[key];
   const match = (food.foodNutrients || []).find((n: any) =>
@@ -73,6 +93,23 @@ function normalizeBranded(food: any) {
   };
 }
 
+async function searchUsda(term: string, isUpc: boolean) {
+  const response = await fetch(`${USDA_BASE}/foods/search?api_key=${encodeURIComponent(USDA_KEY!)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: term,
+      pageSize: isUpc ? 20 : 20,
+      dataType: ["Branded"],
+      sortBy: isUpc ? "publishedDate" : undefined,
+      sortOrder: isUpc ? "desc" : undefined,
+    }),
+  });
+
+  if (!response.ok) throw new Error(`USDA request failed (${response.status})`);
+  return response.json();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -99,31 +136,39 @@ Deno.serve(async (req) => {
     // Phase E starts with Branded Foods because they have reliable labeled
     // serving sizes and UPC/GTIN support. Foundation/FNDDS need measure-aware
     // detail handling and will be added separately rather than guessing.
-    const response = await fetch(`${USDA_BASE}/foods/search?api_key=${encodeURIComponent(USDA_KEY)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: term,
-        pageSize: upc ? 10 : 20,
-        dataType: ["Branded"],
-        sortBy: upc ? "publishedDate" : undefined,
-        sortOrder: upc ? "desc" : undefined,
-      }),
-    });
-
-    if (!response.ok) throw new Error(`USDA request failed (${response.status})`);
-
-    const payload = await response.json();
-    let foods = (payload.foods || []).map(normalizeBranded);
+    let rawFoods: any[] = [];
 
     if (upc) {
       const requestedGtin = canonicalGtin(upc);
-      foods = foods.filter((food: any) => canonicalGtin(food.gtin_upc) === requestedGtin);
-      // UPC-A, EAN-13, and GTIN-14 can represent the same item with left-zero
-      // padding. Compare their canonical GTIN-14 forms so equivalent barcodes
-      // are treated as the same product. Duplicate USDA records still sort
-      // newest-first, so keep the latest published version only.
-      foods = foods.slice(0, 1);
+      const seen = new Set<string>();
+
+      for (const searchTerm of gtinSearchTerms(upc)) {
+        const payload = await searchUsda(searchTerm, true);
+        for (const food of payload.foods || []) {
+          const id = String(food.fdcId || "");
+          if (!seen.has(id)) {
+            seen.add(id);
+            rawFoods.push(food);
+          }
+        }
+
+        // Stop as soon as USDA returns an exact equivalent GTIN. This keeps
+        // barcode lookup fast while still handling alternate GTIN formatting.
+        if (rawFoods.some((food: any) => canonicalGtin(food.gtinUpc) === requestedGtin)) break;
+      }
+    } else {
+      const payload = await searchUsda(query, false);
+      rawFoods = payload.foods || [];
+    }
+
+    let foods = rawFoods.map(normalizeBranded);
+
+    if (upc) {
+      const requestedGtin = canonicalGtin(upc);
+      foods = foods
+        .filter((food: any) => canonicalGtin(food.gtin_upc) === requestedGtin)
+        .sort((a: any, b: any) => String(b.published_date || "").localeCompare(String(a.published_date || "")))
+        .slice(0, 1);
     }
 
     return Response.json(
