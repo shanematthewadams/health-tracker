@@ -62,7 +62,8 @@ create table if not exists public.saved_food_global_map (
   saved_food_id uuid primary key
     references public.saved_foods(id) on delete restrict,
   global_food_id uuid not null unique
-    references public.global_foods(id) on delete restrict,
+    references public.global_foods(id) on delete restrict
+    deferrable initially deferred,
   migrated_at timestamptz not null default now()
 );
 
