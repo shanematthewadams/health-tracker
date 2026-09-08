@@ -37,6 +37,7 @@ export default function LogTab(props) {
   const [importedFoods, setImportedFoods] = useState([]);
   const [importing, setImporting] = useState(false);
   const searchSequence = useRef(0);
+  const searchCache = useRef(new Map());
 
   useEffect(() => {
     const clean = String(savedSearch || "").trim();
@@ -47,15 +48,41 @@ export default function LogTab(props) {
       return;
     }
 
+    const cacheKey = `${looksLikeUpc(clean) ? "upc" : "query"}:${normalize(clean)}`;
+    const cached = searchCache.current.get(cacheKey);
+    if (cached?.length) {
+      setUsdaFoods(cached);
+      return;
+    }
+
     const timer = window.setTimeout(async () => {
       try {
-        const foods = await searchUsdaFoods(clean);
+        let foods = await searchUsdaFoods(clean);
+
+        // A remote search occasionally returns an empty/transient response.
+        // Give it one quiet retry before treating the query as empty.
+        if (!foods.length) {
+          await new Promise((resolve) => window.setTimeout(resolve, 180));
+          if (searchSequence.current !== sequence) return;
+          foods = await searchUsdaFoods(clean);
+        }
+
         if (searchSequence.current !== sequence) return;
-        setUsdaFoods(foods);
+
+        if (foods.length) {
+          searchCache.current.set(cacheKey, foods);
+          setUsdaFoods(foods);
+        } else {
+          setUsdaFoods([]);
+        }
       } catch (error) {
         if (searchSequence.current !== sequence) return;
         console.warn("USDA food search unavailable", error);
-        setUsdaFoods([]);
+
+        // Never erase a previously successful result set because a later
+        // request failed. Search should feel stable, not lottery-adjacent.
+        const fallback = searchCache.current.get(cacheKey);
+        setUsdaFoods(fallback || []);
       }
     }, looksLikeUpc(clean) ? 50 : 350);
 
