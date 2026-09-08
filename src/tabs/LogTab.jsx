@@ -1,449 +1,129 @@
-import { useEffect, useMemo, useState } from "react";
-import { brand, metricColors } from "../brand.jsx";
-import { Search, Pencil, Trash2, Utensils, Scale, Dumbbell, Droplet, Footprints, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import LogTabCore from "./LogTabCore.jsx";
+import { importUsdaFood, looksLikeUpc, searchUsdaFoods } from "../foodSearch.js";
 
-function fmtDate(d) {
-  const dt = new Date(d + "T00:00:00");
-  return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function normalize(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function normalizeFoodName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+function toSearchFood(food) {
+  const sourceId = String(food.source_id || "");
+  return {
+    ...food,
+    id: `usda-${sourceId}`,
+    source: "usda",
+    source_id: sourceId,
+    serving_label: food.serving_description || "1 serving",
+    brand: [food.brand, "USDA FoodData Central"].filter(Boolean).join(" · "),
+    _usdaFood: food,
+  };
 }
 
 export default function LogTab(props) {
   const {
-    activeUser, activeCanEdit, data, today, ts,
-    logTab, setLogTab, buttonSuccess, logBusy,
-    activeFasts, fastPromptDismissedToday, fastEditorOpen, fastBusy,
-    fastStartDate, fastStartTime, setFastStartDate, setFastStartTime,
-    setFastEditorOpen, dismissFastPromptToday, openFastEditor, startFast, updateFastStart, fastElapsed,
-    savedFoods, globalFoods, savedSearch, setSavedSearch, selectedSavedFoodId, setSelectedSavedFoodId,
-    foodQuantity, foodServingLabel, setSaveAsSaved, editingFoodId,
-    chooseSavedFood, changeQuantity, clearFoodForm,
-    foodName, setFoodName, foodMeal, setFoodMeal, foodDate, setFoodDate,
-    foodCals, setFoodCals, foodProtein, setFoodProtein, foodCarbs, setFoodCarbs,
-    foodFat, setFoodFat, foodFiber, setFoodFiber, foodNotes, setFoodNotes, setFoodServingLabel,
-    foodError, addFood, deleteFood, editLoggedFood,
-    weightInput, setWeightInput, weightDate, setWeightDate, weightError, addWeight, deleteWeight,
-    actName, setActName, editingActivityId, editActivity, cancelActivityEdit, activityError, actCals, setActCals, actDate, setActDate, addActivity, deleteActivity,
-    waterOz, setWaterOz, waterError, waterDate, setWaterDate, waterShortcuts, addWater,
-    stepsInput, setStepsInput, stepsError, stepsDate, setStepsDate, saveSteps,
-    walkthrough, updateWalkthrough,
-    styles,
+    savedSearch,
+    globalFoods = [],
+    chooseSavedFood,
+    changeQuantity,
+    selectedSavedFoodId,
+    setFoodCals,
+    setFoodProtein,
+    setFoodCarbs,
+    setFoodFat,
+    setFoodFiber,
   } = props;
 
-  const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
-  const [foodSearchOpen, setFoodSearchOpen] = useState(false);
-  const [pendingCreateName, setPendingCreateName] = useState("");
-  const [foodSummaryOpen, setFoodSummaryOpen] = useState(false);
-  const [activitySummaryOpen, setActivitySummaryOpen] = useState(false);
-  const [showWalkthroughIntro, setShowWalkthroughIntro] = useState(() => Boolean(walkthrough?.active && !walkthrough?.logIntroSeen));
+  const [usdaFoods, setUsdaFoods] = useState([]);
+  const [importedFoods, setImportedFoods] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const searchSequence = useRef(0);
 
   useEffect(() => {
-    if (showWalkthroughIntro && walkthrough?.active && !walkthrough?.logIntroSeen) updateWalkthrough?.({ logIntroSeen: true });
-  }, []);
+    const clean = String(savedSearch || "").trim();
+    const sequence = ++searchSequence.current;
 
-  useEffect(() => {
-    setFoodSummaryOpen(false);
-    setActivitySummaryOpen(false);
-  }, [activeUser, logTab]);
-
-  useEffect(() => {
-    setPendingCreateName("");
-  }, [savedSearch]);
-
-  const todayFoods = data[activeUser].foods.filter((f) => f.date === today);
-  const todayActivities = data[activeUser].activities.filter((a) => a.date === today);
-  const todayWeight = data[activeUser].weights.find((w) => w.date === today);
-  const activityCals = todayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
-  const context = {
-    food: todayFoods.length ? `${todayFoods.length} ${todayFoods.length === 1 ? "food" : "foods"} · ${Math.round(ts.calories)} calories logged` : "No food logged today.",
-    weight: todayWeight ? `${todayWeight.weight} lb logged today. Saving another weight for today will update it.` : "No weight logged today.",
-    activity: todayActivities.length ? `${todayActivities.length} ${todayActivities.length === 1 ? "activity" : "activities"} · ${Math.round(activityCals)} calories burned` : "No activity logged today.",
-    water: ts.water > 0 ? `${Math.round(ts.water)} oz logged today.` : "No water logged today.",
-    steps: ts.steps != null ? `${ts.steps.toLocaleString()} steps logged today. Saving another total for today will update it.` : "No steps logged today.",
-  }[logTab];
-
-  const foodGroups = todayFoods.reduce((groups, food) => {
-    const meal = food.meal || "Other";
-    if (!groups[meal]) groups[meal] = [];
-    groups[meal].push(food);
-    return groups;
-  }, {});
-  const mealOrder = ["Breakfast", "Lunch", "Dinner", "Snack"];
-  const orderedMeals = [
-    ...mealOrder.filter((meal) => foodGroups[meal]),
-    ...Object.keys(foodGroups).filter((meal) => !mealOrder.includes(meal)),
-  ];
-
-  const globalByName = useMemo(() => {
-    const map = new Map();
-    globalFoods.forEach((food) => {
-      const key = normalizeFoodName(food.name);
-      if (key && !map.has(key)) map.set(key, food);
-    });
-    return map;
-  }, [globalFoods]);
-
-  const savedByName = useMemo(() => {
-    const map = new Map();
-    savedFoods.forEach((food) => {
-      const key = normalizeFoodName(food.name);
-      if (key && !map.has(key)) map.set(key, food);
-    });
-    return map;
-  }, [savedFoods]);
-
-  const personalRecentFoods = useMemo(() => {
-    const seen = new Set();
-    const recent = [];
-    const history = [...(data[activeUser]?.foods || [])].reverse();
-    for (const entry of history) {
-      const key = normalizeFoodName(entry.name);
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      const match = globalByName.get(key) || savedByName.get(key);
-      if (match) recent.push(match);
-      if (recent.length >= 6) break;
-    }
-    return recent;
-  }, [data, activeUser, globalByName, savedByName]);
-
-  const searchResults = useMemo(() => {
-    const query = normalizeFoodName(savedSearch);
-    if (!query) return personalRecentFoods;
-    return globalFoods
-      .filter((food) => normalizeFoodName(food.name).includes(query) || normalizeFoodName(food.brand).includes(query))
-      .slice()
-      .sort((a, b) => {
-        const an = normalizeFoodName(a.name);
-        const bn = normalizeFoodName(b.name);
-        const aStarts = an.startsWith(query) ? 0 : 1;
-        const bStarts = bn.startsWith(query) ? 0 : 1;
-        return aStarts - bStarts || a.name.localeCompare(b.name);
-      })
-      .slice(0, 20);
-  }, [savedSearch, globalFoods, personalRecentFoods]);
-
-  const duplicateCandidates = useMemo(() => {
-    const query = normalizeFoodName(pendingCreateName || savedSearch);
-    if (!query) return [];
-    return globalFoods.filter((food) => {
-      const name = normalizeFoodName(food.name);
-      return name === query || (query.length >= 5 && (name.startsWith(query) || query.startsWith(name)));
-    }).slice(0, 3);
-  }, [pendingCreateName, savedSearch, globalFoods]);
-
-  function startCreatingFood(name, force = false) {
-    const clean = String(name || "").trim();
-    if (!clean) return;
-    const normalized = normalizeFoodName(clean);
-    const similar = globalFoods.filter((food) => {
-      const foodNameNormalized = normalizeFoodName(food.name);
-      return foodNameNormalized === normalized || (normalized.length >= 5 && (foodNameNormalized.startsWith(normalized) || normalized.startsWith(foodNameNormalized)));
-    });
-    if (!force && similar.length) {
-      setPendingCreateName(clean);
-      setFoodSearchOpen(true);
+    if (clean.length < 2) {
+      setUsdaFoods([]);
       return;
     }
-    setPendingCreateName("");
-    setFoodName(clean);
-    setSelectedSavedFoodId(null);
-    setSaveAsSaved(true);
-    setSavedSearch("");
-    setFoodSearchOpen(false);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const foods = await searchUsdaFoods(clean);
+        if (searchSequence.current !== sequence) return;
+        setUsdaFoods(foods);
+      } catch (error) {
+        if (searchSequence.current !== sequence) return;
+        console.warn("USDA food search unavailable", error);
+        setUsdaFoods([]);
+      }
+    }, looksLikeUpc(clean) ? 50 : 350);
+
+    return () => window.clearTimeout(timer);
+  }, [savedSearch]);
+
+  const remoteFoods = useMemo(() => {
+    const sourceIds = new Set(globalFoods.map((food) => String(food.source_id || "")).filter(Boolean));
+    const localKeys = new Set(globalFoods.map((food) => `${normalize(food.name)}|${normalize(food.brand)}`));
+
+    return usdaFoods
+      .filter((food) => !sourceIds.has(String(food.source_id || "")))
+      .filter((food) => !localKeys.has(`${normalize(food.name)}|${normalize(food.brand)}`))
+      .slice(0, 12)
+      .map(toSearchFood);
+  }, [usdaFoods, globalFoods]);
+
+  const augmentedGlobalFoods = useMemo(() => {
+    const byId = new Map();
+    [...globalFoods, ...importedFoods, ...remoteFoods].forEach((food) => {
+      if (!byId.has(food.id)) byId.set(food.id, food);
+    });
+    return [...byId.values()];
+  }, [globalFoods, importedFoods, remoteFoods]);
+
+  async function chooseFood(food) {
+    if (food?.source !== "usda") {
+      chooseSavedFood(food);
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const imported = await importUsdaFood(food._usdaFood || food);
+      setImportedFoods((current) => current.some((item) => item.id === imported.id) ? current : [...current, imported]);
+      chooseSavedFood(imported);
+    } catch (error) {
+      console.error("Could not import USDA food", error);
+      window.alert("We found that food, but couldn’t add it to With. You can still create it manually.");
+    } finally {
+      setImporting(false);
+    }
   }
 
-  const currentLogDate = {
-    food: foodDate,
-    weight: weightDate,
-    activity: actDate,
-    water: waterDate,
-    steps: stepsDate,
-  }[logTab] || today;
+  function changeFoodQuantity(value) {
+    changeQuantity(value);
 
-  const changeLogTab = (id) => {
-    if (id === "food") setFoodDate(currentLogDate);
-    if (id === "weight") setWeightDate(currentLogDate);
-    if (id === "activity") setActDate(currentLogDate);
-    if (id === "water") setWaterDate(currentLogDate);
-    if (id === "steps") setStepsDate(currentLogDate);
-    setLogTab(id);
-    localStorage.setItem("with-log-tab", id);
-  };
+    const [source, id] = String(selectedSavedFoodId || "").split(":");
+    if (source !== "global") return;
+    const food = importedFoods.find((item) => item.id === id);
+    const quantity = Number(value);
+    if (!food || !Number.isFinite(quantity) || quantity <= 0) return;
 
-  const beginEditFood = (food) => {
-    if (!activeCanEdit) return;
-    setFoodSummaryOpen(false);
-    editLoggedFood(food);
-    window.requestAnimationFrame(() => document.getElementById("log-food-form")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  };
-
-  const beginEditActivity = (activity) => {
-    if (!activeCanEdit) return;
-    setActivitySummaryOpen(false);
-    editActivity(activity);
-    window.requestAnimationFrame(() => document.getElementById("log-activity-form")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  };
+    const round1 = (number) => String(Math.round(Number(number || 0) * quantity * 10) / 10);
+    setFoodCals(round1(food.calories));
+    setFoodProtein(round1(food.protein));
+    setFoodCarbs(round1(food.carbs));
+    setFoodFat(round1(food.fat));
+    setFoodFiber(round1(food.fiber));
+  }
 
   return (
-    <>
-      <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Log</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
-      </div>
-
-      {showWalkthroughIntro && (
-        <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>Track what matters to you.</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>Food, weight, activity, water and steps all live here. Use all of them, some of them, or just what’s useful today.</div>
-          <button type="button" onClick={() => setShowWalkthroughIntro(false)} style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontSize: 12, fontWeight: 800 }}>Got it</button>
-        </section>
-      )}
-
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 0 8px", marginBottom: 6 }}>
-        {[
-          ["food", "Food", Utensils, metricColors.food],
-          ["weight", "Weight", Scale, metricColors.weight],
-          ["activity", "Activity", Dumbbell, metricColors.activity],
-          ["water", "Water", Droplet, metricColors.water],
-          ["steps", "Steps", Footprints, metricColors.steps],
-        ].map(([id, label, Icon, metricColor]) => {
-          const active = logTab === id;
-          return (
-            <button key={id} aria-label={label} title={label} onClick={() => changeLogTab(id)} style={{ flex: active ? "0 0 auto" : "1 1 0", minWidth: active ? "max-content" : 0, minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: active ? 6 : 0, border: `1px solid ${active ? brand.teal : BORDER}`, background: active ? brand.surfaceSoft : SURFACE, color: active ? TEXT : TEXT_MUTED, borderRadius: 999, padding: active ? "7px 12px" : "7px 0", fontSize: 12, fontWeight: 700, transition: "all .16s ease", overflow: "hidden" }}>
-              <Icon style={{ width: 14, height: 14, flexShrink: 0, color: metricColor }} strokeWidth={2.2} />
-              {active && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {logTab === "food" ? (
-        <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
-          <button type="button" aria-expanded={foodSummaryOpen} aria-controls="log-food-summary-detail" onClick={() => setFoodSummaryOpen((open) => !open)} style={{ width: "100%", minHeight: 42, display: "grid", gridTemplateColumns: "auto auto minmax(0, 1fr) auto", alignItems: "center", gap: 7, background: "transparent", border: "none", padding: "9px 11px", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35, textAlign: "left" }}>
-            <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
-            <ChevronDown aria-hidden="true" style={{ width: 16, height: 16, color: TEXT_MUTED, transform: foodSummaryOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .16s ease", flexShrink: 0 }} strokeWidth={1.8} />
-          </button>
-          {foodSummaryOpen && (
-            <div id="log-food-summary-detail" style={{ borderTop: `1px solid ${BORDER}`, padding: todayFoods.length ? "5px 11px 10px" : "10px 11px 11px" }}>
-              {todayFoods.length === 0 ? <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45 }}>Nothing here yet. Foods you log today will show up here so you can get back to them quickly.</div> : orderedMeals.map((meal) => (
-                <div key={meal} style={{ paddingTop: 8 }}>
-                  <div style={{ color: TEXT_MUTED, fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 2 }}>{meal}</div>
-                  {foodGroups[meal].map((food) => (
-                    <div key={food.id} style={{ display: "grid", gridTemplateColumns: activeCanEdit ? "minmax(0, 1fr) 32px 32px" : "minmax(0, 1fr)", gap: 4, alignItems: "center", borderBottom: `1px solid ${BORDER}`, minHeight: 48 }}>
-                      <button type="button" disabled={!activeCanEdit} onClick={() => beginEditFood(food)} style={{ minWidth: 0, textAlign: "left", background: "transparent", border: "none", color: TEXT, padding: "7px 4px 7px 0", cursor: activeCanEdit ? "pointer" : "default" }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.name}</div>
-                        <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{Math.round(food.calories)} cal · {Math.round(food.fat)}g fat · {Math.round(food.carbs)}g carbs · {Math.round(food.fiber || 0)}g fiber · {Math.round(food.protein)}g protein</div>
-                      </button>
-                      {activeCanEdit && <button type="button" onClick={() => beginEditFood(food)} aria-label={`Edit ${food.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: TEXT_MUTED, padding: 0 }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
-                      {activeCanEdit && <button type="button" onClick={async () => { if (window.confirm(`Remove ${food.name} from today?`)) { await deleteFood(food.id); if (editingFoodId === food.id) clearFoodForm(); } }} aria-label={`Delete ${food.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: WARN, padding: 0 }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
-                    </div>
-                  ))}
-                </div>
-              ))}
-              {todayFoods.length > 0 && <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.4, paddingTop: 9 }}>{activeCanEdit ? "Tap a food to edit it." : `You’re viewing ${activeUser}’s food log.`}</div>}
-            </div>
-          )}
-        </div>
-      ) : logTab === "activity" ? (
-        <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
-          <button type="button" aria-expanded={activitySummaryOpen} aria-controls="log-activity-summary-detail" onClick={() => setActivitySummaryOpen((open) => !open)} style={{ width: "100%", minHeight: 42, display: "grid", gridTemplateColumns: "auto auto minmax(0, 1fr) auto", alignItems: "center", gap: 7, background: "transparent", border: "none", padding: "9px 11px", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35, textAlign: "left" }}>
-            <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
-            <ChevronDown aria-hidden="true" style={{ width: 16, height: 16, color: TEXT_MUTED, transform: activitySummaryOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .16s ease", flexShrink: 0 }} strokeWidth={1.8} />
-          </button>
-          {activitySummaryOpen && (
-            <div id="log-activity-summary-detail" style={{ borderTop: `1px solid ${BORDER}`, padding: todayActivities.length ? "5px 11px 10px" : "10px 11px 11px" }}>
-              {todayActivities.length === 0 ? <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45 }}>Nothing here yet. Activities you log today will show up here so you can get back to them quickly.</div> : <>
-                {todayActivities.map((activity) => (
-                  <div key={activity.id} style={{ display: "grid", gridTemplateColumns: activeCanEdit ? "minmax(0, 1fr) 32px 32px" : "minmax(0, 1fr)", gap: 4, alignItems: "center", borderBottom: `1px solid ${BORDER}`, minHeight: 48 }}>
-                    <button type="button" disabled={!activeCanEdit} onClick={() => beginEditActivity(activity)} style={{ minWidth: 0, textAlign: "left", background: "transparent", border: "none", color: TEXT, padding: "7px 4px 7px 0", cursor: activeCanEdit ? "pointer" : "default" }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activity.name}</div>
-                      <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2 }}>{Math.round(activity.caloriesBurned)} calories burned</div>
-                    </button>
-                    {activeCanEdit && <button type="button" onClick={() => beginEditActivity(activity)} aria-label={`Edit ${activity.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: TEXT_MUTED, padding: 0 }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
-                    {activeCanEdit && <button type="button" onClick={async () => { if (window.confirm(`Remove ${activity.name} from today?`)) { await deleteActivity(activity.id); if (editingActivityId === activity.id) cancelActivityEdit(); } }} aria-label={`Delete ${activity.name}`} style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: WARN, padding: 0 }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}
-                  </div>
-                ))}
-                <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.4, paddingTop: 9 }}>{activeCanEdit ? "Tap an activity to edit it." : `You’re viewing ${activeUser}’s activity log.`}</div>
-              </>}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 7, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}><span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span></div>
-      )}
-
-      {logTab === "food" && <>
-        {activeFasts[activeUser] ? (
-          <div style={{ ...cardStyle, background: brand.surface, borderColor: BORDER, borderRadius: 14, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div></div>
-              {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
-            </div>
-          </div>
-        ) : activeCanEdit && !fastPromptDismissedToday ? (
-          <div style={{ ...cardStyle, background: brand.surface, borderColor: BORDER, borderRadius: 14, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div></div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button onClick={dismissFastPromptToday} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 9px", fontSize: 11, fontWeight: 700 }}>Not today</button>
-                <button onClick={() => openFastEditor()} style={{ background: SURFACE, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Start fast</button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {activeCanEdit && fastEditorOpen && (
-          <div style={{ ...cardStyle, padding: "1.05rem 1.1rem" }}>
-            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>It defaults to right now. Backdating is completely fine.</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-              <div><div style={fieldLabel}>Date</div><input type="date" max={today} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={{ ...inputStyle, width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", padding: "10px 9px", fontSize: 15 }} /></div>
-              <div><div style={fieldLabel}>Time</div><input type="time" value={fastStartTime} onChange={(e) => setFastStartTime(e.target.value)} style={inputStyle} /></div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
-              <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={bigButton(brand.teal, brand.inkOn)}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
-            </div>
-          </div>
-        )}
-
-        <div id="log-food-form" style={{ ...cardStyle, marginBottom: "1rem", scrollMarginTop: 112 }}>
-          <div style={{ ...headingStyle, marginBottom: 12 }}>{editingFoodId ? "Edit Logged Food" : "Food"}</div>
-
-          {!editingFoodId && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Search foods</div>
-              <input type="text" placeholder="Search foods or type a new one" value={savedSearch} onFocus={() => setFoodSearchOpen(true)} onBlur={() => window.setTimeout(() => setFoodSearchOpen(false), 160)} onChange={(e) => { setSavedSearch(e.target.value); setFoodSearchOpen(true); }} style={{ ...inputStyle, marginBottom: 0 }} />
-
-              {foodSearchOpen && (
-                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 8, marginTop: 7 }}>
-                  {!savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", padding: "1px 3px 7px" }}>Recent</div>}
-                  {pendingCreateName && duplicateCandidates.length > 0 ? (
-                    <div style={{ padding: 3 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: TEXT, marginBottom: 4 }}>A similar food is already here.</div>
-                      <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>Use an existing food if it matches. Different brand or serving? Creating another is completely fine.</div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {duplicateCandidates.map((food) => (
-                          <button key={food.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { chooseSavedFood(food); setPendingCreateName(""); setFoodSearchOpen(false); }} style={{ textAlign: "left", background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{food.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(food.calories)} cal</span></div>
-                            <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2 }}>{food.serving_label || food.serving_description || "1 serving"}</div>
-                          </button>
-                        ))}
-                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => startCreatingFood(pendingCreateName, true)} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>Create “{pendingCreateName}” anyway</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gap: 6, maxHeight: 245, overflowY: "auto", overflowX: "hidden", paddingRight: 5 }}>
-                      {searchResults.map((food) => (
-                        <button key={`${food.source || "global"}-${food.id}`} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { chooseSavedFood(food); setFoodSearchOpen(false); }} style={{ textAlign: "left", background: "transparent", border: `1px solid ${BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px", minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>{Math.round(food.calories)} cal</span></div>
-                          <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.serving_label || food.serving_description || "1 serving"} · {Math.round(food.fat)}g fat · {Math.round(food.carbs)}g carbs · {Math.round(food.fiber)}g fiber · {Math.round(food.protein)}g protein</div>
-                          {food.brand && <div style={{ color: TEXT_MUTED, fontSize: 9, marginTop: 2 }}>{food.brand}</div>}
-                        </button>
-                      ))}
-                      {savedSearch.trim() && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => startCreatingFood(savedSearch.trim())} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>+ Create “{savedSearch.trim()}”</button>}
-                      {searchResults.length === 0 && !savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 3px" }}>No recent foods yet. Search for something or create your first one.</div>}
-                      {searchResults.length === 0 && savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 11, padding: "2px 3px" }}>No matching foods yet.</div>}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {selectedSavedFoodId && <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 12px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Logging</div><div style={{ fontSize: 15, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div></div>
-              <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0", flexShrink: 0 }}>Change</button>
-            </div>
-            <div style={fieldLabel}>Quantity</div>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginBottom: 10 }}>
-              <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
-              <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{foodServingLabel} each</div>
-            </div>
-          </>}
-
-          {editingFoodId && <><div style={fieldLabel}>Food name</div><input type="text" placeholder="Food name" value={foodName} onChange={(e) => setFoodName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
-          {foodName && !editingFoodId && !selectedSavedFoodId && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 10px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Creating</div><div style={{ fontSize: 14, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div></div>
-              <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Change</button>
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div><div style={fieldLabel}>Date</div><div style={{ height: 46, border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden" }}><input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ width: "100%", maxWidth: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 8px", fontSize: 15, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }} /></div></div>
-            <div><div style={fieldLabel}>Meal</div><div style={{ height: 46, border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden" }}><select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ width: "100%", maxWidth: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 8px", fontSize: 15, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div></div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Fat (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Carbs (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
-          </div>
-
-          {!selectedSavedFoodId && !editingFoodId && <>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}><div style={{ ...fieldLabel, marginBottom: 0 }}>Serving description</div><details style={{ position: "relative" }}><summary aria-label="What is serving description?" style={{ listStyle: "none", cursor: "pointer", width: 18, height: 18, borderRadius: "50%", border: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: 11, fontWeight: 800, display: "grid", placeItems: "center" }}>?</summary><div style={{ position: "absolute", zIndex: 5, left: 0, top: 24, width: 250, background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 9, padding: 10, boxShadow: "0 5px 18px rgba(37,36,34,.12)", color: TEXT, fontSize: 11, lineHeight: 1.45 }}>Describe the amount these nutrition numbers represent, like “1 bar” or “2 tbsp.” With uses this as the base serving when the food is logged again.</div></details></div>
-            <input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-          </>}
-          <div style={fieldLabel}>Notes (optional)</div><input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
-          {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
-          <button onClick={addFood} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "food"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "food" ? (editingFoodId ? "Saving…" : "Logging…") : buttonSuccess === "food" ? "✓ Saved" : editingFoodId ? "Save changes" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>
-          {editingFoodId && <button onClick={async () => { await deleteFood(editingFoodId); clearFoodForm(); }} style={{ width: "100%", marginTop: 10, padding: 10, background: "transparent", border: "none", color: WARN, fontSize: 12, fontWeight: 700 }}>Delete logged food</button>}
-        </div>
-      </>}
-
-      {logTab === "weight" && <div style={cardStyle}>
-        <div style={headingStyle}>Weight</div><div style={fieldLabel}>Weight (lb)</div>
-        <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-        <button onClick={addWeight} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "weight"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "weight" ? "Saving…" : buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
-        {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
-      </div>}
-
-      {logTab === "activity" && <div id="log-activity-form" style={{ ...cardStyle, scrollMarginTop: 112 }}>
-        <div style={{ ...headingStyle, marginBottom: 6 }}>{editingActivityId ? "Edit activity" : "Activity"}</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>{editingActivityId ? "Update the activity, calories burned, or date." : "Add movement from your day."}</div>
-        <div style={fieldLabel}>Activity</div><input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Calories burned</div><input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {activityError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{activityError}</div>}
-        <div style={{ display: "grid", gridTemplateColumns: editingActivityId ? "1fr 1fr" : "1fr", gap: 8 }}>
-          {editingActivityId && <button type="button" onClick={cancelActivityEdit} disabled={!!logBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>}
-          <button onClick={addActivity} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "activity"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "activity" ? (editingActivityId ? "Saving…" : "Logging…") : buttonSuccess === "activity" ? "✓ Saved" : editingActivityId ? "Save activity" : "Log activity"}</button>
-        </div>
-        {actDate !== today && data[activeUser].activities.filter((a) => a.date === actDate).length > 0 && <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
-          <div style={{ ...fieldLabel, marginBottom: 6 }}>Activities for {fmtDate(actDate)}</div>
-          {data[activeUser].activities.filter((a) => a.date === actDate).map((a) => <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div><div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{Math.round(a.caloriesBurned)} cal burned</div></div>{activeCanEdit && <button type="button" onClick={() => editActivity(a)} aria-label={`Edit ${a.name}`} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 6, display: "grid", placeItems: "center" }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}{activeCanEdit && <button type="button" onClick={() => deleteActivity(a.id)} aria-label={`Delete ${a.name}`} style={{ background: "none", border: "none", color: WARN, padding: 6, display: "grid", placeItems: "center" }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}</div>)}
-          <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 9 }}>{Math.round(data[activeUser].activities.filter((a) => a.date === actDate).reduce((sum, a) => sum + a.caloriesBurned, 0))} calories burned total</div>
-        </div>}
-      </div>}
-
-      {logTab === "water" && <div style={cardStyle}>
-        <div style={headingStyle}>Water</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => { const pendingKey = `water-shortcut-${index}`; return <button key={`${oz}-${index}`} onClick={() => addWater(oz, pendingKey)} disabled={!!logBusy} aria-busy={logBusy === pendingKey} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600, opacity: logBusy ? 0.62 : 1 }}>{logBusy === pendingKey ? "Adding…" : `+${oz} oz`}</button>; })}</div>
-        <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {waterError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{waterError}</div>}
-        <button onClick={() => addWater()} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "water"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "water" ? "Adding…" : buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
-      </div>}
-
-      {logTab === "steps" && <div style={cardStyle}>
-        <div style={headingStyle}>Steps</div><div style={fieldLabel}>Step count</div>
-        <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {stepsError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{stepsError}</div>}
-        <button onClick={saveSteps} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "steps"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "steps" ? "Saving…" : buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
-      </div>}
-    </>
+    <LogTabCore
+      {...props}
+      activeCanEdit={props.activeCanEdit && !importing}
+      globalFoods={augmentedGlobalFoods}
+      chooseSavedFood={chooseFood}
+      changeQuantity={changeFoodQuantity}
+    />
   );
 }
