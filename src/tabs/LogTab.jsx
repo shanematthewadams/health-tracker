@@ -6,16 +6,33 @@ function normalize(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function barcodeDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 function toSearchFood(food) {
   const sourceId = String(food.source_id || "");
+  const upc = barcodeDigits(food.gtin_upc);
   return {
     ...food,
     id: `usda-${sourceId}`,
     source: "usda",
     source_id: sourceId,
     serving_label: food.serving_description || "1 serving",
-    brand: [food.brand, "USDA FoodData Central"].filter(Boolean).join(" · "),
+    // LogTabCore currently filters only name + brand. Include the barcode in
+    // this temporary search representation so a valid UPC result is not
+    // fetched successfully and then hidden by the client-side filter.
+    brand: [food.brand, upc ? `UPC ${upc}` : null, "USDA FoodData Central"].filter(Boolean).join(" · "),
     _usdaFood: food,
+  };
+}
+
+function toLocalSearchFood(food) {
+  const upc = barcodeDigits(food.gtin_upc);
+  if (!upc) return food;
+  return {
+    ...food,
+    brand: [food.brand, `UPC ${upc}`].filter(Boolean).join(" · "),
   };
 }
 
@@ -102,7 +119,7 @@ export default function LogTab(props) {
 
   const augmentedGlobalFoods = useMemo(() => {
     const byId = new Map();
-    [...globalFoods, ...importedFoods, ...remoteFoods].forEach((food) => {
+    [...globalFoods.map(toLocalSearchFood), ...importedFoods.map(toLocalSearchFood), ...remoteFoods].forEach((food) => {
       if (!byId.has(food.id)) byId.set(food.id, food);
     });
     return [...byId.values()];
