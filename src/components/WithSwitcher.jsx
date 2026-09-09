@@ -25,6 +25,18 @@ export default function WithSwitcher({ withs = [], activeWithId, onSelect, onSta
 
   if (!activeWith) return null;
 
+  // Most people will only ever have one With. Until there is actually
+  // something to switch, keep the chrome relational instead of teaching
+  // a piece of account architecture the person does not need yet.
+  if (withs.length === 1) {
+    return (
+      <div style={{ minWidth: 0, maxWidth: "100%", color: brand.inkOn, textAlign: "right" }}>
+        <div style={{ color: "rgba(255,255,255,.68)", fontSize: 8, fontWeight: 800, letterSpacing: ".09em", textTransform: "uppercase", lineHeight: 1.1 }}>Your With</div>
+        <div style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11, fontWeight: 700, lineHeight: 1.15 }}>{activeWith.name}</div>
+      </div>
+    );
+  }
+
   return (
     <div ref={rootRef} style={{ position: "relative", minWidth: 0 }}>
       <button
