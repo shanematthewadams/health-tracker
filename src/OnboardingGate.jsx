@@ -3,7 +3,6 @@ import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
 import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
-const BG = brand.bg;
 const SURFACE = brand.surface;
 const SURFACE_2 = brand.surfaceSoft;
 const BORDER = brand.border;
@@ -16,7 +15,6 @@ const PROFILE_COLORS = ["#F06A24","#7047EB","#4C6EF5","#E7685B","#D99524","#D95B
 
 function friendlyOnboardingError(error, fallback) {
   const raw = String(error?.message || error || "").toLowerCase();
-  if (raw.includes("invalid") && raw.includes("invite")) return "That invite doesn’t look right. Check the code and try again.";
   if (raw.includes("duplicate") || raw.includes("unique")) return "That name is already being used in this With.";
   if (raw.includes("network") || raw.includes("fetch")) return "We couldn’t connect to With. Check your connection and try again.";
   return fallback;
@@ -54,7 +52,6 @@ const primaryButton = {
   fontSize: 15,
   width: "100%",
   fontFamily: "'DM Sans', -apple-system, sans-serif",
-  
 };
 
 const secondaryButton = {
@@ -104,11 +101,10 @@ function BrandIntro({ eyebrow }) {
   );
 }
 
-function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = "" }) {
-  const [mode, setMode] = useState(initialInviteCode ? "join" : null);
+function OnboardingScreen({ onComplete }) {
+  const [mode, setMode] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [profileName, setProfileName] = useState("");
-  const [inviteCode, setInviteCode] = useState(initialInviteCode);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState("membership");
@@ -116,13 +112,6 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
   const [profileColor, setProfileColor] = useState(PROFILE_COLORS[2]);
   const [profileWithmark, setProfileWithmark] = useState("star");
   const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
-  function goBack() {
-    setMode(null);
-    setError("");
-    setHouseholdName("");
-    setInviteCode(initialInviteCode);
-  }
 
   async function createHousehold(event) {
     event.preventDefault();
@@ -152,38 +141,9 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     setBusy(false);
   }
 
-  async function joinHousehold(event) {
-    event.preventDefault();
-    const cleanCode = inviteCode.trim().toUpperCase();
-    const cleanProfileName = profileName.trim();
-
-    if (!cleanCode || !cleanProfileName) return;
-
+  async function finishPersonalization() {
     setBusy(true);
     setError("");
-
-    const { error: joinError } = await supabase.rpc("join_household", {
-      invite_code_input: cleanCode,
-      profile_name: cleanProfileName,
-    });
-
-    if (joinError) {
-      setError(friendlyOnboardingError(joinError, "We couldn’t join that With. Check the invite and try again."));
-      setBusy(false);
-      return;
-    }
-
-    localStorage.removeItem("with-pending-invite");
-    localStorage.removeItem("with-pending-inviter");
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: joinedProfile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).limit(1).maybeSingle();
-    setProfileId(joinedProfile?.id || null);
-    setStep("personalize");
-    setBusy(false);
-  }
-
-  async function finishPersonalization() {
-    setBusy(true); setError("");
     try {
       if (profileId) {
         const { error: profileError } = await supabase.from("profiles").update({ profile_color: profileColor, profile_withmark: profileWithmark }).eq("id", profileId);
@@ -197,7 +157,8 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
       localStorage.setItem("with-walkthrough-state", JSON.stringify({ active: true, logIntroSeen: false, goalsIntroSeen: false, firstLogDone: false, todaySoFarSeen: false }));
       await onComplete();
     } catch (saveError) {
-      setError(friendlyOnboardingError(saveError, "We couldn’t save that. Try again.")); setBusy(false);
+      setError(friendlyOnboardingError(saveError, "We couldn’t save that. Try again."));
+      setBusy(false);
     }
   }
 
@@ -205,7 +166,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     return (
       <ScreenShell>
         <BrandIntro eyebrow="A little piece of With that’s yours." />
-        <div style={{ fontFamily: "\'Newsreader\', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>This is you in With.</div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>This is you in With.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>Pick a color and a Withmark, or keep what we chose. You can change either one later.</div>
         <div style={{ ...fieldLabel, marginBottom: 9 }}>Your color</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 8, marginBottom: 20 }}>
@@ -225,7 +186,7 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
     );
   }
 
-  if (!mode && !initialInviteCode) {
+  if (!mode) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
@@ -236,60 +197,34 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
           Everyone has their own goals. You’re simply doing life together.
         </div>
-        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 10 }}>Start a new With</button>
-        <button type="button" onClick={() => setMode("join")} style={secondaryButton}>I have an invite code</button>
+        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 12 }}>Start a new With</button>
+        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, textAlign: "center" }}>
+          Have an invitation? Open the invitation link from your email. Invitations are private and tied to the email address they were sent to.
+        </div>
       </ScreenShell>
     );
   }
 
-  const isCreate = mode === "create";
-
   return (
     <ScreenShell>
-      <BrandIntro eyebrow={isCreate ? "Start with yourself. Add your people when you’re ready." : "Your goals are still yours. You’ll just have company."} />
-      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>
-        {isCreate ? "Who are you with?" : inviterName ? `${inviterName} invited you to With.` : "Join a With"}
-      </div>
+      <BrandIntro eyebrow="Start with yourself. Add your people when you’re ready." />
+      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>Who are you with?</div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
-        {isCreate
-          ? "A With is your private space with the people you choose. Give it a name, then tell us what to call you."
-          : initialInviteCode
-            ? inviterName
-              ? `You’ll each track your own health and goals. With gives you a private place to share the experience and support each other.`
-              : "You’ve been invited to join this With. Create your own health profile to continue."
-            : "Enter the invite code you received, then create your own health profile."}
+        A With is your private space with the people you choose. Give it a name, then tell us what to call you.
       </div>
 
-      <form onSubmit={isCreate ? createHousehold : joinHousehold}>
-        {isCreate ? (
-          <>
-            <div style={fieldLabel}>What should we call your With?</div>
-            <input
-              type="text"
-              maxLength={40}
-              required
-              autoFocus
-              placeholder="e.g. Shane & Alli, The Adamses, Morning Crew"
-              value={householdName}
-              onChange={(event) => setHouseholdName(event.target.value)}
-              style={{ ...inputStyle, marginBottom: 14 }}
-            />
-          </>
-        ) : !initialInviteCode ? (
-          <>
-            <div style={fieldLabel}>Invite code</div>
-            <input
-              type="text"
-              required
-              autoFocus
-              autoCapitalize="characters"
-              placeholder="e.g. A7K2M9QX"
-              value={inviteCode}
-              onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-              style={{ ...inputStyle, marginBottom: 14, textTransform: "uppercase" }}
-            />
-          </>
-        ) : null}
+      <form onSubmit={createHousehold}>
+        <div style={fieldLabel}>What should we call your With?</div>
+        <input
+          type="text"
+          maxLength={40}
+          required
+          autoFocus
+          placeholder="e.g. Shane & Alli, The Adamses, Morning Crew"
+          value={householdName}
+          onChange={(event) => setHouseholdName(event.target.value)}
+          style={{ ...inputStyle, marginBottom: 14 }}
+        />
 
         <div style={fieldLabel}>What should we call you?</div>
         <input
@@ -312,9 +247,9 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
         )}
 
         <button type="submit" disabled={busy} style={{ ...primaryButton, opacity: busy ? 0.65 : 1, marginBottom: 8 }}>
-          {busy ? "Setting things up…" : isCreate ? "Create my With" : inviterName ? `Join ${inviterName}’s With` : "Join With"}
+          {busy ? "Setting things up…" : "Create my With"}
         </button>
-        <button type="button" onClick={goBack} disabled={busy} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 9, fontSize: 13 }}>
+        <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={busy} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 9, fontSize: 13 }}>
           Back
         </button>
       </form>
@@ -323,21 +258,11 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
 }
 
 export default function OnboardingGate({ children }) {
-  const params = new URLSearchParams(window.location.search);
-  const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
-  const inviterFromUrl = params.get("inviter")?.trim() || "";
-  const initialInviteCode = inviteFromUrl || localStorage.getItem("with-pending-invite") || "";
-  const initialInviterName = inviterFromUrl || localStorage.getItem("with-pending-inviter") || "";
   const [session, setSession] = useState(null);
   const sessionRef = useRef(null);
   const [checking, setChecking] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [checkError, setCheckError] = useState("");
-
-  useEffect(() => {
-    if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
-    if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
-  }, [inviteFromUrl, inviterFromUrl]);
 
   async function checkMembership(nextSession) {
     if (!nextSession?.user) {
@@ -407,8 +332,6 @@ export default function OnboardingGate({ children }) {
         return;
       }
 
-      // TOKEN_REFRESHED, USER_UPDATED and other routine auth events should not
-      // blank the app or re-run onboarding checks. Keep the session current silently.
       sessionRef.current = nextSession;
       setSession(nextSession);
     });
@@ -441,7 +364,7 @@ export default function OnboardingGate({ children }) {
   }
 
   if (session && needsOnboarding) {
-    return <OnboardingScreen onComplete={finishOnboarding} initialInviteCode={initialInviteCode} inviterName={initialInviterName} />;
+    return <OnboardingScreen onComplete={finishOnboarding} />;
   }
 
   return children;
