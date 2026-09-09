@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BarcodeScanner from "../components/BarcodeScanner.jsx";
 import LogTabCore from "./LogTabCore.jsx";
 import { brand } from "../brand.jsx";
+import { supabase } from "../supabase.js";
 import { importUsdaFood, looksLikeUpc, searchUsdaFoods } from "../foodSearch.js";
 
 function normalize(value) {
@@ -64,6 +65,7 @@ export default function LogTab(props) {
   const [scanningBarcode, setScanningBarcode] = useState(false);
   const [missingBarcode, setMissingBarcode] = useState("");
   const [manualScanName, setManualScanName] = useState("");
+  const [pendingManualBarcode, setPendingManualBarcode] = useState("");
   const searchSequence = useRef(0);
   const searchCache = useRef(new Map());
 
@@ -155,6 +157,16 @@ export default function LogTab(props) {
     }
   }
 
+  async function attachBarcode(barcode, { globalFoodId = null, foodName = null } = {}) {
+    const { data, error } = await supabase.rpc("with_attach_scanned_barcode", {
+      barcode_input: barcode,
+      global_food_id_input: globalFoodId,
+      food_name_input: foodName,
+    });
+    if (error) throw error;
+    return data || null;
+  }
+
   function changeFoodQuantity(value) {
     changeQuantity(value);
 
@@ -188,6 +200,7 @@ export default function LogTab(props) {
     props.setSavedSearch?.("");
     setMissingBarcode("");
     setManualScanName("");
+    setPendingManualBarcode("");
     setScanningBarcode(true);
 
     try {
@@ -242,9 +255,36 @@ export default function LogTab(props) {
     props.setFoodName?.(value);
   }
 
-  function createManualScannedFood() {
+  async function createManualScannedFood() {
     const name = manualScanName.trim();
-    if (!name) return;
+    const barcode = missingBarcode;
+    if (!name || !barcode) return;
+
+    // If this is a food the person already created earlier, teach that existing
+    // canonical Global Food instead of making a duplicate just to store a UPC.
+    const existing = globalFoods.find(
+      (food) => food.source_type === "user" && normalize(food.name) === normalize(name)
+    );
+
+    if (existing) {
+      setScanningBarcode(true);
+      try {
+        const attachedId = await attachBarcode(barcode, { globalFoodId: existing.id });
+        if (!attachedId) throw new Error("No eligible Global Food was found for this barcode.");
+        const taughtFood = { ...existing, gtin_upc: canonicalGtin(barcode), source: "global" };
+        setImportedFoods((current) => current.some((item) => item.id === taughtFood.id) ? current.map((item) => item.id === taughtFood.id ? taughtFood : item) : [...current, taughtFood]);
+        setMissingBarcode("");
+        setManualScanName("");
+        setPendingManualBarcode("");
+        chooseSavedFood(taughtFood);
+      } catch (error) {
+        console.error("Could not attach barcode to existing Global Food", error);
+        window.alert("That food is already in With, but we couldn’t remember this barcode yet. Nothing was duplicated.");
+      } finally {
+        setScanningBarcode(false);
+      }
+      return;
+    }
 
     props.clearFoodForm?.();
     props.setFoodName?.(name);
@@ -252,12 +292,34 @@ export default function LogTab(props) {
     props.setSaveAsSaved?.(true);
     props.setSavedSearch?.("");
     props.setFoodServingLabel?.("");
+    setPendingManualBarcode(barcode);
     setMissingBarcode("");
     setManualScanName("");
 
     window.setTimeout(() => {
       document.getElementById("log-food-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 40);
+  }
+
+  async function addFoodWithBarcode() {
+    const barcode = pendingManualBarcode;
+    const name = String(props.foodName || "").trim();
+
+    await props.addFood?.();
+
+    if (!barcode || !name) return;
+
+    try {
+      let attachedId = await attachBarcode(barcode, { foodName: name });
+      if (!attachedId) {
+        await new Promise((resolve) => window.setTimeout(resolve, 150));
+        attachedId = await attachBarcode(barcode, { foodName: name });
+      }
+      if (attachedId) setPendingManualBarcode("");
+    } catch (error) {
+      console.error("Food saved but barcode could not be attached", error);
+      window.alert("The food was saved, but With couldn’t remember its barcode. Your food log is safe; the barcode can be taught again later.");
+    }
   }
 
   const showScanner = props.logTab === "food" && props.activeCanEdit && !props.editingFoodId;
@@ -272,6 +334,7 @@ export default function LogTab(props) {
         chooseSavedFood={chooseFood}
         changeQuantity={changeFoodQuantity}
         setFoodName={setSafeFoodName}
+        addFood={addFoodWithBarcode}
       />
 
       {scanningBarcode && (
@@ -285,7 +348,7 @@ export default function LogTab(props) {
           <div style={{ width: "100%", maxWidth: 520, margin: "0 auto", background: brand.surface, borderRadius: 18, padding: "18px", boxShadow: "0 18px 60px rgba(0,0,0,.24)" }}>
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, color: brand.text, lineHeight: 1.08 }}>We couldn’t find that barcode.</div>
             <div style={{ color: brand.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 7, marginBottom: 14 }}>
-              Tell With what the food is. The barcode is an identifier, so we’ll never use <span style={{ fontFamily: "monospace" }}>{missingBarcode}</span> as the food name.
+              Tell With what the food is. If it’s already in your foods, we’ll connect this barcode to it. Otherwise, enter the macros once and With will remember it next time.
             </div>
             <label style={{ display: "block", color: brand.textMuted, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Food name</label>
             <input
@@ -298,8 +361,8 @@ export default function LogTab(props) {
               style={{ width: "100%", minHeight: 46, boxSizing: "border-box", border: `1px solid ${brand.border}`, borderRadius: 10, background: brand.surface, color: brand.text, padding: "11px 12px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif" }}
             />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-              <button type="button" onClick={() => { setMissingBarcode(""); setManualScanName(""); }} style={{ minHeight: 44, border: `1px solid ${brand.border}`, borderRadius: 10, background: brand.surfaceSoft, color: brand.text, fontWeight: 700 }}>Cancel</button>
-              <button type="button" disabled={!manualScanName.trim()} onClick={createManualScannedFood} style={{ minHeight: 44, border: "none", borderRadius: 10, background: brand.teal, color: brand.inkOn, fontWeight: 700, opacity: manualScanName.trim() ? 1 : .55 }}>Add food</button>
+              <button type="button" onClick={() => { setMissingBarcode(""); setManualScanName(""); setPendingManualBarcode(""); }} style={{ minHeight: 44, border: `1px solid ${brand.border}`, borderRadius: 10, background: brand.surfaceSoft, color: brand.text, fontWeight: 700 }}>Cancel</button>
+              <button type="button" disabled={!manualScanName.trim()} onClick={createManualScannedFood} style={{ minHeight: 44, border: "none", borderRadius: 10, background: brand.teal, color: brand.inkOn, fontWeight: 700, opacity: manualScanName.trim() ? 1 : .55 }}>Continue</button>
             </div>
           </div>
         </div>
