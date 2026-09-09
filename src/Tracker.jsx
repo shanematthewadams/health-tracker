@@ -6,6 +6,9 @@ import LogTab from "./tabs/LogTab.jsx";
 import TrendsTab from "./tabs/TrendsTab.jsx";
 import GoalsTab from "./tabs/GoalsTab.jsx";
 import ProfileTab from "./tabs/ProfileTab.jsx";
+import WithSwitcher from "./components/WithSwitcher.jsx";
+import CreateWithDialog from "./components/CreateWithDialog.jsx";
+import { normalizeWithMemberships, chooseActiveWithId, readStoredActiveWithId, storeActiveWithId, clearStoredActiveWithId } from "./withMemberships.js";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
 import { CheckMark, WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
@@ -464,6 +467,10 @@ export default function Tracker() {
   const [accountBusy, setAccountBusy] = useState(false);
   const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const [timeZone, setTimeZone] = useState(deviceTimeZone);
+  const [myWiths, setMyWiths] = useState([]);
+  const [activeWithId, setActiveWithId] = useState(() => readStoredActiveWithId());
+  const [activeWithMembers, setActiveWithMembers] = useState([]);
+  const [createWithOpen, setCreateWithOpen] = useState(false);
   const [householdId, setHouseholdId] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [householdRole, setHouseholdRole] = useState(null);
@@ -624,6 +631,11 @@ export default function Tracker() {
       if (event === "SIGNED_OUT") {
         sessionStorage.removeItem("with-password-recovery");
         setPasswordRecovery(false);
+        clearStoredActiveWithId();
+        setMyWiths([]);
+        setActiveWithId(null);
+        setActiveWithMembers([]);
+        setCreateWithOpen(false);
         setHouseholdId(null);
         setHouseholdName("");
         setHouseholdRole(null);
@@ -658,38 +670,78 @@ export default function Tracker() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function loadAll() {
+  async function loadAll(requestedWithId = null) {
     if (!session?.user) return;
-    const shouldBlock = !householdId || !Object.keys(profiles).length;
+    const shouldBlock = Boolean(requestedWithId) || !householdId || !Object.keys(profiles).length;
     if (shouldBlock) setLoading(true);
     setSaveError(null);
     try {
       const { data: memberships, error: memberError } = await supabase
-        .from("household_members").select("household_id, role").eq("user_id", session.user.id).limit(1);
+        .from("household_members")
+        .select("household_id, role")
+        .eq("user_id", session.user.id);
       if (memberError) throw memberError;
-      const hid = memberships?.[0]?.household_id;
-      setHouseholdRole(memberships?.[0]?.role || null);
-      if (!hid) {
+
+      const membershipRows = memberships || [];
+      if (!membershipRows.length) {
         setNeedsOnboarding(true);
+        setMyWiths([]);
+        setActiveWithId(null);
+        clearStoredActiveWithId();
         setHouseholdId(null);
         setLoading(false);
         return;
       }
-      setNeedsOnboarding(false);
-      setHouseholdId(hid);
-      const { data: householdRow, error: householdError } = await supabase.from("households").select("name, invite_code").eq("id", hid).single();
-      if (householdError) throw householdError;
-      setHouseholdName(householdRow?.name || "Your household");
-      setWithNameInput(householdRow?.name || "Your household");
-      setInviteCode(householdRow?.invite_code || "");
 
-      const { data: profileRows, error: profileError } = await supabase
-        .from("profiles").select("*").eq("household_id", hid);
-      if (profileError) throw profileError;
+      const membershipWithIds = [...new Set(membershipRows.map((membership) => membership.household_id).filter(Boolean))];
+      const { data: householdRows, error: householdsError } = await supabase
+        .from("households")
+        .select("id, name, invite_code")
+        .in("id", membershipWithIds);
+      if (householdsError) throw householdsError;
+
+      const nextWiths = normalizeWithMemberships(membershipRows, householdRows || []);
+      const preferredWithId = requestedWithId || activeWithId || readStoredActiveWithId();
+      const hid = chooseActiveWithId(nextWiths, preferredWithId);
+      const activeWith = nextWiths.find((withItem) => withItem.id === hid) || null;
+      if (!activeWith) throw new Error("We couldn’t find an active With for this account.");
+
+      setNeedsOnboarding(false);
+      setMyWiths(nextWiths);
+      setActiveWithId(hid);
+      storeActiveWithId(hid);
+
+      // Compatibility aliases for the still-single-With-aware surfaces below.
+      setHouseholdId(hid);
+      setHouseholdName(activeWith.name || "Your With");
+      setHouseholdRole(activeWith.role || "member");
+      setWithNameInput(activeWith.name || "Your With");
+      setInviteCode(activeWith.inviteCode || "");
+
+      const { data: rosterRows, error: rosterError } = await supabase
+        .from("household_members")
+        .select("user_id, role")
+        .eq("household_id", hid);
+      if (rosterError) throw rosterError;
+      setActiveWithMembers(rosterRows || []);
+
+      const memberUserIds = [...new Set((rosterRows || []).map((member) => member.user_id).filter(Boolean))];
+      const profileRequests = [];
+      if (memberUserIds.length) {
+        profileRequests.push(supabase.from("profiles").select("*").in("user_id", memberUserIds));
+      }
+      profileRequests.push(supabase.from("profiles").select("*").eq("household_id", hid).is("user_id", null));
+      const profileResults = await Promise.all(profileRequests);
+      for (const result of profileResults) if (result.error) throw result.error;
+
+      const profileRowMap = new Map();
+      profileResults.forEach((result) => (result.data || []).forEach((profile) => profileRowMap.set(profile.id, profile)));
+      const profileRows = Array.from(profileRowMap.values());
+
       const pmap = {};
       const pmapById = {};
       const nextById = {};
-      (profileRows || []).forEach((p) => {
+      profileRows.forEach((p) => {
         pmap[p.name] = p;
         pmapById[p.id] = p;
         nextById[p.id] = {
@@ -702,35 +754,33 @@ export default function Tracker() {
       });
       setProfiles(pmap);
       setProfilesById(pmapById);
-      setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
-      setProfileWithmarks(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_withmark || null])));
-      setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr(timeZone) ? (p.current_intention || "") : ""])));
-      const owned = (profileRows || []).find((p) => p.user_id === session.user.id);
+      setProfileColors(Object.fromEntries(profileRows.map((p) => [p.name, p.profile_color || null])));
+      setProfileWithmarks(Object.fromEntries(profileRows.map((p) => [p.name, p.profile_withmark || null])));
+      setIntentions(Object.fromEntries(profileRows.map((p) => [p.name, p.intention_date === todayStr(timeZone) ? (p.current_intention || "") : ""])));
+
+      const owned = profileRows.find((p) => p.user_id === session.user.id);
       setOwnedProfileId(owned?.id || null);
       if (owned) {
         setProfileNameInput(owned.name || "");
         setFastPromptDismissedDate(owned.fasting_prompt_dismissed_date || null);
       }
       setEmailInput(session.user.email || "");
-      if (owned) {
-        setActiveProfileId(owned.id);
-        setActiveUser(owned.name);
-      } else {
-        const fallbackProfileId = activeProfileId && pmapById[activeProfileId]
-          ? activeProfileId
-          : Object.keys(pmapById)[0] || null;
-        setActiveProfileId(fallbackProfileId);
-        if (fallbackProfileId) setActiveUser(pmapById[fallbackProfileId].name);
-      }
+
+      const fallbackProfileId = activeProfileId && pmapById[activeProfileId]
+        ? activeProfileId
+        : owned?.id || Object.keys(pmapById)[0] || null;
+      setActiveProfileId(fallbackProfileId);
+      if (fallbackProfileId) setActiveUser(pmapById[fallbackProfileId].name);
+
       const profileIds = Object.keys(pmapById);
-      if (!profileIds.length) throw new Error("No health profiles exist for this household.");
+      if (!profileIds.length) throw new Error("No health profiles exist for this With.");
 
       const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes] = await Promise.all([
-        supabase.from("weight_entries").select("*").eq("household_id", hid).order("entry_date"),
-        supabase.from("food_entries").select("*").eq("household_id", hid).order("entry_date"),
-        supabase.from("activity_entries").select("*").eq("household_id", hid).order("entry_date"),
-        supabase.from("step_entries").select("*").eq("household_id", hid).order("entry_date"),
-        supabase.from("water_entries").select("*").eq("household_id", hid).order("entry_date"),
+        supabase.from("weight_entries").select("*").in("profile_id", profileIds).order("entry_date"),
+        supabase.from("food_entries").select("*").in("profile_id", profileIds).order("entry_date"),
+        supabase.from("activity_entries").select("*").in("profile_id", profileIds).order("entry_date"),
+        supabase.from("step_entries").select("*").in("profile_id", profileIds).order("entry_date"),
+        supabase.from("water_entries").select("*").in("profile_id", profileIds).order("entry_date"),
         supabase.from("saved_foods").select("*").eq("household_id", hid).order("name"),
         supabase.from("global_foods").select("*").order("name"),
         supabase.from("household_food_state").select("*").eq("household_id", hid),
@@ -748,7 +798,7 @@ export default function Tracker() {
       setFoodStates(foodStatesRes.data || []);
       setDataByProfileId(nextById);
       const next = {};
-      (profileRows || []).forEach((p) => { next[p.name] = nextById[p.id]; });
+      profileRows.forEach((p) => { next[p.name] = nextById[p.id]; });
       setData(next);
       const fastMap = {};
       (fastsRes?.data || []).filter((f) => !f.ended_at).forEach((f) => {
@@ -766,6 +816,7 @@ export default function Tracker() {
   useEffect(() => {
     if (loading) return;
     const u = data[activeUser];
+    if (!u) return;
     setGoalInput(u.goalWeight || "");
     setGoalStatementInput(u.goalStatement || "");
     setGoalDateInput(u.goalDate || "");
@@ -782,6 +833,24 @@ export default function Tracker() {
   useEffect(() => {
     document.title = householdName ? `WITH — ${householdName}` : "WITH";
   }, [householdName]);
+
+  async function selectWith(withId) {
+    if (!withId || withId === activeWithId) return;
+    setFastEditorOpen(false);
+    setLoading(true);
+    await loadAll(withId);
+  }
+
+  async function createAdditionalWith(name) {
+    const { data: newWithId, error } = await supabase.rpc("create_with_v2", {
+      with_name: name,
+      profile_name: null,
+    });
+    if (error) throw new Error(friendlyError(error, "We couldn’t start that With. Try again."));
+    await loadAll(newWithId);
+    showSuccess(`${name} started`);
+    return true;
+  }
 
   async function saveProfileColor(color) {
     if (!ownedProfileId) return;
@@ -962,10 +1031,11 @@ export default function Tracker() {
     if (!nextName) { setAccountError("Your With needs a name."); return; }
     if (nextName.length > 40) { setAccountError("Keep your With name to 40 characters or fewer."); return; }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
-    const { error } = await supabase.rpc("rename_household", { new_name: nextName });
+    const { error } = await supabase.rpc("rename_with_v2", { with_id: householdId, new_name: nextName });
     if (error) setAccountError(friendlyError(error, "We couldn’t save that account change. Try again."));
     else {
       setHouseholdName(nextName);
+      setMyWiths((prev) => prev.map((withItem) => withItem.id === householdId ? { ...withItem, name: nextName } : withItem));
       setRenamingWith(false);
       setAccountMessage("Your With has been renamed.");
     }
@@ -1642,11 +1712,14 @@ export default function Tracker() {
             <BrandLogo compact style={{ width: 96, backgroundColor: brand.inkOn }} />
             <div style={{ color: "rgba(255,255,255,.72)", fontSize: 9, fontWeight: 500, letterSpacing: ".01em", lineHeight: 1.15, whiteSpace: "nowrap" }}>We’re in this together.</div>
           </div>
-          <div style={{ minWidth: 0, width: "fit-content", maxWidth: "100%", justifySelf: "end", background: "rgba(255,255,255,.10)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 12, padding: "7px 9px 8px" }}>
-            <div title={householdName} style={{ fontSize: 11, color: "rgba(255,255,255,.76)", fontWeight: 800, letterSpacing: ".055em", textTransform: "uppercase", textAlign: "center", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {householdName}
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
+          <div style={{ minWidth: 0, maxWidth: "100%", justifySelf: "end", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+            <WithSwitcher
+              withs={myWiths}
+              activeWithId={activeWithId}
+              onSelect={selectWith}
+              onStartWith={() => setCreateWithOpen(true)}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, maxWidth: "100%", overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
               {profileIds.map((profileId) => {
                 const name = profileNameForProfile(profileId);
                 const selected = activeProfileId === profileId;
@@ -1973,6 +2046,12 @@ export default function Tracker() {
         )}
 
       </div>
+
+      <CreateWithDialog
+        open={createWithOpen}
+        onClose={() => setCreateWithOpen(false)}
+        onCreate={createAdditionalWith}
+      />
 
       {toast && (
         <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", bottom: NAV_H + 18, transform: "translateX(-50%)", zIndex: 30, background: TEXT, color: SURFACE, borderRadius: 999, padding: "10px 15px", fontSize: 13, fontWeight: 700, boxShadow: "0 8px 30px rgba(28,36,48,.16)", whiteSpace: "nowrap", maxWidth: "calc(100vw - 32px)", overflow: "hidden", textOverflow: "ellipsis" }}>
