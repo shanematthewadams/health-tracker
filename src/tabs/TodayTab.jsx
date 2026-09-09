@@ -80,11 +80,13 @@ export default function TodayTab({
   editLoggedFood,
   profileColor,
   profileText,
+  profileNameForProfile,
   intentions,
   saveIntention,
   styles,
 }) {
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, fieldLabel, inputStyle, bigButton } = styles;
+  const activeName = profileNameForProfile?.(activeUser) || activeUser;
   const u = data[activeUser];
   const targets = u.targets;
   const goalWeeks = weeksUntil(u.goalDate);
@@ -228,7 +230,7 @@ export default function TodayTab({
     <div style={{ background: "#FEFDF9" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 31, lineHeight: 1.08, color: PEN.ink }}>
-          {isToday ? (isMine ? `${greeting(timeZone)}, ${activeUser}.` : `${activeUser} today`) : activeUser}
+          {isToday ? (isMine ? `${greeting(timeZone)}, ${activeName}.` : `${activeName} today`) : activeName}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
           <button
@@ -361,7 +363,7 @@ export default function TodayTab({
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <WaveMark size={14} color={brand.teal} />
-              <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
+              <div style={sectionLabel}>{isMine ? "My intention" : `${activeName}'s intention`}</div>
             </div>
             <div style={straightRule(brand.teal)} />
           </div>
@@ -414,7 +416,7 @@ export default function TodayTab({
             lineHeight: 1.4,
             color: intention ? profileColor(activeUser) : TEXT_MUTED,
           }}>
-            {intention || (isMine ? "Set one small thought to carry with you today." : `${activeUser} hasn’t set an intention yet.`)}
+            {intention || (isMine ? "Set one small thought to carry with you today." : `${activeName} hasn’t set an intention yet.`)}
           </div>
         )}
       </section>}
@@ -511,7 +513,7 @@ export default function TodayTab({
               ? (activeFasts[activeUser]
                 ? "You’re fasting right now. You can still add water, activity, weight or steps."
                 : "Add something whenever you’re ready. A little information is still useful information.")
-              : `${activeUser} hasn’t added anything today.`}
+              : `${activeName} hasn’t added anything today.`}
           </div>
         </section>
       ) : (
