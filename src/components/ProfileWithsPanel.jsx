@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import { readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
 
-export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
+export default function ProfileWithsPanel({ styles, onMultipleWithsChange, onStartAnotherWith }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
   const [withs, setWiths] = useState([]);
   const [activeWithId, setActiveWithId] = useState(() => readStoredActiveWithId());
@@ -97,6 +97,23 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={onStartAnotherWith}
+        style={{
+          background: "none",
+          border: "none",
+          color: TEXT_MUTED,
+          padding: "10px 0 0",
+          fontSize: 11,
+          fontWeight: 700,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
+        <Plus size={12} strokeWidth={2} /> Add another With
+      </button>
     </div>
   );
 }
