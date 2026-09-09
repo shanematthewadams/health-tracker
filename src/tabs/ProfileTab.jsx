@@ -90,6 +90,16 @@ export default function ProfileTab({
     bigButton,
   } = styles;
 
+  const accountOnlyMessage = accountMessage && ![
+    "Your profile name is already up to date.",
+    "Profile name updated.",
+    "Your color is updated.",
+    "Your Withmark is updated.",
+    "Your With has been renamed.",
+  ].includes(accountMessage)
+    ? accountMessage
+    : "";
+
   async function shareWith() {
     const url = window.location.origin;
     const shareData = {
@@ -363,7 +373,7 @@ export default function ProfileTab({
         )}
 
         {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 8 }}>{accountError}</div>}
-        {accountMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountMessage}</div>}
+        {accountOnlyMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountOnlyMessage}</div>}
       </section>
 
       <section style={{ padding: "2px 0 22px" }}>
