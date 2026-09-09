@@ -4,7 +4,7 @@ import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import { readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
 
-export default function ProfileWithsPanel({ styles, onMultipleWithsChange, onStartAnotherWith }) {
+export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
   const [withs, setWiths] = useState([]);
   const [activeWithId, setActiveWithId] = useState(() => readStoredActiveWithId());
@@ -64,6 +64,10 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, onSta
     window.location.reload();
   }
 
+  function startAnotherWith() {
+    window.dispatchEvent(new CustomEvent("with:open-create-dialog"));
+  }
+
   return (
     <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
       <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>You’re also With</div>
@@ -99,7 +103,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, onSta
       </div>
       <button
         type="button"
-        onClick={onStartAnotherWith}
+        onClick={startAnotherWith}
         style={{
           background: "none",
           border: "none",
