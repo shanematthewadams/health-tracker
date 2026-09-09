@@ -2,6 +2,7 @@ import { brand } from "../brand.jsx";
 import { useMemo, useState } from "react";
 import { Share2, Check, LogOut, Users } from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
+import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
 
 export default function ProfileTab({
   activeUser,
@@ -69,6 +70,7 @@ export default function ProfileTab({
   const [editingTimeZone, setEditingTimeZone] = useState(false);
   const [editingWaterShortcuts, setEditingWaterShortcuts] = useState(false);
   const [waterShortcutDraft, setWaterShortcutDraft] = useState(() => (waterShortcuts || [8, 16, 24]).map(String));
+  const [hasMultipleWiths, setHasMultipleWiths] = useState(false);
 
   const timeZoneOptions = useMemo(() => {
     const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
@@ -195,7 +197,7 @@ export default function ProfileTab({
       </section>
 
       <section style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Your With</div>
+        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>{hasMultipleWiths ? "Your Current With" : "Your With"}</div>
 
         {!renamingWith ? (
           <>
@@ -267,13 +269,17 @@ export default function ProfileTab({
         )}
 
         {!renamingWith && (
+          <ProfileWithsPanel styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED }} onMultipleWithsChange={setHasMultipleWiths} />
+        )}
+
+        {!renamingWith && (
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <div style={{ width: 32, height: 32, borderRadius: 10, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}>
                 <Users size={16} color={brand.tealDark} strokeWidth={1.9} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>You can have more than one With</div>
+                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>{hasMultipleWiths ? "More people, same health history" : "You can have more than one With"}</div>
                 <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
                   Your health stays yours. You keep one profile and one health history, so you only log food, weight, movement, water, and everything else once. Each With is simply another private group of people you’re doing life With.
                 </div>
