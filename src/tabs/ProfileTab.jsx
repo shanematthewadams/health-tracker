@@ -1,6 +1,6 @@
 import { brand } from "../brand.jsx";
 import { useMemo, useState } from "react";
-import { Share2, Check, LogOut } from "lucide-react";
+import { Share2, Check, LogOut, Users } from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
 
 export default function ProfileTab({
@@ -83,7 +83,6 @@ export default function ProfileTab({
     TEXT,
     TEXT_MUTED,
     WARN,
-    headingStyle,
     fieldLabel,
     inputStyle,
     bigButton,
@@ -116,6 +115,10 @@ export default function ProfileTab({
         window.setTimeout(() => setShareStatus(""), 2600);
       }
     }
+  }
+
+  function startAnotherWith() {
+    window.dispatchEvent(new CustomEvent("with:open-create-dialog"));
   }
 
   const goal = data[activeUser];
@@ -162,9 +165,7 @@ export default function ProfileTab({
             </div>
 
             <div style={fieldLabel}>Your Withmark</div>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.4, marginBottom: 9 }}>
-              A little mark that represents you in your With.
-            </div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.4, marginBottom: 9 }}>A little mark that represents you in your With.</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 7, marginBottom: 16 }}>
               {withmarkOptions.map((option) => {
                 const selected = (profileWithmarks[profileNameInput || activeUser] || profileWithmark(profileNameInput || activeUser)) === option.id;
@@ -175,16 +176,7 @@ export default function ProfileTab({
                     title={option.name}
                     aria-label={`Choose ${option.name} Withmark`}
                     onClick={() => saveProfileWithmark(option.id)}
-                    style={{
-                      minWidth: 0,
-                      aspectRatio: "1",
-                      display: "grid",
-                      placeItems: "center",
-                      background: selected ? SURFACE_2 : SURFACE,
-                      border: selected ? `2px solid ${TEXT}` : `1px solid ${BORDER}`,
-                      borderRadius: 10,
-                      padding: 5,
-                    }}
+                    style={{ minWidth: 0, aspectRatio: "1", display: "grid", placeItems: "center", background: selected ? SURFACE_2 : SURFACE, border: selected ? `2px solid ${TEXT}` : `1px solid ${BORDER}`, borderRadius: 10, padding: 5 }}
                   >
                     <WithMark id={option.id} size={22} color={selected ? profileColor(activeUser) : TEXT_MUTED} />
                   </button>
@@ -276,6 +268,23 @@ export default function ProfileTab({
 
         {!renamingWith && (
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <Users size={16} color={brand.tealDark} strokeWidth={1.9} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>You can have more than one With</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
+                  Your health stays yours. You keep one profile and one health history, so you only log food, weight, movement, water, and everything else once. Each With is simply another private group of people you’re doing life With.
+                </div>
+                <button type="button" onClick={startAnotherWith} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "9px 0 0" }}>Start another With</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!renamingWith && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Share With</div>
             <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>Know someone who might like With? Send them a link.</div>
             <button onClick={shareWith} style={{ background: "none", border: "none", color: brand.tealDark, padding: "8px 0 0", fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
@@ -296,9 +305,7 @@ export default function ProfileTab({
         <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Water</div>
         {!editingWaterShortcuts ? (
           <>
-            <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>
-              Your quick-add buttons are <strong style={{ color: TEXT }}>{waterShortcuts.join(" oz, ")} oz</strong>.
-            </div>
+            <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>Your quick-add buttons are <strong style={{ color: TEXT }}>{waterShortcuts.join(" oz, ")} oz</strong>.</div>
             <button onClick={() => { clearAccountError(); setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change water shortcuts</button>
           </>
         ) : (
@@ -345,9 +352,7 @@ export default function ProfileTab({
         <div style={{ marginBottom: 14 }}>
           {!editingTimeZone ? (
             <>
-              <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>
-                Your day follows <strong style={{ color: TEXT }}>{timeZone}</strong>.
-              </div>
+              <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>Your day follows <strong style={{ color: TEXT }}>{timeZone}</strong>.</div>
               <button onClick={() => { clearAccountError(); setEditingTimeZone(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change time zone</button>
             </>
           ) : (
@@ -358,11 +363,7 @@ export default function ProfileTab({
               </select>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setEditingTimeZone(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-                <button onClick={async () => {
-                  const nextZone = document.getElementById("with-timezone-select")?.value;
-                  const ok = await saveTimeZone(nextZone);
-                  if (ok !== false) setEditingTimeZone(false);
-                }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save time zone</button>
+                <button onClick={async () => { const nextZone = document.getElementById("with-timezone-select")?.value; const ok = await saveTimeZone(nextZone); if (ok !== false) setEditingTimeZone(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save time zone</button>
               </div>
             </>
           )}
