@@ -107,7 +107,7 @@ export default function GoalsTab({
         </section>
       )}
 
-      {!hasAnything ? (
+      {!hasAnything && !editingGoals ? (
         <div style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Your goals</div>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 7 }}>Choose what you’re working toward.</div>
@@ -220,7 +220,7 @@ export default function GoalsTab({
               <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.55, padding: "10px 0 4px 2px" }}>
                 {user.targets.bmr
                   ? <>Your estimated BMR is <strong style={{ color: TEXT }}>{user.targets.bmr.toLocaleString()} calories</strong>. It’s background information used to help make sense of nutrition targets, not another goal you have to hit.</>
-                  : "BMR is optional background information that can help make sense of nutrition targets. It isn’t another goal to hit."}
+                  : "BMR is optional background information that can help make sense of nutrition targets. It isn’t another goal you have to hit."}
               </div>
             </details>
           </section>
