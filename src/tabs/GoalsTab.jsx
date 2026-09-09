@@ -220,7 +220,7 @@ export default function GoalsTab({
               <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.55, padding: "10px 0 4px 2px" }}>
                 {user.targets.bmr
                   ? <>Your estimated BMR is <strong style={{ color: TEXT }}>{user.targets.bmr.toLocaleString()} calories</strong>. It’s background information used to help make sense of nutrition targets, not another goal you have to hit.</>
-                  : "BMR is optional background information that can help make sense of nutrition targets. It isn’t another goal you have to hit."}
+                  : "BMR is optional background information that can help make sense of nutrition targets. It isn’t another goal to hit."}
               </div>
             </details>
           </section>
