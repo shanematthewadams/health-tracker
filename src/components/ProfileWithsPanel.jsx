@@ -4,7 +4,7 @@ import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import { readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
 
-export default function ProfileWithsPanel({ styles }) {
+export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
   const [withs, setWiths] = useState([]);
   const [activeWithId, setActiveWithId] = useState(() => readStoredActiveWithId());
@@ -41,6 +41,7 @@ export default function ProfileWithsPanel({ styles }) {
 
       if (cancelled) return;
       setWiths(nextWiths);
+      onMultipleWithsChange?.(nextWiths.length > 1);
       const stored = readStoredActiveWithId();
       const validStored = nextWiths.some((withItem) => withItem.id === stored) ? stored : nextWiths[0]?.id || null;
       setActiveWithId(validStored);
@@ -48,7 +49,7 @@ export default function ProfileWithsPanel({ styles }) {
 
     loadWiths();
     return () => { cancelled = true; };
-  }, []);
+  }, [onMultipleWithsChange]);
 
   const otherWiths = useMemo(
     () => withs.filter((withItem) => withItem.id !== activeWithId),
