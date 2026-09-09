@@ -253,9 +253,9 @@ function observationCandidates(user, today) {
   return candidates;
 }
 
-function chooseDailyObservation(user, today, name) {
+function chooseDailyObservation(user, today, identitySeed) {
   const candidates = observationCandidates(user, today);
-  const seed = stableHash(`${name}|${today}|with-trends-observation`);
+  const seed = stableHash(`${identitySeed}|${today}|with-trends-observation`);
 
   if (!candidates.length) {
     return {
@@ -279,11 +279,11 @@ function chooseDailyObservation(user, today, name) {
   };
 }
 
-function DailyObservation({ user, today, name, profileColor, styles }) {
+function DailyObservation({ user, today, profileKey, profileColorFor, styles }) {
   const { TEXT, TEXT_MUTED, cardStyle } = styles;
-  const observation = chooseDailyObservation(user, today, name);
+  const observation = chooseDailyObservation(user, today, profileKey);
   return (
-    <section style={{ ...cardStyle, background: brand.surfaceSoft, borderColor: brand.border, borderTop: `3px solid ${profileColor(name)}`, marginBottom: 18, padding: "1.05rem 1.1rem" }}>
+    <section style={{ ...cardStyle, background: brand.surfaceSoft, borderColor: brand.border, borderTop: `3px solid ${profileColorFor(profileKey)}`, marginBottom: 18, padding: "1.05rem 1.1rem" }}>
       <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 7 }}>{observation.heading}</div>
       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, fontStyle: "italic", lineHeight: 1.35, color: TEXT }}>{observation.text}</div>
     </section>
@@ -321,11 +321,11 @@ function MiniBarTrend({ data, dataKey, color, target, suffix, styles }) {
   );
 }
 
-function IndividualTrends({ name, user, today, range, goalInfo, profileColor, styles }) {
-  const { BORDER, TEXT, TEXT_MUTED, cardStyle } = styles;
+function IndividualTrends({ profileKey, profileNameFor, user, today, range, goalInfoFor, profileColorFor, styles }) {
+  const { BORDER, TEXT_MUTED, cardStyle } = styles;
   const trend = buildTrendData(user, today, range);
   const weightRows = rollingWeightRows(user, today, range);
-  const gi = goalInfo(name);
+  const gi = goalInfoFor(profileKey);
   const weightChange = weightPeriodChange(user, today, range);
 
   const targets = user.targets || {};
@@ -363,7 +363,7 @@ function IndividualTrends({ name, user, today, range, goalInfo, profileColor, st
                 <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} domain={["dataMin - 2", "dataMax + 2"]} width={48} tickFormatter={(v) => `${Math.round(v)} lb`} />
                 {gi?.goal != null ? <ReferenceLine y={gi.goal} stroke={brand.textSoft} strokeDasharray="4 4" /> : null}
                 <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v) => [`${v} lb`, "7-day average"]} />
-                <Line type="monotone" dataKey="weight" stroke={profileColor(name)} strokeWidth={3} dot={false} activeDot={{ r: 4 }} connectNulls />
+                <Line type="monotone" dataKey="weight" stroke={profileColorFor(profileKey)} strokeWidth={3} dot={false} activeDot={{ r: 4 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -419,19 +419,19 @@ function IndividualTrends({ name, user, today, range, goalInfo, profileColor, st
   );
 }
 
-function WithTrends({ names, data, today, range, goalInfo, profileColor, styles }) {
+function WithTrends({ profileKeys, data, today, range, goalInfoFor, profileColorFor, profileNameFor, styles }) {
   const { BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle } = styles;
   const allDates = lastNDays(range, today);
   const weightRows = allDates.map((date) => {
     const row = { date, label: shortDate(date) };
-    names.forEach((name) => {
+    profileKeys.forEach((profileKey) => {
       const start = addCalendarDays(date, -6);
-      const entries = data[name].weights.filter((w) => w.date >= start && w.date <= date);
-      if (entries.length) row[name] = Number((entries.reduce((sum, w) => sum + w.weight, 0) / entries.length).toFixed(1));
+      const entries = data[profileKey].weights.filter((w) => w.date >= start && w.date <= date);
+      if (entries.length) row[profileKey] = Number((entries.reduce((sum, w) => sum + w.weight, 0) / entries.length).toFixed(1));
     });
     return row;
   });
-  const hasWeightTrend = names.some((name) => weightRows.filter((r) => r[name] != null).length >= 2);
+  const hasWeightTrend = profileKeys.some((profileKey) => weightRows.filter((r) => r[profileKey] != null).length >= 2);
 
   return (
     <>
@@ -439,9 +439,10 @@ function WithTrends({ names, data, today, range, goalInfo, profileColor, styles 
         <div style={{ ...headingStyle, marginBottom: 3 }}>Weight, together</div>
         <div style={{ color: TEXT_MUTED, fontSize: 10, marginBottom: 10 }}>Each line is personal. Sharing the view doesn’t turn it into a competition.</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "7px 13px", marginBottom: 12 }}>
-          {names.map((name) => {
-            const gi = goalInfo(name);
-            return <div key={name} style={{ display: "flex", alignItems: "center", gap: 5, color: TEXT_MUTED, fontSize: 10 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColor(name) }} /><strong style={{ color: TEXT }}>{name}</strong>{gi ? `${gi.latest.toFixed(1)} lb avg` : "No weigh-ins"}</div>;
+          {profileKeys.map((profileKey) => {
+            const gi = goalInfoFor(profileKey);
+            const displayName = profileNameFor(profileKey);
+            return <div key={profileKey} style={{ display: "flex", alignItems: "center", gap: 5, color: TEXT_MUTED, fontSize: 10 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColorFor(profileKey) }} /><strong style={{ color: TEXT }}>{displayName}</strong>{gi ? `${gi.latest.toFixed(1)} lb avg` : "No weigh-ins"}</div>;
           })}
         </div>
         {!hasWeightTrend ? <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "2rem 0", textAlign: "center" }}>Weight trends will take shape with more weigh-ins.</div> : (
@@ -451,8 +452,8 @@ function WithTrends({ names, data, today, range, goalInfo, profileColor, styles 
                 <CartesianGrid stroke={BORDER} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={28} />
                 <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} domain={["dataMin - 2", "dataMax + 2"]} width={48} tickFormatter={(v) => `${Math.round(v)} lb`} />
-                <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v, key) => [`${v} lb`, key]} />
-                {names.map((name) => <Line key={name} type="monotone" dataKey={name} stroke={profileColor(name)} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} connectNulls />)}
+                <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v, key) => [`${v} lb`, profileNameFor(key)]} />
+                {profileKeys.map((profileKey) => <Line key={profileKey} type="monotone" dataKey={profileKey} stroke={profileColorFor(profileKey)} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} connectNulls />)}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -462,11 +463,11 @@ function WithTrends({ names, data, today, range, goalInfo, profileColor, styles 
       <section style={{ ...cardStyle, padding: "14px 14px 12px" }}>
         <div style={{ ...headingStyle, marginBottom: 4 }}>Your With lately</div>
         <div style={{ color: TEXT_MUTED, fontSize: 10, marginBottom: 10 }}>A shared view of what everyone has been logging. No rankings, because absolutely not.</div>
-        {names.map((name) => {
-          const trend = buildTrendData(data[name], today, range);
+        {profileKeys.map((profileKey) => {
+          const trend = buildTrendData(data[profileKey], today, range);
           return (
-            <div key={name} style={{ padding: "12px 0", borderTop: `1px solid ${BORDER}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColor(name) }} /><strong style={{ fontSize: 12 }}>{name}</strong></div>
+            <div key={profileKey} style={{ padding: "12px 0", borderTop: `1px solid ${BORDER}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColorFor(profileKey) }} /><strong style={{ fontSize: 12 }}>{profileNameFor(profileKey)}</strong></div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 7 }}>
                 {[
                   [Footprints, metricColors.steps, "Steps", trend.stepAvg == null ? "—" : Math.round(trend.stepAvg).toLocaleString()],
@@ -489,12 +490,15 @@ function WithTrends({ names, data, today, range, goalInfo, profileColor, styles 
   );
 }
 
-export default function TrendsTab({ activeUser, data, today, goalInfo, profileColor, styles }) {
+export default function TrendsTab({ activeUser, data, today, goalInfo, profileColor, profiles = {}, goalInfoForProfile, profileColorForProfile, profileNameForProfile, styles }) {
   const { TEXT_MUTED } = styles;
-  const profileNames = Object.keys(data);
+  const profileKeys = Object.keys(data);
+  const profileNameFor = profileNameForProfile || ((profileKey) => profiles?.[profileKey]?.name || profileKey);
+  const goalInfoFor = goalInfoForProfile || goalInfo;
+  const profileColorFor = profileColorForProfile || ((profileKey) => profileColor(profileNameFor(profileKey)));
   const [view, setView] = useState(activeUser);
   const [range, setRange] = useState(30);
-  const selectedName = profileNames.includes(view) ? view : activeUser;
+  const selectedProfileKey = profileKeys.includes(view) ? view : activeUser;
   const activeData = data[activeUser];
 
   return (
@@ -504,7 +508,7 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Notice what’s changing over time.</div>
       </div>
 
-      {activeData && <DailyObservation user={activeData} today={today} name={activeUser} profileColor={profileColor} styles={styles} />}
+      {activeData && <DailyObservation user={activeData} today={today} profileKey={activeUser} profileColorFor={profileColorFor} styles={styles} />}
 
       <div style={{ padding: "0 2px", marginBottom: 8 }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600 }}>Explore your trends</div>
@@ -514,7 +518,7 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
         <div style={{ display: "flex", gap: 4, overflowX: "auto", background: brand.stone, borderRadius: 12, padding: 4, WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
           <button onClick={() => setView("with")} style={{ border: "none", background: view === "with" ? brand.surface : "transparent", color: view === "with" ? brand.tealDark : brand.textMuted, boxShadow: view === "with" ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === "with" ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>With</button>
-          {profileNames.map((name) => <button key={name} onClick={() => setView(name)} style={{ border: "none", background: view === name ? brand.surface : "transparent", color: view === name ? brand.text : brand.textMuted, boxShadow: view === name ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === name ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}><span aria-hidden="true" style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: profileColor(name), marginRight: 6 }} />{name}</button>)}
+          {profileKeys.map((profileKey) => <button key={profileKey} onClick={() => setView(profileKey)} style={{ border: "none", background: view === profileKey ? brand.surface : "transparent", color: view === profileKey ? brand.text : brand.textMuted, boxShadow: view === profileKey ? "0 1px 4px rgba(17,17,17,.08)" : "none", borderRadius: 9, padding: "8px 13px", fontWeight: view === profileKey ? 800 : 600, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}><span aria-hidden="true" style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: profileColorFor(profileKey), marginRight: 6 }} />{profileNameFor(profileKey)}</button>)}
         </div>
 
         <div style={{ display: "flex", gap: 4 }}>
@@ -523,9 +527,9 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
       </div>
 
       {view === "with" ? (
-        <WithTrends names={profileNames} data={data} today={today} range={range} goalInfo={goalInfo} profileColor={profileColor} styles={styles} />
+        <WithTrends profileKeys={profileKeys} data={data} today={today} range={range} goalInfoFor={goalInfoFor} profileColorFor={profileColorFor} profileNameFor={profileNameFor} styles={styles} />
       ) : (
-        <IndividualTrends name={selectedName} user={data[selectedName]} today={today} range={range} goalInfo={goalInfo} profileColor={profileColor} styles={styles} />
+        <IndividualTrends profileKey={selectedProfileKey} profileNameFor={profileNameFor} user={data[selectedProfileKey]} today={today} range={range} goalInfoFor={goalInfoFor} profileColorFor={profileColorFor} styles={styles} />
       )}
 
       <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "12px 2px 6px" }}>Averages use the days you logged. Intentional fasting days count as zero food intake; unlogged days stay missing. Trends are here to help you notice patterns, not grade them.</div>
