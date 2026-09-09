@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { Share2, Check, LogOut, Users } from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
 import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
+import { supabase } from "../supabase.js";
+import { readStoredActiveWithId } from "../withMemberships.js";
 
 export default function ProfileTab({
   activeUser,
@@ -15,15 +17,6 @@ export default function ProfileTab({
   saveWaterShortcuts,
   householdName,
   householdRole,
-  inviteCode,
-  inviteEmail,
-  setInviteEmail,
-  inviteBusy,
-  inviteMessage,
-  inviteError,
-  sendInviteEmail,
-  shareInvite,
-  copyInviteCode,
   profileNames,
   profileNameInput,
   setProfileNameInput,
@@ -67,6 +60,10 @@ export default function ProfileTab({
   const [editingEmail, setEditingEmail] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteError, setInviteError] = useState("");
   const [editingTimeZone, setEditingTimeZone] = useState(false);
   const [editingWaterShortcuts, setEditingWaterShortcuts] = useState(false);
   const [waterShortcutDraft, setWaterShortcutDraft] = useState(() => (waterShortcuts || [8, 16, 24]).map(String));
@@ -127,6 +124,35 @@ export default function ProfileTab({
         window.setTimeout(() => setShareStatus(""), 2600);
       }
     }
+  }
+
+  async function sendInviteEmail() {
+    const email = inviteEmail.trim();
+    const householdId = readStoredActiveWithId();
+    setInviteError("");
+    setInviteMessage("");
+
+    if (!email) {
+      setInviteError("Enter an email address.");
+      return;
+    }
+    if (!householdId) {
+      setInviteError("We couldn’t identify this With. Refresh and try again.");
+      return;
+    }
+
+    setInviteBusy(true);
+    const { error } = await supabase.functions.invoke("send-with-invite", {
+      body: { email, householdId },
+    });
+
+    if (error) {
+      setInviteError("We couldn’t send that invitation. Try again.");
+    } else {
+      setInviteMessage(`Invite sent to ${email}.`);
+      setInviteEmail("");
+    }
+    setInviteBusy(false);
   }
 
   function startAnotherWith() {
@@ -217,15 +243,13 @@ export default function ProfileTab({
               <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); clearAccountError(); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "12px 0 0" }}>Edit With name</button>
             )}
 
-            {inviteCode && (
-              <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
-                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Invite someone to your With</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>
-                  {profileNames.length === 1 ? "With is better with others. Add someone you know to this With so you can support each other in your goals." : "Add someone else to your With so you can support each other in your goals."}
-                </div>
-                <button onClick={() => setInviting((v) => !v)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{inviting ? "Close invite" : "Invite someone"}</button>
+            <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Invite someone to your With</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>
+                {profileNames.length === 1 ? "With is better with others. Add someone you know to this With so you can support each other in your goals." : "Add someone else to your With so you can support each other in your goals."}
               </div>
-            )}
+              <button onClick={() => setInviting((v) => !v)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{inviting ? "Close invite" : "Invite someone"}</button>
+            </div>
           </>
         ) : (
           <div>
@@ -239,24 +263,16 @@ export default function ProfileTab({
           </div>
         )}
 
-        {inviteCode && inviting && !renamingWith && (
+        {inviting && !renamingWith && (
           <div style={{ marginTop: 12, padding: 14, background: SURFACE_2, borderRadius: 12 }}>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Who would you like to invite? They’ll create their own account and health profile.</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Who would you like to invite? We’ll email them a private invitation tied to this With.</div>
             <div style={fieldLabel}>Email address</div>
             <div style={{ display: "flex", gap: 8, marginBottom: 9 }}>
               <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="friend@example.com" style={{ ...inputStyle, flex: 1 }} />
               <button type="button" onClick={sendInviteEmail} disabled={inviteBusy || !inviteEmail.trim()} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", padding: "10px 14px", opacity: inviteBusy || !inviteEmail.trim() ? .6 : 1 }}>{inviteBusy ? "Sending…" : "Send"}</button>
             </div>
-            <button type="button" onClick={shareInvite} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 700, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 0" }}><Share2 style={{ width: 14, height: 14 }} /> Share invite link</button>
             {inviteError && <div style={{ color: WARN, fontSize: 12, marginTop: 8 }}>{inviteError}</div>}
             {inviteMessage && <div style={{ color: successColor, fontSize: 12, marginTop: 8 }}>{inviteMessage}</div>}
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ color: TEXT_MUTED, fontSize: 11, cursor: "pointer" }}>Use invite code instead</summary>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                <div style={{ flex: 1, background: SURFACE, borderRadius: 8, padding: "9px 10px", fontFamily: "monospace", fontWeight: 700, letterSpacing: 1.2 }}>{inviteCode}</div>
-                <button type="button" onClick={copyInviteCode} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 700, fontSize: 12 }}>Copy</button>
-              </div>
-            </details>
           </div>
         )}
 
