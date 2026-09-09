@@ -106,6 +106,12 @@ export default function InvitationGate({ children }) {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
+      if (event === "PASSWORD_RECOVERY") {
+        sessionStorage.setItem("with-password-recovery", "1");
+      }
+      if (event === "SIGNED_OUT") {
+        sessionStorage.removeItem("with-password-recovery");
+      }
       setSession(nextSession);
       setAuthReady(true);
     });
