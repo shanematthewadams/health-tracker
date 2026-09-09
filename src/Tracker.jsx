@@ -477,6 +477,7 @@ export default function Tracker() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [ownedProfileId, setOwnedProfileId] = useState(null);
   const [profiles, setProfiles] = useState({});
+  const [profilesById, setProfilesById] = useState({});
   const [profileColors, setProfileColors] = useState({});
   const [profileWithmarks, setProfileWithmarks] = useState({});
   const [intentions, setIntentions] = useState({});
@@ -491,6 +492,7 @@ export default function Tracker() {
     return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
   });
   const [activeUser, setActiveUser] = useState("Alli");
+  const [activeProfileId, setActiveProfileId] = useState(null);
   const [tab, setTab] = useState("today");
   const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
   const [toast, setToast] = useState(null);
@@ -498,6 +500,7 @@ export default function Tracker() {
   const [logBusy, setLogBusy] = useState(null);
   const logBusyRef = useRef(null);
   const [data, setData] = useState({ Alli: emptyData("Alli"), Shane: emptyData("Shane") });
+  const [dataByProfileId, setDataByProfileId] = useState({});
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState(null);
   const [walkthrough, setWalkthrough] = useState(() => {
@@ -626,11 +629,14 @@ export default function Tracker() {
         setHouseholdRole(null);
         setInviteCode("");
         setProfiles({});
+        setProfilesById({});
         setProfileColors({});
         setProfileWithmarks({});
         setIntentions({});
         setActiveFasts({});
         setOwnedProfileId(null);
+        setActiveProfileId(null);
+        setDataByProfileId({});
         setNeedsOnboarding(false);
         setLoading(false);
       }
@@ -681,10 +687,12 @@ export default function Tracker() {
         .from("profiles").select("*").eq("household_id", hid);
       if (profileError) throw profileError;
       const pmap = {};
-      const next = {};
+      const pmapById = {};
+      const nextById = {};
       (profileRows || []).forEach((p) => {
         pmap[p.name] = p;
-        next[p.name] = {
+        pmapById[p.id] = p;
+        nextById[p.id] = {
           ...emptyData(p.name),
           goalWeight: p.goal_weight == null ? null : num(p.goal_weight),
           goalDate: p.goal_date || null,
@@ -693,6 +701,7 @@ export default function Tracker() {
         };
       });
       setProfiles(pmap);
+      setProfilesById(pmapById);
       setProfileColors(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_color || null])));
       setProfileWithmarks(Object.fromEntries((profileRows || []).map((p) => [p.name, p.profile_withmark || null])));
       setIntentions(Object.fromEntries((profileRows || []).map((p) => [p.name, p.intention_date === todayStr(timeZone) ? (p.current_intention || "") : ""])));
@@ -703,9 +712,17 @@ export default function Tracker() {
         setFastPromptDismissedDate(owned.fasting_prompt_dismissed_date || null);
       }
       setEmailInput(session.user.email || "");
-      if (owned) setActiveUser(owned.name);
-      else if (!pmap[activeUser] && Object.keys(pmap).length) setActiveUser(Object.keys(pmap)[0]);
-      const profileIds = Object.values(pmap).map((p) => p.id);
+      if (owned) {
+        setActiveProfileId(owned.id);
+        setActiveUser(owned.name);
+      } else {
+        const fallbackProfileId = activeProfileId && pmapById[activeProfileId]
+          ? activeProfileId
+          : Object.keys(pmapById)[0] || null;
+        setActiveProfileId(fallbackProfileId);
+        if (fallbackProfileId) setActiveUser(pmapById[fallbackProfileId].name);
+      }
+      const profileIds = Object.keys(pmapById);
       if (!profileIds.length) throw new Error("No health profiles exist for this household.");
 
       const [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes] = await Promise.all([
@@ -720,20 +737,22 @@ export default function Tracker() {
         supabase.from("fasting_entries").select("*").in("profile_id", profileIds).order("started_at"),
       ]);
       for (const r of [weightsRes, foodsRes, activitiesRes, stepsRes, waterRes, savedFoodsRes, globalFoodsRes, foodStatesRes, fastsRes]) if (r.error) throw r.error;
-      const nameById = Object.fromEntries(Object.values(pmap).map((p) => [p.id, p.name]));
-      for (const w of weightsRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].weights.push({ id: w.id, date: w.entry_date, weight: num(w.weight) }); }
-      for (const f of foodsRes.data || []) { const n = nameById[f.profile_id]; if (next[n]) next[n].foods.push({ id: f.id, date: f.entry_date, name: f.name, calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), meal: f.meal, notes: f.notes || "" }); }
-      for (const a of activitiesRes.data || []) { const n = nameById[a.profile_id]; if (next[n]) next[n].activities.push({ id: a.id, date: a.entry_date, name: a.name, caloriesBurned: num(a.calories_burned) }); }
-      for (const s of stepsRes.data || []) { const n = nameById[s.profile_id]; if (next[n]) next[n].steps.push({ id: s.id, date: s.entry_date, count: Number(s.step_count) }); }
-      for (const w of waterRes.data || []) { const n = nameById[w.profile_id]; if (next[n]) next[n].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
-      for (const fast of fastsRes.data || []) { const n = nameById[fast.profile_id]; if (next[n]) next[n].fasts.push({ id: fast.id, startedAt: fast.started_at, endedAt: fast.ended_at || null }); }
+      for (const w of weightsRes.data || []) { if (nextById[w.profile_id]) nextById[w.profile_id].weights.push({ id: w.id, date: w.entry_date, weight: num(w.weight) }); }
+      for (const f of foodsRes.data || []) { if (nextById[f.profile_id]) nextById[f.profile_id].foods.push({ id: f.id, date: f.entry_date, name: f.name, calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), meal: f.meal, notes: f.notes || "" }); }
+      for (const a of activitiesRes.data || []) { if (nextById[a.profile_id]) nextById[a.profile_id].activities.push({ id: a.id, date: a.entry_date, name: a.name, caloriesBurned: num(a.calories_burned) }); }
+      for (const s of stepsRes.data || []) { if (nextById[s.profile_id]) nextById[s.profile_id].steps.push({ id: s.id, date: s.entry_date, count: Number(s.step_count) }); }
+      for (const w of waterRes.data || []) { if (nextById[w.profile_id]) nextById[w.profile_id].water.push({ id: w.id, date: w.entry_date, ounces: num(w.ounces) }); }
+      for (const fast of fastsRes.data || []) { if (nextById[fast.profile_id]) nextById[fast.profile_id].fasts.push({ id: fast.id, startedAt: fast.started_at, endedAt: fast.ended_at || null }); }
       setSavedFoods((savedFoodsRes.data || []).map((f) => ({ ...f, source: "household", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber), use_count: Number(f.use_count || 0) })));
       setGlobalFoods((globalFoodsRes.data || []).map((f) => ({ ...f, source: "global", calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), fiber: num(f.fiber) })));
       setFoodStates(foodStatesRes.data || []);
+      setDataByProfileId(nextById);
+      const next = {};
+      (profileRows || []).forEach((p) => { next[p.name] = nextById[p.id]; });
       setData(next);
       const fastMap = {};
       (fastsRes?.data || []).filter((f) => !f.ended_at).forEach((f) => {
-        const name = Object.keys(pmap).find((n) => pmap[n].id === f.profile_id);
+        const name = pmapById[f.profile_id]?.name;
         if (name) fastMap[name] = f;
       });
       setActiveFasts(fastMap);
@@ -756,6 +775,7 @@ export default function Tracker() {
   }, [activeUser, loading, data]);
 
   const profileNames = Object.keys(profiles);
+  const profileIds = Object.keys(profilesById);
   useEffect(() => {
     if (profileNames.length && !profiles[activeUser]) setActiveUser(profileNames[0]);
   }, [profiles, activeUser]);
@@ -1109,7 +1129,12 @@ export default function Tracker() {
     }
   }
 
-  function profileColor(name, dim=false) {
+  function profileNameForProfile(profileRef) {
+    return profilesById[profileRef]?.name || profileRef;
+  }
+
+  function profileColor(profileRef, dim=false) {
+    const name = profileNameForProfile(profileRef);
     const chosen = profileColors[name];
     if (chosen) {
       const match = PROFILE_COLORS.find((c) => c.value === chosen);
@@ -1118,12 +1143,14 @@ export default function Tracker() {
     }
     return userColor(name, dim);
   }
-  function profileText(name) {
+  function profileText(profileRef) {
+    const name = profileNameForProfile(profileRef);
     const chosen = profileColors[name];
     const match = PROFILE_COLORS.find((c) => c.value === chosen);
     return match?.text || userText(name);
   }
-  function profileWithmark(name) {
+  function profileWithmark(profileRef) {
+    const name = profileNameForProfile(profileRef);
     const chosen = profileWithmarks[name];
     if (WITHMARK_OPTIONS.some((option) => option.id === chosen)) return chosen;
     const ids = WITHMARK_OPTIONS.map((option) => option.id);
@@ -1132,9 +1159,13 @@ export default function Tracker() {
     return ids[total % ids.length] || "star";
   }
 
-  function profileFor(name) { return profiles[name]; }
-  function canEdit(name) { return profiles[name]?.user_id === session?.user?.id; }
-  const activeCanEdit = canEdit(activeUser);
+  function profileFor(profileRef) {
+    if (profilesById[profileRef]) return profilesById[profileRef];
+    if (profileRef === activeUser && activeProfileId && profilesById[activeProfileId]) return profilesById[activeProfileId];
+    return profiles[profileRef];
+  }
+  function canEdit(profileRef) { return profileFor(profileRef)?.user_id === session?.user?.id; }
+  const activeCanEdit = activeProfileId ? profilesById[activeProfileId]?.user_id === session?.user?.id : canEdit(activeUser);
   async function runWrite(work) {
     setSaveError(null);
     try { await work(); await loadAll(); return true; }
@@ -1516,8 +1547,10 @@ export default function Tracker() {
     return out;
   }, [data, today]);
 
-  function goalInfo(u) {
-    const w = data[u].weights;
+  function goalInfo(profileRef) {
+    const profileData = dataByProfileId[profileRef] || data[profileRef];
+    if (!profileData) return null;
+    const w = profileData.weights;
     if (w.length === 0) return null;
     const start = w[0].weight;
     const latestEntry = w[w.length - 1];
@@ -1528,7 +1561,7 @@ export default function Tracker() {
     const latest = recentWeights.reduce((sum, entry) => sum + entry.weight, 0) / recentWeights.length;
     const latestActual = latestEntry.weight;
     const averageCount = recentWeights.length;
-    const goal = data[u].goalWeight;
+    const goal = profileData.goalWeight;
 
     if (goal == null || goal === start) {
       return {
@@ -1567,6 +1600,7 @@ export default function Tracker() {
 
   const gi = goalInfo(activeUser);
   const ts = todayStats[activeUser];
+  const activeName = profileNameForProfile(activeProfileId || activeUser);
 
   const NAV_ITEMS = [
     { id: "today", label: "Today", icon: Home },
@@ -1613,34 +1647,38 @@ export default function Tracker() {
               {householdName}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, overflowX: "auto", paddingBottom: 1, WebkitOverflowScrolling: "touch" }}>
-              {profileNames.map((u) => (
-                <button
-                  key={u}
-                  title={u}
-                  onClick={() => { setActiveUser(u); setFastEditorOpen(false); if (tab === "profile") setTab("today"); }}
-                  style={{
-                    flexShrink: 0,
-                    border: activeUser === u ? "1px solid rgba(255,255,255,.78)" : "1px solid rgba(255,255,255,.22)",
-                    background: activeUser === u ? "rgba(255,255,255,.16)" : "transparent",
-                    color: brand.inkOn,
-                    borderRadius: 999,
-                    padding: "5px 9px",
-                    minHeight: 30,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    lineHeight: 1,
-                    fontFamily: "'DM Sans', -apple-system, sans-serif",
-                    fontWeight: activeUser === u ? 700 : 500,
-                    fontSize: 11,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <WithMark id={profileWithmark(u)} size={15} color={activeUser === u ? brand.inkOn : "rgba(255,255,255,.72)"} />
-                  <span style={{ display: "block", lineHeight: 1 }}>{u}</span>
-                </button>
-              ))}
+              {profileIds.map((profileId) => {
+                const name = profileNameForProfile(profileId);
+                const selected = activeProfileId === profileId;
+                return (
+                  <button
+                    key={profileId}
+                    title={name}
+                    onClick={() => { setActiveProfileId(profileId); setActiveUser(name); setFastEditorOpen(false); if (tab === "profile") setTab("today"); }}
+                    style={{
+                      flexShrink: 0,
+                      border: selected ? "1px solid rgba(255,255,255,.78)" : "1px solid rgba(255,255,255,.22)",
+                      background: selected ? "rgba(255,255,255,.16)" : "transparent",
+                      color: brand.inkOn,
+                      borderRadius: 999,
+                      padding: "5px 9px",
+                      minHeight: 30,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      lineHeight: 1,
+                      fontFamily: "'DM Sans', -apple-system, sans-serif",
+                      fontWeight: selected ? 700 : 500,
+                      fontSize: 11,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <WithMark id={profileWithmark(profileId)} size={15} color={selected ? brand.inkOn : "rgba(255,255,255,.72)"} />
+                    <span style={{ display: "block", lineHeight: 1 }}>{name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1652,7 +1690,7 @@ export default function Tracker() {
         )}
         {tab !== "profile" && !activeCanEdit && (
           <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT_MUTED, padding: "10px 14px", borderRadius: 10, marginBottom: "1rem", fontSize: 12 }}>
-            You’re viewing {activeUser}’s health information. Only {activeUser} can make changes.
+            You’re viewing {activeName}’s health information. Only {activeName} can make changes.
           </div>
         )}
 
@@ -1690,6 +1728,7 @@ export default function Tracker() {
             setActiveUser={setActiveUser}
             profileColor={profileColor}
             profileText={profileText}
+            profileNameForProfile={profileNameForProfile}
             intentions={intentions}
             saveIntention={saveIntention}
             styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton }}
@@ -1812,11 +1851,15 @@ export default function Tracker() {
 
         {tab === "trends" && (
           <TrendsTab
-            activeUser={activeUser}
-            data={data}
+            activeUser={activeProfileId || activeUser}
+            data={Object.keys(dataByProfileId).length ? dataByProfileId : data}
             today={today}
             goalInfo={goalInfo}
             profileColor={profileColor}
+            profiles={profilesById}
+            goalInfoForProfile={goalInfo}
+            profileColorForProfile={profileColor}
+            profileNameForProfile={profileNameForProfile}
             styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle }}
           />
         )}
