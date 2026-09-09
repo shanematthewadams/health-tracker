@@ -373,9 +373,9 @@ export default function ProfileTab({
       </section>
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 15, paddingBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 14px", marginBottom: 16, width: "100%" }}>
           <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, fontSize: 11, textDecoration: "none" }}>Privacy policy</a>
-          <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
             {shareStatus === "Link copied" ? <Check style={{ width: 12, height: 12 }} /> : <Share2 style={{ width: 12, height: 12 }} />}
             {shareStatus || "Share the app"}
           </button>
