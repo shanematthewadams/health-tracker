@@ -154,14 +154,7 @@ export default function ProfileTab({
               {profileColorOptions.map((c) => {
                 const selected = (profileColors[profileNameInput || activeUser] || profileColor(profileNameInput || activeUser)) === c.value;
                 return (
-                  <button
-                    key={c.value}
-                    type="button"
-                    title={c.name}
-                    aria-label={`Choose ${c.name}`}
-                    onClick={() => saveProfileColor(c.value)}
-                    style={{ width: 34, height: 34, borderRadius: "50%", background: c.value, border: selected ? `3px solid ${TEXT}` : `2px solid ${SURFACE}`, boxShadow: selected ? `0 0 0 2px ${BORDER}` : `0 0 0 1px ${BORDER}`, padding: 0 }}
-                  />
+                  <button key={c.value} type="button" title={c.name} aria-label={`Choose ${c.name}`} onClick={() => saveProfileColor(c.value)} style={{ width: 34, height: 34, borderRadius: "50%", background: c.value, border: selected ? `3px solid ${TEXT}` : `2px solid ${SURFACE}`, boxShadow: selected ? `0 0 0 2px ${BORDER}` : `0 0 0 1px ${BORDER}`, padding: 0 }} />
                 );
               })}
             </div>
@@ -172,14 +165,7 @@ export default function ProfileTab({
               {withmarkOptions.map((option) => {
                 const selected = (profileWithmarks[profileNameInput || activeUser] || profileWithmark(profileNameInput || activeUser)) === option.id;
                 return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    title={option.name}
-                    aria-label={`Choose ${option.name} Withmark`}
-                    onClick={() => saveProfileWithmark(option.id)}
-                    style={{ minWidth: 0, aspectRatio: "1", display: "grid", placeItems: "center", background: selected ? SURFACE_2 : SURFACE, border: selected ? `2px solid ${TEXT}` : `1px solid ${BORDER}`, borderRadius: 10, padding: 5 }}
-                  >
+                  <button key={option.id} type="button" title={option.name} aria-label={`Choose ${option.name} Withmark`} onClick={() => saveProfileWithmark(option.id)} style={{ minWidth: 0, aspectRatio: "1", display: "grid", placeItems: "center", background: selected ? SURFACE_2 : SURFACE, border: selected ? `2px solid ${TEXT}` : `1px solid ${BORDER}`, borderRadius: 10, padding: 5 }}>
                     <WithMark id={option.id} size={22} color={selected ? profileColor(activeUser) : TEXT_MUTED} />
                   </button>
                 );
@@ -225,9 +211,7 @@ export default function ProfileTab({
               <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
                 <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Invite someone to your With</div>
                 <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>
-                  {profileNames.length === 1
-                    ? "With is better with others. Add someone you know to this With so you can support each other in your goals."
-                    : "Add someone else to your With so you can support each other in your goals."}
+                  {profileNames.length === 1 ? "With is better with others. Add someone you know to this With so you can support each other in your goals." : "Add someone else to your With so you can support each other in your goals."}
                 </div>
                 <button onClick={() => setInviting((v) => !v)} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{inviting ? "Close invite" : "Invite someone"}</button>
               </div>
@@ -253,9 +237,7 @@ export default function ProfileTab({
               <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="friend@example.com" style={{ ...inputStyle, flex: 1 }} />
               <button type="button" onClick={sendInviteEmail} disabled={inviteBusy || !inviteEmail.trim()} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", padding: "10px 14px", opacity: inviteBusy || !inviteEmail.trim() ? .6 : 1 }}>{inviteBusy ? "Sending…" : "Send"}</button>
             </div>
-            <button type="button" onClick={shareInvite} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 700, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 0" }}>
-              <Share2 style={{ width: 14, height: 14 }} /> Share invite link
-            </button>
+            <button type="button" onClick={shareInvite} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 700, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 0" }}><Share2 style={{ width: 14, height: 14 }} /> Share invite link</button>
             {inviteError && <div style={{ color: WARN, fontSize: 12, marginTop: 8 }}>{inviteError}</div>}
             {inviteMessage && <div style={{ color: successColor, fontSize: 12, marginTop: 8 }}>{inviteMessage}</div>}
             <details style={{ marginTop: 10 }}>
@@ -272,31 +254,18 @@ export default function ProfileTab({
           <ProfileWithsPanel styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED }} onMultipleWithsChange={setHasMultipleWiths} />
         )}
 
-        {!renamingWith && (
+        {!renamingWith && !hasMultipleWiths && (
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <div style={{ width: 32, height: 32, borderRadius: 10, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}>
                 <Users size={16} color={brand.tealDark} strokeWidth={1.9} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>{hasMultipleWiths ? "More people, same health history" : "You can have more than one With"}</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
-                  Your health stays yours. You keep one profile and one health history, so you only log food, weight, movement, water, and everything else once. Each With is simply another private group of people you’re doing life With.
-                </div>
+                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>You can have more than one With</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>Your health stays yours. You keep one profile and one health history, so you only log food, weight, movement, water, and everything else once. Each With is simply another private group of people you’re doing life With.</div>
                 <button type="button" onClick={startAnotherWith} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "9px 0 0" }}>Start another With</button>
               </div>
             </div>
-          </div>
-        )}
-
-        {!renamingWith && (
-          <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
-            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>Share With</div>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>Know someone who might like With? Send them a link.</div>
-            <button onClick={shareWith} style={{ background: "none", border: "none", color: brand.tealDark, padding: "8px 0 0", fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
-              {shareStatus === "Link copied" ? <Check style={{ width: 14, height: 14 }} /> : <Share2 style={{ width: 14, height: 14 }} />}
-              {shareStatus || "Share With"}
-            </button>
           </div>
         )}
       </section>
@@ -336,7 +305,7 @@ export default function ProfileTab({
         )}
       </section>
 
-      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
+      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 18 }}>
         <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Account</div>
 
         {!editingEmail ? (
@@ -395,14 +364,22 @@ export default function ProfileTab({
 
         {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 8 }}>{accountError}</div>}
         {accountMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountMessage}</div>}
-
-        <div style={{ marginTop: 16 }}>
-          <button onClick={signOut} style={{ background: "none", border: "none", color: TEXT, padding: 0, fontWeight: 800, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}><LogOut style={{ width: 13, height: 13 }} strokeWidth={1.9} /> Sign out</button>
-        </div>
       </section>
 
-      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 18, paddingBottom: 8 }}>
-        <a href="/privacy" style={{ display: "inline-block", color: TEXT_MUTED, fontWeight: 700, fontSize: 12, textDecoration: "none", marginBottom: 16 }}>Privacy policy</a>
+      <section style={{ padding: "2px 0 22px" }}>
+        <button onClick={signOut} style={{ width: "100%", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 11, color: TEXT, padding: "11px 13px", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+          <LogOut style={{ width: 15, height: 15 }} strokeWidth={1.9} /> Sign out
+        </button>
+      </section>
+
+      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 15, paddingBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 14px", marginBottom: 16 }}>
+          <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, fontSize: 11, textDecoration: "none" }}>Privacy policy</a>
+          <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {shareStatus === "Link copied" ? <Check style={{ width: 12, height: 12 }} /> : <Share2 style={{ width: 12, height: 12 }} />}
+            {shareStatus || "Share the app"}
+          </button>
+        </div>
         <details>
           <summary style={{ cursor: "pointer", color: WARN, fontWeight: 700, fontSize: 12 }}>Delete account</summary>
           <div style={{ marginTop: 12 }}>
