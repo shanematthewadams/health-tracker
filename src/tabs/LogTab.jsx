@@ -45,9 +45,31 @@ function toLocalSearchFood(food) {
   };
 }
 
+function inferLoggedQuantity(loggedFood, baseFood) {
+  if (!loggedFood || !baseFood) return 1;
+  const pairs = [
+    [loggedFood.calories, baseFood.calories],
+    [loggedFood.protein, baseFood.protein],
+    [loggedFood.carbs, baseFood.carbs],
+    [loggedFood.fat, baseFood.fat],
+    [loggedFood.fiber, baseFood.fiber],
+  ];
+  const ratios = pairs
+    .filter(([, base]) => Number(base) > 0)
+    .map(([logged, base]) => Number(logged || 0) / Number(base))
+    .filter((ratio) => Number.isFinite(ratio) && ratio > 0);
+  if (!ratios.length) return 1;
+  ratios.sort((a, b) => a - b);
+  const middle = Math.floor(ratios.length / 2);
+  const median = ratios.length % 2 ? ratios[middle] : (ratios[middle - 1] + ratios[middle]) / 2;
+  const quarterStep = Math.round(median * 4) / 4;
+  return quarterStep >= 0.25 && quarterStep <= 20 ? quarterStep : 1;
+}
+
 export default function LogTab(props) {
   const {
     savedSearch,
+    savedFoods = [],
     globalFoods = [],
     chooseSavedFood,
     changeQuantity,
@@ -66,8 +88,20 @@ export default function LogTab(props) {
   const [missingBarcode, setMissingBarcode] = useState("");
   const [manualScanName, setManualScanName] = useState("");
   const [pendingManualBarcode, setPendingManualBarcode] = useState("");
+  const [editingQuantity, setEditingQuantity] = useState("1");
+  const [editingServingLabel, setEditingServingLabel] = useState("logged amount");
+  const editingBaseMacros = useRef(null);
+  const editingFoodRef = useRef(props.editingFoodId);
   const searchSequence = useRef(0);
   const searchCache = useRef(new Map());
+
+  useEffect(() => {
+    editingFoodRef.current = props.editingFoodId;
+  }, [props.editingFoodId]);
+
+  useEffect(() => () => {
+    if (editingFoodRef.current) props.clearFoodForm?.();
+  }, []);
 
   useEffect(() => {
     const clean = String(savedSearch || "").trim();
@@ -168,6 +202,20 @@ export default function LogTab(props) {
   }
 
   function changeFoodQuantity(value) {
+    if (props.editingFoodId) {
+      setEditingQuantity(value);
+      const quantity = Number(value);
+      const base = editingBaseMacros.current;
+      if (!base || !Number.isFinite(quantity) || quantity <= 0) return;
+      const round1 = (number) => String(Math.round(Number(number || 0) * quantity * 10) / 10);
+      setFoodCals(round1(base.calories));
+      setFoodProtein(round1(base.protein));
+      setFoodCarbs(round1(base.carbs));
+      setFoodFat(round1(base.fat));
+      setFoodFiber(round1(base.fiber));
+      return;
+    }
+
     changeQuantity(value);
 
     const [source, id] = String(selectedSavedFoodId || "").split(":");
@@ -182,6 +230,24 @@ export default function LogTab(props) {
     setFoodCarbs(round1(food.carbs));
     setFoodFat(round1(food.fat));
     setFoodFiber(round1(food.fiber));
+  }
+
+  function editFoodWithQuantity(food) {
+    const normalizedName = normalize(food?.name);
+    const baseFood = savedFoods.find((item) => normalize(item.name) === normalizedName)
+      || augmentedGlobalFoods.find((item) => normalize(item.name) === normalizedName)
+      || null;
+    const quantity = inferLoggedQuantity(food, baseFood);
+    editingBaseMacros.current = {
+      calories: Number(food?.calories || 0) / quantity,
+      protein: Number(food?.protein || 0) / quantity,
+      carbs: Number(food?.carbs || 0) / quantity,
+      fat: Number(food?.fat || 0) / quantity,
+      fiber: Number(food?.fiber || 0) / quantity,
+    };
+    setEditingQuantity(String(quantity));
+    setEditingServingLabel(baseFood?.serving_label || baseFood?.serving_description || "logged amount");
+    props.editLoggedFood?.(food);
   }
 
   const focusFoodSearch = useCallback(() => {
@@ -332,6 +398,9 @@ export default function LogTab(props) {
         activeCanEdit={props.activeCanEdit && !busy}
         globalFoods={augmentedGlobalFoods}
         chooseSavedFood={chooseFood}
+        editLoggedFood={editFoodWithQuantity}
+        foodQuantity={props.editingFoodId ? editingQuantity : props.foodQuantity}
+        foodServingLabel={props.editingFoodId ? editingServingLabel : props.foodServingLabel}
         changeQuantity={changeFoodQuantity}
         setFoodName={setSafeFoodName}
         addFood={addFoodWithBarcode}
