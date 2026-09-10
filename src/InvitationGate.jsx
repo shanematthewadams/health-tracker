@@ -43,6 +43,16 @@ const secondaryButton = {
   border: `1px solid ${BORDER}`,
 };
 
+const textButton = {
+  background: "none",
+  border: "none",
+  color: TEXT_MUTED,
+  width: "100%",
+  padding: "11px 8px 0",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
 function Shell({ children }) {
   return (
     <div style={{ minHeight: "100vh", minHeight: "100dvh", background: brand.teal, display: "grid", placeItems: "center", padding: 20, color: TEXT, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
@@ -63,6 +73,11 @@ function cleanPendingInvite() {
   window.history.replaceState({}, "", url.pathname + url.search + url.hash);
 }
 
+function abandonInvite() {
+  cleanPendingInvite();
+  window.location.assign(window.location.origin + window.location.pathname);
+}
+
 async function sha256(value) {
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -80,10 +95,11 @@ export default function InvitationGate({ children }) {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const inviteFromUrl = params.get("invite")?.trim() || "";
   const inviterFromUrl = params.get("inviter")?.trim() || "";
-  const pendingInvite = inviteFromUrl || localStorage.getItem("with-pending-invite") || "";
+  const storedInvite = localStorage.getItem("with-pending-invite") || "";
+  const [pendingInvite, setPendingInvite] = useState(inviteFromUrl || storedInvite);
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [checkingInvite, setCheckingInvite] = useState(Boolean(pendingInvite));
+  const [checkingInvite, setCheckingInvite] = useState(Boolean(inviteFromUrl || storedInvite));
   const [inviteInfo, setInviteInfo] = useState(null);
   const [inviteError, setInviteError] = useState("");
   const [existingProfile, setExistingProfile] = useState(null);
@@ -93,7 +109,10 @@ export default function InvitationGate({ children }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
+    if (inviteFromUrl) {
+      localStorage.setItem("with-pending-invite", inviteFromUrl);
+      setPendingInvite(inviteFromUrl);
+    }
     if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
   }, [inviteFromUrl, inviterFromUrl]);
 
@@ -120,6 +139,15 @@ export default function InvitationGate({ children }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!authReady || session || inviteFromUrl || !pendingInvite) return;
+    cleanPendingInvite();
+    setPendingInvite("");
+    setInviteInfo(null);
+    setInviteError("");
+    setCheckingInvite(false);
+  }, [authReady, session, inviteFromUrl, pendingInvite]);
 
   useEffect(() => {
     if (!authReady || !session?.user || !pendingInvite || sessionStorage.getItem("with-password-recovery") === "1") {
@@ -192,7 +220,9 @@ export default function InvitationGate({ children }) {
     window.location.reload();
   }
 
-  if (!pendingInvite || !authReady || !session || sessionStorage.getItem("with-password-recovery") === "1") return children;
+  if (!authReady) return children;
+  if (!session && pendingInvite && !inviteFromUrl) return <BrandLoading>Clearing an old invitation…</BrandLoading>;
+  if (!pendingInvite || !session || sessionStorage.getItem("with-password-recovery") === "1") return children;
   if (checkingInvite) return <BrandLoading>Checking your invitation…</BrandLoading>;
 
   if (inviteError && !inviteInfo) {
@@ -200,7 +230,7 @@ export default function InvitationGate({ children }) {
       <Shell>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>We couldn’t use this invitation.</div>
         <div role="alert" style={{ color: WARN, fontSize: 14, lineHeight: 1.5, marginBottom: 18 }}>{inviteError}</div>
-        <button type="button" onClick={() => { cleanPendingInvite(); window.location.reload(); }} style={secondaryButton}>Continue to With</button>
+        <button type="button" onClick={abandonInvite} style={secondaryButton}>Continue to With</button>
       </Shell>
     );
   }
@@ -215,6 +245,7 @@ export default function InvitationGate({ children }) {
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>This invitation is for another email.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 18 }}>It was sent to <strong style={{ color: TEXT }}>{inviteInfo.email}</strong>, but you’re signed in as <strong style={{ color: TEXT }}>{session.user.email}</strong>.</div>
         <button type="button" onClick={() => supabase.auth.signOut()} style={secondaryButton}>Sign out and use the invited account</button>
+        <button type="button" onClick={abandonInvite} style={textButton}>Not now. Continue to With.</button>
       </Shell>
     );
   }
@@ -246,6 +277,7 @@ export default function InvitationGate({ children }) {
 
       {inviteError && <div role="alert" style={{ color: WARN, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>{inviteError}</div>}
       <button type="button" disabled={busy || (!existingProfile && !profileName.trim())} onClick={acceptInvite} style={{ ...primaryButton, opacity: busy || (!existingProfile && !profileName.trim()) ? .6 : 1 }}>{busy ? "Joining…" : `Join ${inviteInfo?.householdName || "this With"}`}</button>
+      <button type="button" disabled={busy} onClick={abandonInvite} style={textButton}>Not now. Continue to With.</button>
     </Shell>
   );
 }
