@@ -91,6 +91,7 @@ export default function LogTab(props) {
   const [editingQuantity, setEditingQuantity] = useState("1");
   const [editingServingLabel, setEditingServingLabel] = useState("logged amount");
   const editingBaseMacros = useRef(null);
+  const preparedEditingId = useRef(null);
   const editingFoodRef = useRef(props.editingFoodId);
   const searchSequence = useRef(0);
   const searchCache = useRef(new Map());
@@ -102,6 +103,17 @@ export default function LogTab(props) {
   useEffect(() => () => {
     if (editingFoodRef.current) props.clearFoodForm?.();
   }, []);
+
+  useEffect(() => {
+    if (!props.editingFoodId) {
+      preparedEditingId.current = null;
+      editingBaseMacros.current = null;
+      return;
+    }
+    if (preparedEditingId.current === props.editingFoodId) return;
+    const food = props.data?.[props.activeUser]?.foods?.find((item) => item.id === props.editingFoodId);
+    if (food) prepareEditQuantity(food);
+  }, [props.editingFoodId, props.activeUser]);
 
   useEffect(() => {
     const clean = String(savedSearch || "").trim();
@@ -201,6 +213,24 @@ export default function LogTab(props) {
     return data || null;
   }
 
+  function prepareEditQuantity(food) {
+    const normalizedName = normalize(food?.name);
+    const baseFood = savedFoods.find((item) => normalize(item.name) === normalizedName)
+      || augmentedGlobalFoods.find((item) => normalize(item.name) === normalizedName)
+      || null;
+    const quantity = inferLoggedQuantity(food, baseFood);
+    editingBaseMacros.current = {
+      calories: Number(food?.calories || 0) / quantity,
+      protein: Number(food?.protein || 0) / quantity,
+      carbs: Number(food?.carbs || 0) / quantity,
+      fat: Number(food?.fat || 0) / quantity,
+      fiber: Number(food?.fiber || 0) / quantity,
+    };
+    preparedEditingId.current = food?.id || null;
+    setEditingQuantity(String(quantity));
+    setEditingServingLabel(baseFood?.serving_label || baseFood?.serving_description || "logged amount");
+  }
+
   function changeFoodQuantity(value) {
     if (props.editingFoodId) {
       setEditingQuantity(value);
@@ -233,20 +263,7 @@ export default function LogTab(props) {
   }
 
   function editFoodWithQuantity(food) {
-    const normalizedName = normalize(food?.name);
-    const baseFood = savedFoods.find((item) => normalize(item.name) === normalizedName)
-      || augmentedGlobalFoods.find((item) => normalize(item.name) === normalizedName)
-      || null;
-    const quantity = inferLoggedQuantity(food, baseFood);
-    editingBaseMacros.current = {
-      calories: Number(food?.calories || 0) / quantity,
-      protein: Number(food?.protein || 0) / quantity,
-      carbs: Number(food?.carbs || 0) / quantity,
-      fat: Number(food?.fat || 0) / quantity,
-      fiber: Number(food?.fiber || 0) / quantity,
-    };
-    setEditingQuantity(String(quantity));
-    setEditingServingLabel(baseFood?.serving_label || baseFood?.serving_description || "logged amount");
+    prepareEditQuantity(food);
     props.editLoggedFood?.(food);
   }
 
