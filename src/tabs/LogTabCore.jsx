@@ -106,7 +106,7 @@ export default function LogTab(props) {
       const key = normalizeFoodName(entry.name);
       if (!key || seen.has(key)) continue;
       seen.add(key);
-      const match = globalByName.get(key) || savedByName.get(key);
+      const match = savedByName.get(key) || globalByName.get(key);
       if (match) recent.push(match);
       if (recent.length >= 6) break;
     }
@@ -116,18 +116,29 @@ export default function LogTab(props) {
   const searchResults = useMemo(() => {
     const query = normalizeFoodName(savedSearch);
     if (!query) return personalRecentFoods;
-    return globalFoods
+
+    const deduped = new Map();
+    [...savedFoods, ...globalFoods].forEach((food) => {
+      const key = normalizeFoodName(food.name);
+      if (!key) return;
+      if (!deduped.has(key)) deduped.set(key, food);
+    });
+
+    return [...deduped.values()]
       .filter((food) => normalizeFoodName(food.name).includes(query) || normalizeFoodName(food.brand).includes(query))
-      .slice()
       .sort((a, b) => {
         const an = normalizeFoodName(a.name);
         const bn = normalizeFoodName(b.name);
+        const aSaved = (a.source || "household") === "household" ? 0 : 1;
+        const bSaved = (b.source || "household") === "household" ? 0 : 1;
+        const aExact = an === query ? 0 : 1;
+        const bExact = bn === query ? 0 : 1;
         const aStarts = an.startsWith(query) ? 0 : 1;
         const bStarts = bn.startsWith(query) ? 0 : 1;
-        return aStarts - bStarts || a.name.localeCompare(b.name);
+        return aSaved - bSaved || aExact - bExact || aStarts - bStarts || a.name.localeCompare(b.name);
       })
       .slice(0, 20);
-  }, [savedSearch, globalFoods, personalRecentFoods]);
+  }, [savedSearch, savedFoods, globalFoods, personalRecentFoods]);
 
   const duplicateCandidates = useMemo(() => {
     const query = normalizeFoodName(pendingCreateName || savedSearch);
@@ -358,19 +369,23 @@ export default function LogTab(props) {
             </div>
           )}
 
-          {selectedSavedFoodId && <>
+          {selectedSavedFoodId && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 12px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
               <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Logging</div><div style={{ fontSize: 15, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div></div>
               <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0", flexShrink: 0 }}>Change</button>
             </div>
-            <div style={fieldLabel}>Quantity</div>
+          )}
+
+          {editingFoodId && <><div style={fieldLabel}>Food name</div><input type="text" placeholder="Food name" value={foodName} onChange={(e) => setFoodName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
+
+          {(selectedSavedFoodId || editingFoodId) && <>
+            <div style={fieldLabel}>{editingFoodId ? "Servings" : "Quantity"}</div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginBottom: 10 }}>
               <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
-              <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{foodServingLabel} each</div>
+              <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{editingFoodId && foodServingLabel === "logged amount" ? "× logged amount" : `${foodServingLabel} each`}</div>
             </div>
           </>}
 
-          {editingFoodId && <><div style={fieldLabel}>Food name</div><input type="text" placeholder="Food name" value={foodName} onChange={(e) => setFoodName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
           {foodName && !editingFoodId && !selectedSavedFoodId && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 10px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
               <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Creating</div><div style={{ fontSize: 14, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div></div>
