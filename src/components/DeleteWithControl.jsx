@@ -3,6 +3,14 @@ import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import { clearStoredActiveWithId } from "../withMemberships.js";
 
+function normalizeConfirmation(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase();
+}
+
 export default function DeleteWithControl({ withId, withName, isOwner, styles, hasOtherWiths }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
   const [confirming, setConfirming] = useState(false);
@@ -12,8 +20,10 @@ export default function DeleteWithControl({ withId, withName, isOwner, styles, h
 
   if (!isOwner || !withId) return null;
 
+  const nameMatches = normalizeConfirmation(typedName) === normalizeConfirmation(withName);
+
   async function deleteWith() {
-    if (busy || typedName.trim() !== withName) return;
+    if (busy || !nameMatches) return;
     setBusy(true);
     setError("");
 
@@ -63,6 +73,11 @@ export default function DeleteWithControl({ withId, withName, isOwner, styles, h
             autoComplete="off"
             style={{ width: "100%", minHeight: 42, border: `1px solid ${BORDER}`, borderRadius: 9, background: "transparent", color: TEXT, padding: "9px 10px", fontSize: 14 }}
           />
+          {typedName && !nameMatches && !error && (
+            <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginTop: 6 }}>
+              Keep typing the With name shown above to enable deletion.
+            </div>
+          )}
           {error && <div role="alert" style={{ color: brand.warn, fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button
@@ -75,9 +90,9 @@ export default function DeleteWithControl({ withId, withName, isOwner, styles, h
             </button>
             <button
               type="button"
-              disabled={busy || typedName.trim() !== withName}
+              disabled={busy || !nameMatches}
               onClick={deleteWith}
-              style={{ flex: 1.2, minHeight: 40, borderRadius: 9, border: "none", background: brand.warn, color: "#fff", fontWeight: 800, opacity: busy || typedName.trim() !== withName ? .5 : 1 }}
+              style={{ flex: 1.2, minHeight: 40, borderRadius: 9, border: "none", background: brand.warn, color: "#fff", fontWeight: 800, opacity: busy || !nameMatches ? .5 : 1 }}
             >
               {busy ? "Deleting…" : "Delete With"}
             </button>
