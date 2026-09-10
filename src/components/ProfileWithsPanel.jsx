@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Plus } from "lucide-react";
 import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
+import DeleteWithControl from "./DeleteWithControl.jsx";
 import { clearStoredActiveWithId, readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
 
 export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
@@ -282,6 +283,16 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
             </div>
           )}
         </div>
+      )}
+
+      {ownerNeedsTransfer && (
+        <DeleteWithControl
+          withId={activeWithId}
+          withName={activeWith?.name || "this With"}
+          isOwner={true}
+          styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED }}
+          hasOtherWiths={hasOtherWiths}
+        />
       )}
 
       {hasOtherWiths && (
