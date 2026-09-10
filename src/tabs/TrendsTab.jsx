@@ -510,7 +510,7 @@ function IndividualTrends({ profileKey, profileNameFor, user, today, range, goal
 function WithTrends({ profileKeys, data, today, range, goalInfoFor, profileColorFor, profileNameFor, styles }) {
   const { BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle } = styles;
   const allDates = lastNDays(range, today);
-  const weightRows = allDates.map((date) => {
+  const absoluteRows = allDates.map((date) => {
     const row = { date, label: shortDate(date) };
     profileKeys.forEach((profileKey) => {
       const start = addCalendarDays(date, -6);
@@ -519,18 +519,33 @@ function WithTrends({ profileKeys, data, today, range, goalInfoFor, profileColor
     });
     return row;
   });
+  const baselines = Object.fromEntries(profileKeys.map((profileKey) => {
+    const first = absoluteRows.find((row) => row[profileKey] != null)?.[profileKey];
+    return [profileKey, first ?? null];
+  }));
+  const weightRows = absoluteRows.map((row) => {
+    const relative = { date: row.date, label: row.label };
+    profileKeys.forEach((profileKey) => {
+      const baseline = baselines[profileKey];
+      if (baseline != null && row[profileKey] != null) relative[profileKey] = Number((row[profileKey] - baseline).toFixed(1));
+    });
+    return relative;
+  });
+  const latestChangeFor = (profileKey) => [...weightRows].reverse().find((row) => row[profileKey] != null)?.[profileKey] ?? null;
   const hasWeightTrend = profileKeys.some((profileKey) => weightRows.filter((r) => r[profileKey] != null).length >= 2);
+  const formatChange = (value) => `${value > 0 ? "+" : ""}${Number(value).toFixed(1)} lb`;
 
   return (
     <>
       <section style={{ ...cardStyle, marginBottom: 14 }}>
         <div style={{ ...headingStyle, marginBottom: 3 }}>Weight, together</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 10, marginBottom: 10 }}>Each line is personal. Sharing the view doesn’t turn it into a competition.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 10, marginBottom: 10 }}>Each line starts at 0 for this view, so you can compare direction and shape without comparing body size.</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "7px 13px", marginBottom: 12 }}>
           {profileKeys.map((profileKey) => {
             const gi = goalInfoFor(profileKey);
             const displayName = profileNameFor(profileKey);
-            return <div key={profileKey} style={{ display: "flex", alignItems: "center", gap: 5, color: TEXT_MUTED, fontSize: 10 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColorFor(profileKey) }} /><strong style={{ color: TEXT }}>{displayName}</strong>{gi ? `${gi.latest.toFixed(1)} lb avg` : "No weigh-ins"}</div>;
+            const latestChange = latestChangeFor(profileKey);
+            return <div key={profileKey} style={{ display: "flex", alignItems: "center", gap: 5, color: TEXT_MUTED, fontSize: 10 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: profileColorFor(profileKey) }} /><strong style={{ color: TEXT }}>{displayName}</strong>{gi && latestChange != null ? `${formatChange(latestChange)} in view` : "No weigh-ins"}</div>;
           })}
         </div>
         {!hasWeightTrend ? <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "2rem 0", textAlign: "center" }}>Weight trends will take shape with more weigh-ins.</div> : (
@@ -539,8 +554,9 @@ function WithTrends({ profileKeys, data, today, range, goalInfoFor, profileColor
               <LineChart data={weightRows} margin={{ top: 5, right: 8, left: -2, bottom: 0 }}>
                 <CartesianGrid stroke={BORDER} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={28} />
-                <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} domain={["dataMin - 2", "dataMax + 2"]} width={48} tickFormatter={(v) => `${Math.round(v)} lb`} />
-                <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v, key) => [`${v} lb`, profileNameFor(key)]} />
+                <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} domain={["dataMin - 1", "dataMax + 1"]} width={48} tickFormatter={(v) => `${v > 0 ? "+" : ""}${Math.round(v)} lb`} />
+                <ReferenceLine y={0} stroke={brand.textSoft} strokeDasharray="4 4" />
+                <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v, key) => [formatChange(v), profileNameFor(key)]} />
                 {profileKeys.map((profileKey) => <Line key={profileKey} type="monotone" dataKey={profileKey} stroke={profileColorFor(profileKey)} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} connectNulls />)}
               </LineChart>
             </ResponsiveContainer>
