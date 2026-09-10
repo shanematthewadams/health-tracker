@@ -38,7 +38,8 @@ function dayRows(user, days) {
   return days.map((date) => {
     const foods = user.foods.filter((f) => f.date === date);
     const activities = user.activities.filter((a) => a.date === date);
-    const water = user.water.filter((w) => w.date === date).reduce((sum, w) => sum + w.ounces, 0);
+    const waterEntries = user.water.filter((w) => w.date === date);
+    const water = waterEntries.reduce((sum, w) => sum + w.ounces, 0);
     const stepsEntry = user.steps.find((s) => s.date === date);
     const fastingDay = (user.fasts || []).some((fast) => fastingTouchesDate(fast, date));
     const nutrition = (key) => foods.length ? foods.reduce((sum, f) => sum + Number(f[key] || 0), 0) : fastingDay ? 0 : null;
@@ -47,7 +48,7 @@ function dayRows(user, days) {
       date,
       label: shortDate(date),
       steps: stepsEntry?.count ?? null,
-      water: water || null,
+      water: waterEntries.length ? water : null,
       activity: activities.length ? activities.reduce((sum, a) => sum + a.caloriesBurned, 0) : null,
       active: activities.length ? 1 : 0,
       calories: nutrition("calories"),
@@ -65,17 +66,21 @@ function buildTrendData(user, today, range) {
   const activeDays = recent.filter((d) => d.active).length;
   const previousActiveDays = previous.filter((d) => d.active).length;
   const avg = (rows, key) => average(rows.map((d) => d[key]));
+  const count = (rows, key) => rows.filter((d) => d[key] != null).length;
   return {
     recent,
     previous,
     stepAvg: avg(recent, "steps"),
     previousStepAvg: avg(previous, "steps"),
+    stepLoggedDays: count(recent, "steps"),
     waterAvg: avg(recent, "water"),
     previousWaterAvg: avg(previous, "water"),
+    waterLoggedDays: count(recent, "water"),
     activeDaysPerWeek: activeDays / range * 7,
     previousActiveDaysPerWeek: previousActiveDays / range * 7,
     calorieAvg: avg(recent, "calories"),
     previousCalorieAvg: avg(previous, "calories"),
+    nutritionLoggedDays: count(recent, "calories"),
     proteinAvg: avg(recent, "protein"),
     previousProteinAvg: avg(previous, "protein"),
     carbsAvg: avg(recent, "carbs"),
@@ -96,8 +101,28 @@ function rollingWeightRows(user, today, range) {
       date,
       label: shortDate(date),
       weight: entries.length ? Number((entries.reduce((sum, w) => sum + w.weight, 0) / entries.length).toFixed(1)) : null,
+      sampleCount: entries.length,
     };
   }).filter((row) => row.weight != null);
+}
+
+function actualWeightRows(user, today, range) {
+  const visible = new Set(lastNDays(range, today));
+  return [...user.weights]
+    .filter((w) => visible.has(w.date))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((w) => ({ date: w.date, label: shortDate(w.date), weight: Number(w.weight) }));
+}
+
+function weightDataRows(user, today, range) {
+  const rollingByDate = new Map(rollingWeightRows(user, today, range).map((row) => [row.date, row.weight]));
+  const actualByDate = new Map(user.weights.map((w) => [w.date, Number(w.weight)]));
+  return lastNDays(range, today).slice().reverse().map((date) => ({
+    date,
+    label: shortDate(date),
+    actual: actualByDate.get(date) ?? null,
+    rolling: rollingByDate.get(date) ?? null,
+  }));
 }
 
 function weightPeriodChange(user, today, range) {
@@ -108,6 +133,12 @@ function weightPeriodChange(user, today, range) {
   const previous = rows.filter((r) => r.date >= previousStart && r.date < currentStart);
   if (!current.length || !previous.length) return null;
   return Number((current[current.length - 1].weight - previous[previous.length - 1].weight).toFixed(1));
+}
+
+function actualWeightChange(user, today, range) {
+  const rows = actualWeightRows(user, today, range);
+  if (rows.length < 2) return null;
+  return Number((rows.at(-1).weight - rows[0].weight).toFixed(1));
 }
 
 function comparisonText(current, previous, unit = "", threshold = 0) {
@@ -321,12 +352,48 @@ function MiniBarTrend({ data, dataKey, color, target, suffix, styles }) {
   );
 }
 
+function WeightDataTable({ user, today, range, styles }) {
+  const { BORDER, TEXT_MUTED } = styles;
+  const rows = weightDataRows(user, today, range);
+  return (
+    <div style={{ marginTop: 14, borderTop: `1px solid ${BORDER}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: "76px 1fr 1fr", gap: 8, padding: "9px 2px 7px", color: TEXT_MUTED, fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>
+        <div>Date</div><div>Weight</div><div>7-day avg</div>
+      </div>
+      <div style={{ maxHeight: range === 90 ? 360 : 320, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+        {rows.map((row) => (
+          <div key={row.date} style={{ display: "grid", gridTemplateColumns: "76px 1fr 1fr", gap: 8, alignItems: "center", borderTop: `1px solid ${BORDER}`, padding: "9px 2px", fontSize: 11 }}>
+            <div style={{ color: TEXT_MUTED }}>{row.label}</div>
+            <div className="num" style={{ fontWeight: row.actual != null ? 800 : 600, color: row.actual != null ? undefined : TEXT_MUTED }}>
+              {row.actual != null ? `${row.actual.toFixed(1)} lb` : <span style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontWeight: 600 }}>Not logged · add from Log</span>}
+            </div>
+            <div className="num" style={{ color: row.rolling != null ? undefined : TEXT_MUTED }}>{row.rolling != null ? `${row.rolling.toFixed(1)} lb` : "—"}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function IndividualTrends({ profileKey, profileNameFor, user, today, range, goalInfoFor, profileColorFor, styles }) {
   const { BORDER, TEXT_MUTED, cardStyle } = styles;
   const trend = buildTrendData(user, today, range);
-  const weightRows = rollingWeightRows(user, today, range);
   const gi = goalInfoFor(profileKey);
-  const weightChange = weightPeriodChange(user, today, range);
+  const storageKey = `with-weight-display-${profileKey}`;
+  const [weightDisplay, setWeightDisplayState] = useState(() => {
+    try { return localStorage.getItem(storageKey) || "average"; } catch { return "average"; }
+  });
+  const [weightView, setWeightView] = useState("chart");
+  const setWeightDisplay = (next) => {
+    setWeightDisplayState(next);
+    try { localStorage.setItem(storageKey, next); } catch { /* local preference only */ }
+  };
+  const rollingRows = rollingWeightRows(user, today, range);
+  const measurementRows = actualWeightRows(user, today, range);
+  const weightRows = weightDisplay === "average" ? rollingRows : measurementRows;
+  const latestActual = [...user.weights].sort((a, b) => a.date.localeCompare(b.date)).at(-1)?.weight ?? null;
+  const headlineWeight = weightDisplay === "average" ? gi?.latest : latestActual;
+  const weightChange = weightDisplay === "average" ? weightPeriodChange(user, today, range) : actualWeightChange(user, today, range);
 
   const targets = user.targets || {};
   const nutrition = [
@@ -337,37 +404,53 @@ function IndividualTrends({ profileKey, profileNameFor, user, today, range, goal
     ["Fiber", "fiber", trend.fiberAvg, trend.previousFiberAvg, targets.fiberMin, "g"],
   ].filter(([, , value]) => value != null);
 
+  const toggleStyle = (active) => ({ border: `1px solid ${active ? brand.teal : brand.border}`, background: active ? brand.teal : brand.surface, color: active ? brand.inkOn : brand.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 9, fontWeight: 800 });
+
   return (
     <>
       <section style={{ ...cardStyle, marginBottom: 14 }}>
         <SectionHeading icon={Scale} color={metricColors.weight} styles={styles}>Weight</SectionHeading>
-        {gi ? (
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", margin: "8px 0 4px" }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => setWeightDisplay("average")} style={toggleStyle(weightDisplay === "average")}>7-day average</button>
+            <button onClick={() => setWeightDisplay("measurements")} style={toggleStyle(weightDisplay === "measurements")}>Measurements</button>
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => setWeightView("chart")} style={toggleStyle(weightView === "chart")}>Chart</button>
+            <button onClick={() => setWeightView("data")} style={toggleStyle(weightView === "data")}>Data</button>
+          </div>
+        </div>
+
+        {headlineWeight != null ? (
           <>
-            <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "5px 9px" }}>
-              <div className="num" style={{ fontSize: 27, fontWeight: 800 }}>{gi.latest.toFixed(1)} lb</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 11 }}>7-day average</div>
+            <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "5px 9px", marginTop: 8 }}>
+              <div className="num" style={{ fontSize: 27, fontWeight: 800 }}>{Number(headlineWeight).toFixed(1)} lb</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 11 }}>{weightDisplay === "average" ? "7-day average" : "latest measurement"}</div>
             </div>
             <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 3 }}>
               {weightChange == null ? "More history will make the longer trend clearer." : `${weightChange > 0 ? "↑" : weightChange < 0 ? "↓" : ""} ${Math.abs(weightChange).toFixed(1)} lb over this period`}
-              {gi.goal != null ? ` · Goal: ${gi.goal} lb` : ""}
+              {gi?.goal != null ? ` · Goal: ${gi.goal} lb` : ""}
             </div>
+            <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{measurementRows.length} weigh-in{measurementRows.length === 1 ? "" : "s"} logged in this {range}-day view</div>
           </>
         ) : <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 8 }}>Weight trends will take shape with more weigh-ins.</div>}
 
-        {weightRows.length >= 2 && (
-          <div style={{ width: "100%", height: 205, marginTop: 12 }}>
-            <ResponsiveContainer>
-              <LineChart data={weightRows} margin={{ top: 8, right: 8, left: -2, bottom: 0 }}>
-                <CartesianGrid stroke={BORDER} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={28} />
-                <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} domain={["dataMin - 2", "dataMax + 2"]} width={48} tickFormatter={(v) => `${Math.round(v)} lb`} />
-                {gi?.goal != null ? <ReferenceLine y={gi.goal} stroke={brand.textSoft} strokeDasharray="4 4" /> : null}
-                <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v) => [`${v} lb`, "7-day average"]} />
-                <Line type="monotone" dataKey="weight" stroke={profileColorFor(profileKey)} strokeWidth={3} dot={false} activeDot={{ r: 4 }} connectNulls />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        {weightView === "chart" ? (
+          weightRows.length >= 2 ? (
+            <div style={{ width: "100%", height: 205, marginTop: 12 }}>
+              <ResponsiveContainer>
+                <LineChart data={weightRows} margin={{ top: 8, right: 8, left: -2, bottom: 0 }}>
+                  <CartesianGrid stroke={BORDER} strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} minTickGap={28} />
+                  <YAxis tick={{ fill: TEXT_MUTED, fontSize: 9 }} axisLine={false} tickLine={false} domain={["dataMin - 2", "dataMax + 2"]} width={48} tickFormatter={(v) => `${Math.round(v)} lb`} />
+                  {gi?.goal != null ? <ReferenceLine y={gi.goal} stroke={brand.textSoft} strokeDasharray="4 4" /> : null}
+                  <Tooltip contentStyle={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11 }} formatter={(v) => [`${v} lb`, weightDisplay === "average" ? "7-day average" : "Measurement"]} />
+                  <Line type="monotone" dataKey="weight" stroke={profileColorFor(profileKey)} strokeWidth={3} dot={weightDisplay === "measurements" ? { r: 3 } : false} activeDot={{ r: 4 }} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null
+        ) : <WeightDataTable user={user} today={today} range={range} styles={styles} />}
       </section>
 
       <section style={{ ...cardStyle, marginBottom: 14 }}>
@@ -377,6 +460,7 @@ function IndividualTrends({ profileKey, profileNameFor, user, today, range, goal
             <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".06em" }}>Steps</div>
             <div className="num" style={{ fontSize: 21, fontWeight: 800, marginTop: 3 }}>{trend.stepAvg == null ? "—" : Math.round(trend.stepAvg).toLocaleString()}</div>
             <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{comparisonText(trend.stepAvg, trend.previousStepAvg, "", 150)}</div>
+            {trend.stepLoggedDays ? <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{trend.stepLoggedDays} logged day{trend.stepLoggedDays === 1 ? "" : "s"}</div> : null}
             {targets.steps ? <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>Goal: {targets.steps.toLocaleString()}</div> : null}
           </div>
           <div>
@@ -395,6 +479,7 @@ function IndividualTrends({ profileKey, profileNameFor, user, today, range, goal
           <div style={{ color: TEXT_MUTED, fontSize: 11 }}>daily average on logged days</div>
         </div>
         <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{comparisonText(trend.waterAvg, trend.previousWaterAvg, " oz", 2)}{targets.water ? ` · Goal: ${targets.water} oz` : ""}</div>
+        {trend.waterLoggedDays ? <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{trend.waterLoggedDays} logged day{trend.waterLoggedDays === 1 ? "" : "s"}</div> : null}
         <MiniBarTrend data={trend.recent} dataKey="water" color={metricColors.water} target={targets.water} suffix=" oz" styles={styles} />
       </section>
 
@@ -403,16 +488,19 @@ function IndividualTrends({ profileKey, profileNameFor, user, today, range, goal
         {!nutrition.length ? (
           <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "12px 0 4px" }}>Nutrition trends will appear as you log food or intentional fasting days.</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px 14px", marginTop: 12 }}>
-            {nutrition.map(([label, key, value, previous, target, suffix]) => (
-              <div key={key} style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 9 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".06em" }}>{label}</div>
-                <div className="num" style={{ fontSize: 19, fontWeight: 800, marginTop: 3 }}>{Math.round(value).toLocaleString()}{suffix}</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{comparisonText(value, previous, suffix, key === "calories" ? 50 : 3)}</div>
-                {target ? <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>Goal: {target.toLocaleString()}{suffix}</div> : null}
-              </div>
-            ))}
-          </div>
+          <>
+            <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 8 }}>{trend.nutritionLoggedDays} logged or fasting day{trend.nutritionLoggedDays === 1 ? "" : "s"} in this view</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px 14px", marginTop: 12 }}>
+              {nutrition.map(([label, key, value, previous, target, suffix]) => (
+                <div key={key} style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 9 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".06em" }}>{label}</div>
+                  <div className="num" style={{ fontSize: 19, fontWeight: 800, marginTop: 3 }}>{Math.round(value).toLocaleString()}{suffix}</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>{comparisonText(value, previous, suffix, key === "calories" ? 50 : 3)}</div>
+                  {target ? <div style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 3 }}>Goal: {target.toLocaleString()}{suffix}</div> : null}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </>
@@ -532,7 +620,7 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
         <IndividualTrends profileKey={selectedProfileKey} profileNameFor={profileNameFor} user={data[selectedProfileKey]} today={today} range={range} goalInfoFor={goalInfoFor} profileColorFor={profileColorFor} styles={styles} />
       )}
 
-      <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "12px 2px 6px" }}>Averages use the days you logged. Intentional fasting days count as zero food intake; unlogged days stay missing. Trends are here to help you notice patterns, not grade them.</div>
+      <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "12px 2px 6px" }}>Averages use only the days you logged. Blank days are unknown, never zero. Intentional fasting days count as zero food intake. Trends are here to help you notice patterns, not grade them.</div>
     </>
   );
 }
