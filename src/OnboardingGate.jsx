@@ -105,6 +105,7 @@ function OnboardingScreen({ onComplete }) {
   const [mode, setMode] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [profileName, setProfileName] = useState("");
+  const [existingProfile, setExistingProfile] = useState(undefined);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState("membership");
@@ -113,23 +114,56 @@ function OnboardingScreen({ onComplete }) {
   const [profileWithmark, setProfileWithmark] = useState("star");
   const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExistingProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id || cancelled) {
+        if (!cancelled) setExistingProfile(null);
+        return;
+      }
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, name, profile_color, profile_withmark")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (profileError) {
+        setError("We couldn’t load your profile. Try again.");
+        setExistingProfile(null);
+        return;
+      }
+      setExistingProfile(data || null);
+      if (data?.name) setProfileName(data.name);
+    }
+    loadExistingProfile();
+    return () => { cancelled = true; };
+  }, []);
+
   async function createHousehold(event) {
     event.preventDefault();
     const cleanHouseholdName = householdName.trim();
     const cleanProfileName = profileName.trim();
 
-    if (!cleanHouseholdName || !cleanProfileName) return;
+    if (!cleanHouseholdName || (!existingProfile && !cleanProfileName)) return;
 
     setBusy(true);
     setError("");
 
-    const { error: createError } = await supabase.rpc("create_household", {
-      household_name: cleanHouseholdName,
-      profile_name: cleanProfileName,
+    const { error: createError } = await supabase.rpc("create_with_v2", {
+      with_name: cleanHouseholdName,
+      profile_name: existingProfile ? null : cleanProfileName,
     });
 
     if (createError) {
       setError(friendlyOnboardingError(createError, "We couldn’t create your With. Try again."));
+      setBusy(false);
+      return;
+    }
+
+    if (existingProfile) {
+      await onComplete();
       setBusy(false);
       return;
     }
@@ -162,6 +196,8 @@ function OnboardingScreen({ onComplete }) {
     }
   }
 
+  if (existingProfile === undefined) return <BrandLoading>Getting your profile ready…</BrandLoading>;
+
   if (step === "personalize") {
     return (
       <ScreenShell>
@@ -190,13 +226,19 @@ function OnboardingScreen({ onComplete }) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>Take care of yourself. With people who care about you.</div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>
+          {existingProfile ? "You’re between Withs." : "Take care of yourself. With people who care about you."}
+        </div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>
-          With is a private place to track things like food, movement, water, weight and everyday intentions alongside people you trust.
+          {existingProfile
+            ? `Your profile${existingProfile.name ? ` as ${existingProfile.name}` : ""} and your health history are still here. Start a new With or join one from an invitation whenever you’re ready.`
+            : "With is a private place to track things like food, movement, water, weight and everyday intentions alongside people you trust."}
         </div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
-          Everyone has their own goals. You’re simply doing life together.
-        </div>
+        {!existingProfile && (
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
+            Everyone has their own goals. You’re simply doing life together.
+          </div>
+        )}
         <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 12 }}>Start a new With</button>
         <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, textAlign: "center" }}>
           Have an invitation? Open the invitation link from your email. Invitations are private and tied to the email address they were sent to.
@@ -207,10 +249,10 @@ function OnboardingScreen({ onComplete }) {
 
   return (
     <ScreenShell>
-      <BrandIntro eyebrow="Start with yourself. Add your people when you’re ready." />
+      <BrandIntro eyebrow={existingProfile ? "Your profile stays yours. This just gives it a new place to belong." : "Start with yourself. Add your people when you’re ready."} />
       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>Who are you with?</div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
-        A With is your private space with the people you choose. Give it a name, then tell us what to call you.
+        A With is your private space with the people you choose. Give it a name{existingProfile ? ". Your existing profile and health history come with you." : ", then tell us what to call you."}
       </div>
 
       <form onSubmit={createHousehold}>
@@ -226,19 +268,29 @@ function OnboardingScreen({ onComplete }) {
           style={{ ...inputStyle, marginBottom: 14 }}
         />
 
-        <div style={fieldLabel}>What should we call you?</div>
-        <input
-          type="text"
-          maxLength={40}
-          required
-          placeholder="Your name"
-          value={profileName}
-          onChange={(event) => setProfileName(event.target.value)}
-          style={{ ...inputStyle, marginBottom: 8 }}
-        />
-        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>
-          Your profile is yours. Your goals don’t have to match anyone else’s, even when you’re doing this together.
-        </div>
+        {existingProfile ? (
+          <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 13, marginBottom: 16 }}>
+            <div style={{ ...fieldLabel, marginBottom: 4 }}>Your profile</div>
+            <div style={{ color: TEXT, fontSize: 14, fontWeight: 700 }}>{existingProfile.name || "Your existing profile"}</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>Your goals and health history stay exactly as they are.</div>
+          </div>
+        ) : (
+          <>
+            <div style={fieldLabel}>What should we call you?</div>
+            <input
+              type="text"
+              maxLength={40}
+              required
+              placeholder="Your name"
+              value={profileName}
+              onChange={(event) => setProfileName(event.target.value)}
+              style={{ ...inputStyle, marginBottom: 8 }}
+            />
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>
+              Your profile is yours. Your goals don’t have to match anyone else’s, even when you’re doing this together.
+            </div>
+          </>
+        )}
 
         {error && (
           <div role="alert" style={{ color: WARN, fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
