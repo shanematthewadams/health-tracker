@@ -14,6 +14,9 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const [confirmMember, setConfirmMember] = useState(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState("");
+  const [confirmTransfer, setConfirmTransfer] = useState(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferError, setTransferError] = useState("");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaveBusy, setLeaveBusy] = useState(false);
   const [leaveError, setLeaveError] = useState("");
@@ -127,11 +130,34 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
 
     if (error) {
       const raw = String(error.message || "");
-      if (raw.includes("WITH_OWNER_REQUIRED")) setRemoveError("Only the person who started this With can remove someone.");
+      if (raw.includes("WITH_OWNER_REQUIRED")) setRemoveError("Only the owner of this With can remove someone.");
       else if (raw.includes("CANNOT_REMOVE_OWNER")) setRemoveError("An owner can’t be removed this way.");
       else if (raw.includes("MEMBERSHIP_NOT_FOUND")) setRemoveError("That person is no longer part of this With.");
       else setRemoveError("We couldn’t remove that person. Try again.");
       setRemoveBusy(false);
+      return;
+    }
+
+    window.location.reload();
+  }
+
+  async function transferOwnership(member) {
+    if (!member?.userId || !activeWithId || transferBusy) return;
+    setTransferBusy(true);
+    setTransferError("");
+
+    const { error } = await supabase.rpc("transfer_with_ownership_v1", {
+      with_id: activeWithId,
+      target_user_id: member.userId,
+    });
+
+    if (error) {
+      const raw = String(error.message || "");
+      if (raw.includes("WITH_OWNER_REQUIRED")) setTransferError("Only the current owner can transfer ownership.");
+      else if (raw.includes("TARGET_MEMBERSHIP_NOT_FOUND")) setTransferError("That person is no longer part of this With.");
+      else if (raw.includes("TARGET_ALREADY_OWNER")) setTransferError("That person is already an owner.");
+      else setTransferError("We couldn’t transfer ownership. Try again.");
+      setTransferBusy(false);
       return;
     }
 
@@ -147,7 +173,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
 
     if (error) {
       const raw = String(error.message || "");
-      if (raw.includes("OWNER_TRANSFER_REQUIRED")) setLeaveError("Transfer ownership before leaving a With you started.");
+      if (raw.includes("OWNER_TRANSFER_REQUIRED")) setLeaveError("Transfer ownership before leaving a With you own.");
       else if (raw.includes("MEMBERSHIP_NOT_FOUND")) setLeaveError("You’re no longer part of this With.");
       else setLeaveError("We couldn’t leave this With. Try again.");
       setLeaveBusy(false);
@@ -164,7 +190,13 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
         <div style={{ marginBottom: hasOtherWiths || canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
           <button
             type="button"
-            onClick={() => { setManagingPeople((value) => !value); setConfirmMember(null); setRemoveError(""); }}
+            onClick={() => {
+              setManagingPeople((value) => !value);
+              setConfirmMember(null);
+              setConfirmTransfer(null);
+              setRemoveError("");
+              setTransferError("");
+            }}
             style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontSize: 11, fontWeight: 700 }}
           >
             {managingPeople ? "Close people management" : "Manage people in this With"}
@@ -174,7 +206,19 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
               {removableMembers.map((member) => (
                 <div key={member.userId} style={{ border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, padding: "10px 11px" }}>
-                  {confirmMember?.userId === member.userId ? (
+                  {confirmTransfer?.userId === member.userId ? (
+                    <div>
+                      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Make {member.name} the owner?</div>
+                      <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
+                        {member.name} will become the owner of {activeWith?.name || "this With"}. You’ll stay in the With as a member and can leave afterward if you want.
+                      </div>
+                      {transferError && <div role="alert" style={{ color: brand.warn, fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>{transferError}</div>}
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <button type="button" disabled={transferBusy} onClick={() => { setConfirmTransfer(null); setTransferError(""); }} style={{ flex: 1, minHeight: 40, borderRadius: 9, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT, fontWeight: 700 }}>Cancel</button>
+                        <button type="button" disabled={transferBusy} onClick={() => transferOwnership(member)} style={{ flex: 1.35, minHeight: 40, borderRadius: 9, border: "none", background: brand.teal, color: brand.inkOn, fontWeight: 800, opacity: transferBusy ? .6 : 1 }}>{transferBusy ? "Transferring…" : "Transfer ownership"}</button>
+                      </div>
+                    </div>
+                  ) : confirmMember?.userId === member.userId ? (
                     <div>
                       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Remove {member.name}?</div>
                       <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
@@ -192,7 +236,10 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
                         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 17, fontWeight: 600, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
                         <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 3 }}>Member of this With</div>
                       </div>
-                      <button type="button" onClick={() => { setConfirmMember(member); setRemoveError(""); }} style={{ background: "none", border: "none", color: brand.warn, padding: "6px 0 6px 8px", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>Remove</button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                        <button type="button" onClick={() => { setConfirmTransfer(member); setConfirmMember(null); setTransferError(""); }} style={{ background: "none", border: "none", color: brand.tealDark, padding: "6px 0", fontSize: 11, fontWeight: 800 }}>Make owner</button>
+                        <button type="button" onClick={() => { setConfirmMember(member); setConfirmTransfer(null); setRemoveError(""); }} style={{ background: "none", border: "none", color: brand.warn, padding: "6px 0", fontSize: 11, fontWeight: 800 }}>Remove</button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -215,7 +262,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
                 Leave this With
               </button>
               {ownerNeedsTransfer && (
-                <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>You started this With. Transfer ownership before you leave.</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>You own this With. Transfer ownership before you leave.</div>
               )}
             </>
           ) : (
@@ -262,7 +309,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
               >
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: "block", fontFamily: "'Newsreader', Georgia, serif", fontSize: 17, fontWeight: 600, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{withItem.name}</span>
-                  <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, marginTop: 3 }}>{withItem.role === "owner" ? "You started this With" : "Switch to this With"}</span>
+                  <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, marginTop: 3 }}>{withItem.role === "owner" ? "You own this With" : "Switch to this With"}</span>
                 </span>
                 <span style={{ color: brand.tealDark, fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
                   Switch <ChevronRight size={14} strokeWidth={2} />
