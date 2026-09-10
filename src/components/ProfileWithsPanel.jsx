@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Plus } from "lucide-react";
 import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
-import { readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
+import { clearStoredActiveWithId, readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
 
 export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
@@ -14,6 +14,9 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const [confirmMember, setConfirmMember] = useState(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState("");
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -96,9 +99,11 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
     [members, currentUserId]
   );
   const canManagePeople = activeWith?.role === "owner" && removableMembers.length > 0;
+  const canLeaveWith = activeWith?.role === "member";
+  const ownerNeedsTransfer = activeWith?.role === "owner";
   const hasOtherWiths = withs.length > 1 && otherWiths.length > 0;
 
-  if (!hasOtherWiths && !canManagePeople) return null;
+  if (!hasOtherWiths && !canManagePeople && !canLeaveWith && !ownerNeedsTransfer) return null;
 
   function switchWith(withId) {
     if (!withId || withId === activeWithId) return;
@@ -133,10 +138,30 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
     window.location.reload();
   }
 
+  async function leaveWith() {
+    if (!activeWithId || leaveBusy) return;
+    setLeaveBusy(true);
+    setLeaveError("");
+
+    const { error } = await supabase.rpc("leave_with_v1", { with_id: activeWithId });
+
+    if (error) {
+      const raw = String(error.message || "");
+      if (raw.includes("OWNER_TRANSFER_REQUIRED")) setLeaveError("Transfer ownership before leaving a With you started.");
+      else if (raw.includes("MEMBERSHIP_NOT_FOUND")) setLeaveError("You’re no longer part of this With.");
+      else setLeaveError("We couldn’t leave this With. Try again.");
+      setLeaveBusy(false);
+      return;
+    }
+
+    clearStoredActiveWithId();
+    window.location.reload();
+  }
+
   return (
     <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
       {canManagePeople && (
-        <div style={{ marginBottom: hasOtherWiths ? 18 : 0 }}>
+        <div style={{ marginBottom: hasOtherWiths || canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
           <button
             type="button"
             onClick={() => { setManagingPeople((value) => !value); setConfirmMember(null); setRemoveError(""); }}
@@ -172,6 +197,41 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(canLeaveWith || ownerNeedsTransfer) && (
+        <div style={{ marginBottom: hasOtherWiths ? 18 : 0 }}>
+          {!confirmLeave ? (
+            <>
+              <button
+                type="button"
+                disabled={ownerNeedsTransfer}
+                onClick={() => { setConfirmLeave(true); setLeaveError(""); }}
+                style={{ background: "none", border: "none", color: ownerNeedsTransfer ? TEXT_MUTED : brand.warn, padding: 0, fontSize: 11, fontWeight: 700, opacity: ownerNeedsTransfer ? .7 : 1 }}
+              >
+                Leave this With
+              </button>
+              {ownerNeedsTransfer && (
+                <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>You started this With. Transfer ownership before you leave.</div>
+              )}
+            </>
+          ) : (
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, padding: "11px" }}>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Leave {activeWith?.name || "this With"}?</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
+                Your account, profile, goals, and health history stay yours. You just won’t be part of this With anymore.
+              </div>
+              {withs.length === 1 && (
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>This is your only With. You can start or join another one afterward without losing your personal data.</div>
+              )}
+              {leaveError && <div role="alert" style={{ color: brand.warn, fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>{leaveError}</div>}
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <button type="button" disabled={leaveBusy} onClick={() => { setConfirmLeave(false); setLeaveError(""); }} style={{ flex: 1, minHeight: 40, borderRadius: 9, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT, fontWeight: 700 }}>Cancel</button>
+                <button type="button" disabled={leaveBusy} onClick={leaveWith} style={{ flex: 1, minHeight: 40, borderRadius: 9, border: "none", background: brand.warn, color: "#fff", fontWeight: 800, opacity: leaveBusy ? .6 : 1 }}>{leaveBusy ? "Leaving…" : "Leave With"}</button>
+              </div>
             </div>
           )}
         </div>
