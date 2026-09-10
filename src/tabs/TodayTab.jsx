@@ -1,6 +1,6 @@
 import { brand, metricColors } from "../brand.jsx";
 import { useEffect, useState } from "react";
-import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2 } from "lucide-react";
+import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2, Target } from "lucide-react";
 import { SunMark, WaveMark } from "../WithMarks.jsx";
 
 function greeting(timeZone) {
@@ -52,6 +52,7 @@ export default function TodayTab({
   activeUser,
   activeCanEdit,
   data,
+  profileNames,
   today,
   timeZone,
   todayStats,
@@ -71,15 +72,21 @@ export default function TodayTab({
   endFast,
   fastElapsed,
   openLog,
+  openGoals,
+  openProfile,
+  walkthrough,
+  updateWalkthrough,
   deleteFood,
   editLoggedFood,
   profileColor,
   profileText,
+  profileNameForProfile,
   intentions,
   saveIntention,
   styles,
 }) {
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, fieldLabel, inputStyle, bigButton } = styles;
+  const activeName = profileNameForProfile?.(activeUser) || activeUser;
   const u = data[activeUser];
   const targets = u.targets;
   const goalWeeks = weeksUntil(u.goalDate);
@@ -93,12 +100,39 @@ export default function TodayTab({
   const [selectedDate, setSelectedDate] = useState(today);
   useEffect(() => { setSelectedDate(today); }, [today]);
   const [foodDetailOpen, setFoodDetailOpen] = useState(false);
+  const [firstTodayVisible, setFirstTodayVisible] = useState(() => localStorage.getItem("with-first-today-pending") === "1");
   const isToday = selectedDate === today;
+
+  function finishFirstToday() {
+    localStorage.removeItem("with-first-today-pending");
+    setFirstTodayVisible(false);
+  }
+
+  function startWithIntention() {
+    finishFirstToday();
+    setEditingIntention(true);
+  }
+
+  function startWithLog() {
+    finishFirstToday();
+    window.requestAnimationFrame(() => document.getElementById("today-quick-add")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function startWithSetup() {
+    finishFirstToday();
+    openGoals?.();
+  }
 
   const dayFoods = u.foods.filter((f) => f.date === selectedDate);
   const dayActivities = u.activities.filter((a) => a.date === selectedDate);
   const dayWeight = u.weights.filter((w) => w.date === selectedDate);
   const latestDayWeight = dayWeight.length ? dayWeight[dayWeight.length - 1].weight : null;
+  const weightWindowStart = shiftDate(selectedDate, -6);
+  const recentWeights = u.weights.filter((w) => w.date >= weightWindowStart && w.date <= selectedDate);
+  const averageWeight = recentWeights.length
+    ? recentWeights.reduce((sum, w) => sum + w.weight, 0) / recentWeights.length
+    : null;
+  const averageLabel = recentWeights.length >= 7 ? "7-day average" : "Average weight";
   const prevWeightEntry = u.weights.filter((w) => w.date < selectedDate).slice().sort((a, b) => b.date.localeCompare(a.date))[0] || null;
   const totalActivityCals = dayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
   const dayWater = u.water.filter((w) => w.date === selectedDate).reduce((sum, w) => sum + w.ounces, 0);
@@ -153,19 +187,18 @@ export default function TodayTab({
       value: dayActivities.length === 1 ? dayActivities[0].name : `${dayActivities.length} activities`,
       sub: `${Math.round(totalActivityCals)} cal burned`,
     },
-    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: `${Math.round(ts.water)} oz`, sub: isToday ? "Logged today" : "Logged that day" },
-    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? ts.steps.toLocaleString() : "", sub: isToday ? "Logged today" : "Logged that day" },
+    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: targets.water ? `${Math.round(ts.water)} / ${targets.water} oz` : `${Math.round(ts.water)} oz`, sub: targets.water ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
+    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? (targets.steps ? `${ts.steps.toLocaleString()} / ${targets.steps.toLocaleString()}` : ts.steps.toLocaleString()) : "", sub: targets.steps ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
     {
       id: "weight",
       label: "Weight",
       icon: Scale,
       color: PEN.red,
       show: latestDayWeight != null,
-      value: latestDayWeight != null ? `${latestDayWeight} lb` : "",
+      value: averageWeight != null ? `${averageWeight.toFixed(1)} lb` : "",
       sub: [
-        latestDayWeight != null && prevWeightEntry
-          ? `${latestDayWeight < prevWeightEntry.weight ? "↓" : latestDayWeight > prevWeightEntry.weight ? "↑" : "→"} ${Math.abs(latestDayWeight - prevWeightEntry.weight).toFixed(1)} lb from last weigh-in`
-          : isToday ? "Logged today" : "Logged that day",
+        averageWeight != null ? averageLabel : null,
+        latestDayWeight != null ? `Latest: ${latestDayWeight} lb` : null,
         isToday && goalTiming ? goalTiming : null,
       ].filter(Boolean).join(" · "),
     },
@@ -197,7 +230,7 @@ export default function TodayTab({
     <div style={{ background: "#FEFDF9" }}>
       <div style={{ padding: "0.25rem 0.1rem 1rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontWeight: 600, fontSize: 31, lineHeight: 1.08, color: PEN.ink }}>
-          {isToday ? (isMine ? `${greeting(timeZone)}, ${activeUser}.` : `${activeUser} today`) : activeUser}
+          {isToday ? (isMine ? `${greeting(timeZone)}, ${activeName}.` : `${activeName} today`) : activeName}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
           <button
@@ -220,12 +253,117 @@ export default function TodayTab({
         </div>
       </div>
 
+      {isToday && isMine && firstTodayVisible && (
+        <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", borderTop: "3px solid " + profileColor(activeUser) }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <SunMark size={16} color={profileColor(activeUser)} />
+                <div style={sectionLabel}>Your first Today</div>
+              </div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, color: PEN.ink, lineHeight: 1.12, marginTop: 8 }}>Welcome to your Today.</div>
+            </div>
+            <button onClick={finishFirstToday} aria-label="Dismiss first-day welcome" style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 4, display: "grid", placeItems: "center" }}>
+              <X style={{ width: 17, height: 17 }} strokeWidth={1.8} />
+            </button>
+          </div>
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 14, maxWidth: 390 }}>
+            You don’t need to set everything up before you begin. Start with whatever feels useful today.
+          </div>
+
+          {[
+            ["intention", "Set an intention", "What would you like to keep in mind today?", WaveMark, brand.teal],
+            ["log", "Log something from today", "Food, water, movement, weight or steps.", SunMark, PEN.orange],
+            ["setup", "Set up what you want to track", "Add goals and targets when they’re useful to you.", Target, PEN.green],
+          ].map(([id, title, copy, Icon, color], index) => (
+            <button
+              key={id}
+              onClick={id === "intention" ? startWithIntention : id === "log" ? startWithLog : startWithSetup}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                borderTop: index === 0 ? "1px solid " + PEN.rule : "none",
+                borderBottom: "1px solid " + PEN.rule,
+                background: "transparent",
+                color: TEXT,
+                padding: "13px 0",
+                display: "grid",
+                gridTemplateColumns: "24px 1fr 18px",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Icon size={17} color={color} strokeWidth={1.9} />
+              <span>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: PEN.ink }}>{title}</span>
+                <span style={{ display: "block", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.4, marginTop: 2 }}>{copy}</span>
+              </span>
+              <ChevronRight style={{ width: 16, height: 16, color: TEXT_MUTED }} strokeWidth={1.8} />
+            </button>
+          ))}
+
+          <button onClick={finishFirstToday} style={{ border: "none", background: "transparent", color: brand.tealDark, width: "100%", padding: "13px 4px 1px", fontSize: 12, fontWeight: 800 }}>
+            Not now. I’ll explore on my own.
+          </button>
+        </section>
+      )}
+
+      {isToday && isMine && !firstTodayVisible && walkthrough?.active && walkthrough?.firstLogDone && !walkthrough?.todaySoFarSeen && hasAnything && (
+        <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE_2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+            <SunMark size={16} color={profileColor(activeUser)} />
+            <div style={sectionLabel}>Your day at a glance</div>
+          </div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.12, marginBottom: 6 }}>This is where your day comes together.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
+            As you log things, Today fills in so you can see what’s happening without digging through every entry.
+          </div>
+          <button
+            type="button"
+            onClick={() => updateWalkthrough?.({ todaySoFarSeen: true, active: profileNames?.length === 1 })}
+            style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontSize: 12, fontWeight: 800 }}
+          >
+            Got it
+          </button>
+        </section>
+      )}
+
+      {isToday && isMine && !firstTodayVisible && walkthrough?.active && walkthrough?.todaySoFarSeen && (profileNames?.length || 0) === 1 && !walkthrough?.relationshipSeen && (
+        <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+            <WaveMark size={16} color={brand.teal} />
+            <div style={sectionLabel}>When you’re ready</div>
+          </div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, lineHeight: 1.12, marginBottom: 6 }}>Want someone With you?</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+            With works just fine on your own. But you can invite someone you trust whenever sharing the experience feels useful.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => { updateWalkthrough?.({ relationshipSeen: true, active: false }); openProfile?.(); }}
+              style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 16 }}
+            >
+              Invite someone
+            </button>
+            <button
+              type="button"
+              onClick={() => updateWalkthrough?.({ relationshipSeen: true, active: false })}
+              style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", paddingInline: 14, border: "1px solid " + BORDER }}
+            >
+              Not yet
+            </button>
+          </div>
+        </section>
+      )}
+
       {isToday && <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <WaveMark size={14} color={brand.teal} />
-              <div style={sectionLabel}>{isMine ? "My intention" : `${activeUser}'s intention`}</div>
+              <div style={sectionLabel}>{isMine ? "My intention" : `${activeName}'s intention`}</div>
             </div>
             <div style={straightRule(brand.teal)} />
           </div>
@@ -278,12 +416,12 @@ export default function TodayTab({
             lineHeight: 1.4,
             color: intention ? profileColor(activeUser) : TEXT_MUTED,
           }}>
-            {intention || (isMine ? "Set one small thought to carry with you today." : `${activeUser} hasn’t set an intention yet.`)}
+            {intention || (isMine ? "Set one small thought to carry with you today." : `${activeName} hasn’t set an intention yet.`)}
           </div>
         )}
       </section>}
 
-      {isToday && isMine && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
+      {isToday && isMine && !firstTodayVisible && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
         <section style={{ marginBottom: 28, paddingBottom: 22 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ minWidth: 0 }}>
@@ -331,7 +469,7 @@ export default function TodayTab({
       )}
 
       {isMine && (
-        <section style={{ marginBottom: 30 }}>
+        <section id="today-quick-add" style={{ marginBottom: 30 }}>
           <div style={sectionLabel}>Quick add</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7, marginTop: 10 }}>
             {quick.map(([label, kind, Icon, color]) => (
@@ -375,92 +513,99 @@ export default function TodayTab({
               ? (activeFasts[activeUser]
                 ? "You’re fasting right now. You can still add water, activity, weight or steps."
                 : "Add something whenever you’re ready. A little information is still useful information.")
-              : `${activeUser} hasn’t added anything today.`}
+              : `${activeName} hasn’t added anything today.`}
           </div>
         </section>
       ) : (
-        <>
-          <section style={{ marginBottom: 24 }}>
-            <div style={sectionLabel}>{isToday ? "Today so far" : "Day at a glance"}</div>
-            <div style={straightRule(PEN.blue)} />
-            <div style={{ marginTop: 10 }}>
-              {metricRows.filter((m) => m.show).map(({ id, label, icon: Icon, color, value, sub }) => (
-                <button
-                  key={id}
-                  onClick={() => openLog(id, selectedDate)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    background: "transparent",
-                    color: TEXT,
-                    border: "none",
-                    borderBottom: `1px solid ${PEN.rule}`,
-                    borderRadius: 0,
-                    padding: "12px 0",
-                    display: "grid",
-                    gridTemplateColumns: "22px 1fr auto",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <Icon style={{ width: 16, height: 16, color }} strokeWidth={2} />
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
-                    <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{sub}</div>
-                  </div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>{value}</div>
-                </button>
-              ))}
-            </div>
-          </section>
+        <section style={{ marginBottom: 24 }}>
+          <div style={sectionLabel}>{isToday ? "Today so far" : "Day at a glance"}</div>
+          <div style={straightRule(PEN.blue)} />
+          <div style={{ marginTop: 10 }}>
+            {metricRows.filter((m) => m.show).map(({ id, label, icon: Icon, color, value, sub }) => (
+              <button
+                key={id}
+                onClick={() => openLog(id, selectedDate)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  background: "transparent",
+                  color: TEXT,
+                  border: "none",
+                  borderBottom: `1px solid ${PEN.rule}`,
+                  borderRadius: 0,
+                  padding: "12px 0",
+                  display: "grid",
+                  gridTemplateColumns: "22px 1fr auto",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Icon style={{ width: 16, height: 16, color }} strokeWidth={2} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>{sub}</div>
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>{value}</div>
+              </button>
+            ))}
 
-          <section style={{ marginBottom: 10 }}>
             <button
               onClick={() => setFoodDetailOpen(true)}
-              style={{ width: "100%", textAlign: "left", background: "transparent", color: TEXT, border: "none", padding: 0 }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                background: "transparent",
+                color: TEXT,
+                border: "none",
+                borderBottom: `1px solid ${PEN.rule}`,
+                borderRadius: 0,
+                padding: "12px 0",
+                display: "grid",
+                gridTemplateColumns: "22px 1fr auto",
+                alignItems: "center",
+                gap: 10,
+              }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <div>
-                  <div style={sectionLabel}>Food</div>
-                  <div style={straightRule(PEN.blue)} />
+              <Utensils style={{ width: 16, height: 16, color: PEN.blue }} strokeWidth={2} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>Food</div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>
+                  {dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged
                 </div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12 }}>{dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged →</div>
               </div>
-
-              {isToday && activeFasts[activeUser] && dayFoods.length === 0 ? (
-                <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 12 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
-              ) : (
-                <>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12 }}>
-                    <div className="num" style={{ fontSize: 26, fontWeight: 800, color: PEN.ink }}>{Math.round(ts.calories)}</div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12 }}>/ {targets.calories} cal</div>
-                  </div>
-
-                  <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "8px 0 14px" }}>
-                    <div style={{ width: `${targets.calories ? Math.min(100, ts.calories / targets.calories * 100) : 0}%`, height: "100%", background: PEN.blue }} />
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
-                    {[
-                      ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
-                      ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
-                      ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
-                      ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
-                    ].map(([label, value, target, color]) => (
-                      <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
-                        <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
-                        <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
-                        <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
-                          {value} <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target || "—"}g</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>
+                {Math.round(ts.calories)}{targets.calories ? ` / ${targets.calories}` : ""} cal
+              </div>
             </button>
-          </section>
-        </>
+
+            {isToday && activeFasts[activeUser] && dayFoods.length === 0 ? (
+              <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "12px 0 2px 32px" }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
+            ) : (
+              <div style={{ padding: "12px 0 2px 32px" }}>
+                {targets.calories && <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "0 0 14px" }}>
+                  <div style={{ width: `${Math.min(100, ts.calories / targets.calories * 100)}%`, height: "100%", background: PEN.blue }} />
+                </div>}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
+                  {[
+                    ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
+                    ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
+                    ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
+                    ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
+                  ].map(([label, value, target, color]) => (
+                    <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
+                      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                      <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
+                      <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
+                        {value} {target ? <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target}g</span> : <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>g</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {foodDetailOpen && (

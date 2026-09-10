@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
-const BG = brand.bg;
 const SURFACE = brand.surface;
 const SURFACE_2 = brand.surfaceSoft;
 const BORDER = brand.border;
@@ -11,10 +11,10 @@ const TEXT_MUTED = brand.textMuted;
 const WARN = brand.warn;
 const ACCENT = brand.teal;
 const ACCENT_TEXT = brand.inkOn;
+const PROFILE_COLORS = ["#F06A24","#7047EB","#4C6EF5","#E7685B","#D99524","#D95B83","#4658C9","#9B88D8"];
 
 function friendlyOnboardingError(error, fallback) {
   const raw = String(error?.message || error || "").toLowerCase();
-  if (raw.includes("invalid") && raw.includes("invite")) return "That invite doesn’t look right. Check the code and try again.";
   if (raw.includes("duplicate") || raw.includes("unique")) return "That name is already being used in this With.";
   if (raw.includes("network") || raw.includes("fetch")) return "We couldn’t connect to With. Check your connection and try again.";
   return fallback;
@@ -52,7 +52,6 @@ const primaryButton = {
   fontSize: 15,
   width: "100%",
   fontFamily: "'DM Sans', -apple-system, sans-serif",
-  
 };
 
 const secondaryButton = {
@@ -102,34 +101,59 @@ function BrandIntro({ eyebrow }) {
   );
 }
 
-function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = "" }) {
-  const [mode, setMode] = useState(initialInviteCode ? "join" : null);
+function OnboardingScreen({ onComplete }) {
+  const [mode, setMode] = useState(null);
   const [householdName, setHouseholdName] = useState("");
   const [profileName, setProfileName] = useState("");
-  const [inviteCode, setInviteCode] = useState(initialInviteCode);
+  const [existingProfile, setExistingProfile] = useState(undefined);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState("membership");
+  const [profileId, setProfileId] = useState(null);
+  const [profileColor, setProfileColor] = useState(PROFILE_COLORS[2]);
+  const [profileWithmark, setProfileWithmark] = useState("star");
+  const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-  function goBack() {
-    setMode(null);
-    setError("");
-    setHouseholdName("");
-    setInviteCode(initialInviteCode);
-  }
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExistingProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id || cancelled) {
+        if (!cancelled) setExistingProfile(null);
+        return;
+      }
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, name, profile_color, profile_withmark")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (profileError) {
+        setError("We couldn’t load your profile. Try again.");
+        setExistingProfile(null);
+        return;
+      }
+      setExistingProfile(data || null);
+      if (data?.name) setProfileName(data.name);
+    }
+    loadExistingProfile();
+    return () => { cancelled = true; };
+  }, []);
 
   async function createHousehold(event) {
     event.preventDefault();
     const cleanHouseholdName = householdName.trim();
     const cleanProfileName = profileName.trim();
 
-    if (!cleanHouseholdName || !cleanProfileName) return;
+    if (!cleanHouseholdName || (!existingProfile && !cleanProfileName)) return;
 
     setBusy(true);
     setError("");
 
-    const { error: createError } = await supabase.rpc("create_household", {
-      household_name: cleanHouseholdName,
-      profile_name: cleanProfileName,
+    const { error: createError } = await supabase.rpc("create_with_v2", {
+      with_name: cleanHouseholdName,
+      profile_name: existingProfile ? null : cleanProfileName,
     });
 
     if (createError) {
@@ -138,113 +162,135 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
       return;
     }
 
-    await onComplete();
-    setBusy(false);
-  }
-
-  async function joinHousehold(event) {
-    event.preventDefault();
-    const cleanCode = inviteCode.trim().toUpperCase();
-    const cleanProfileName = profileName.trim();
-
-    if (!cleanCode || !cleanProfileName) return;
-
-    setBusy(true);
-    setError("");
-
-    const { error: joinError } = await supabase.rpc("join_household", {
-      invite_code_input: cleanCode,
-      profile_name: cleanProfileName,
-    });
-
-    if (joinError) {
-      setError(friendlyOnboardingError(joinError, "We couldn’t join that With. Check the invite and try again."));
+    if (existingProfile) {
+      await onComplete();
       setBusy(false);
       return;
     }
 
-    localStorage.removeItem("with-pending-invite");
-    localStorage.removeItem("with-pending-inviter");
-    await onComplete();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: createdProfile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).limit(1).maybeSingle();
+    setProfileId(createdProfile?.id || null);
+    setStep("personalize");
     setBusy(false);
   }
 
-  if (!mode && !initialInviteCode) {
+  async function finishPersonalization() {
+    setBusy(true);
+    setError("");
+    try {
+      if (profileId) {
+        const { error: profileError } = await supabase.from("profiles").update({ profile_color: profileColor, profile_withmark: profileWithmark }).eq("id", profileId);
+        if (profileError) throw profileError;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentData = user?.user_metadata || {};
+      const { error: userError } = await supabase.auth.updateUser({ data: { ...currentData, timezone: deviceTimeZone } });
+      if (userError) throw userError;
+      localStorage.setItem("with-first-today-pending", "1");
+      localStorage.setItem("with-walkthrough-state", JSON.stringify({ active: true, logIntroSeen: false, goalsIntroSeen: false, firstLogDone: false, todaySoFarSeen: false }));
+      await onComplete();
+    } catch (saveError) {
+      setError(friendlyOnboardingError(saveError, "We couldn’t save that. Try again."));
+      setBusy(false);
+    }
+  }
+
+  if (existingProfile === undefined) return <BrandLoading>Getting your profile ready…</BrandLoading>;
+
+  if (step === "personalize") {
     return (
       <ScreenShell>
-        <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>Who are you with?</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 22 }}>
-          With is a private place to track your own health alongside people you trust. Your goals and health information stay yours.
+        <BrandIntro eyebrow="A little piece of With that’s yours." />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>This is you in With.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>Pick a color and a Withmark, or keep what we chose. You can change either one later.</div>
+        <div style={{ ...fieldLabel, marginBottom: 9 }}>Your color</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 8, marginBottom: 20 }}>
+          {PROFILE_COLORS.map((color) => <button key={color} type="button" aria-label={"Choose " + color} onClick={() => setProfileColor(color)} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", background: color, border: profileColor === color ? "3px solid " + TEXT : "3px solid transparent", boxShadow: profileColor === color ? "0 0 0 2px " + SURFACE : "none" }} />)}
         </div>
-        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 10 }}>Start your With</button>
-        <button type="button" onClick={() => setMode("join")} style={secondaryButton}>Join someone</button>
+        <div style={{ ...fieldLabel, marginBottom: 9 }}>Your Withmark</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginBottom: 20 }}>
+          {WITHMARK_OPTIONS.map(({ id, name }) => <button key={id} type="button" aria-label={name} title={name} onClick={() => setProfileWithmark(id)} style={{ minHeight: 42, display: "grid", placeItems: "center", borderRadius: 10, background: profileWithmark === id ? profileColor : SURFACE, color: profileWithmark === id ? "#fff" : TEXT, border: "1px solid " + (profileWithmark === id ? profileColor : BORDER) }}><WithMark id={id} size={20} /></button>)}
+        </div>
+        <div style={{ background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: profileColor, color: "#fff", display: "grid", placeItems: "center" }}><WithMark id={profileWithmark} size={23} /></div>
+          <div><div style={{ fontWeight: 700 }}>{profileName || "You"}</div><div style={{ color: TEXT_MUTED, fontSize: 12 }}>{deviceTimeZone.replaceAll("_", " ")}</div></div>
+        </div>
+        {error && <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 12 }}>{error}</div>}
+        <button type="button" disabled={busy} onClick={finishPersonalization} style={{ ...primaryButton, opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Continue to Today"}</button>
       </ScreenShell>
     );
   }
 
-  const isCreate = mode === "create";
+  if (!mode) {
+    return (
+      <ScreenShell>
+        <BrandIntro eyebrow="We’re in this together." />
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.05, marginBottom: 10 }}>
+          {existingProfile ? "You’re between Withs." : "Take care of yourself. With people who care about you."}
+        </div>
+        <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>
+          {existingProfile
+            ? `Your profile${existingProfile.name ? ` as ${existingProfile.name}` : ""} and your health history are still here. Start a new With or join one from an invitation whenever you’re ready.`
+            : "With is a private place to track things like food, movement, water, weight and everyday intentions alongside people you trust."}
+        </div>
+        {!existingProfile && (
+          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
+            Everyone has their own goals. You’re simply doing life together.
+          </div>
+        )}
+        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 12 }}>Start a new With</button>
+        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, textAlign: "center" }}>
+          Have an invitation? Open the invitation link from your email. Invitations are private and tied to the email address they were sent to.
+        </div>
+      </ScreenShell>
+    );
+  }
 
   return (
     <ScreenShell>
-      <BrandIntro eyebrow={isCreate ? "Start with yourself. Add your people when you’re ready." : "Your goals are still yours. You’ll just have company."} />
-      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>
-        {isCreate ? "Create your With" : inviterName ? `Join ${inviterName}’s With` : "Join a With"}
-      </div>
+      <BrandIntro eyebrow={existingProfile ? "Your profile stays yours. This just gives it a new place to belong." : "Start with yourself. Add your people when you’re ready."} />
+      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>Who are you with?</div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
-        {isCreate
-          ? "Give your private space a name, then create your own health profile."
-          : initialInviteCode
-            ? inviterName
-              ? `${inviterName} invited you to join their With. Create your own health profile to continue.`
-              : "You’ve been invited to join this With. Create your own health profile to continue."
-            : "Enter the invite code you received, then create your own health profile."}
+        A With is your private space with the people you choose. Give it a name{existingProfile ? ". Your existing profile and health history come with you." : ", then tell us what to call you."}
       </div>
 
-      <form onSubmit={isCreate ? createHousehold : joinHousehold}>
-        {isCreate ? (
-          <>
-            <div style={fieldLabel}>Name your With</div>
-            <input
-              type="text"
-              maxLength={40}
-              required
-              autoFocus
-              placeholder="e.g. Shane & Alli"
-              value={householdName}
-              onChange={(event) => setHouseholdName(event.target.value)}
-              style={{ ...inputStyle, marginBottom: 14 }}
-            />
-          </>
-        ) : !initialInviteCode ? (
-          <>
-            <div style={fieldLabel}>Invite code</div>
-            <input
-              type="text"
-              required
-              autoFocus
-              autoCapitalize="characters"
-              placeholder="e.g. A7K2M9QX"
-              value={inviteCode}
-              onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-              style={{ ...inputStyle, marginBottom: 14, textTransform: "uppercase" }}
-            />
-          </>
-        ) : null}
-
-        <div style={fieldLabel}>What should we call you?</div>
+      <form onSubmit={createHousehold}>
+        <div style={fieldLabel}>What should we call your With?</div>
         <input
           type="text"
           maxLength={40}
           required
-          placeholder="Your name"
-          value={profileName}
-          onChange={(event) => setProfileName(event.target.value)}
-          style={{ ...inputStyle, marginBottom: 8 }}
+          autoFocus
+          placeholder="e.g. Shane & Alli, The Adamses, Morning Crew"
+          value={householdName}
+          onChange={(event) => setHouseholdName(event.target.value)}
+          style={{ ...inputStyle, marginBottom: 14 }}
         />
-        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>
-          This creates your personal profile. Your goals, nutrition targets, activity and other health information belong to you.
-        </div>
+
+        {existingProfile ? (
+          <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 13, marginBottom: 16 }}>
+            <div style={{ ...fieldLabel, marginBottom: 4 }}>Your profile</div>
+            <div style={{ color: TEXT, fontSize: 14, fontWeight: 700 }}>{existingProfile.name || "Your existing profile"}</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>Your goals and health history stay exactly as they are.</div>
+          </div>
+        ) : (
+          <>
+            <div style={fieldLabel}>What should we call you?</div>
+            <input
+              type="text"
+              maxLength={40}
+              required
+              placeholder="Your name"
+              value={profileName}
+              onChange={(event) => setProfileName(event.target.value)}
+              style={{ ...inputStyle, marginBottom: 8 }}
+            />
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>
+              Your profile is yours. Your goals don’t have to match anyone else’s, even when you’re doing this together.
+            </div>
+          </>
+        )}
 
         {error && (
           <div role="alert" style={{ color: WARN, fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
@@ -253,9 +299,9 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
         )}
 
         <button type="submit" disabled={busy} style={{ ...primaryButton, opacity: busy ? 0.65 : 1, marginBottom: 8 }}>
-          {busy ? "Setting things up…" : isCreate ? "Create my With" : inviterName ? `Join ${inviterName}’s With` : "Join With"}
+          {busy ? "Setting things up…" : "Create my With"}
         </button>
-        <button type="button" onClick={goBack} disabled={busy} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 9, fontSize: 13 }}>
+        <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={busy} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 9, fontSize: 13 }}>
           Back
         </button>
       </form>
@@ -264,21 +310,11 @@ function OnboardingScreen({ onComplete, initialInviteCode = "", inviterName = ""
 }
 
 export default function OnboardingGate({ children }) {
-  const params = new URLSearchParams(window.location.search);
-  const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
-  const inviterFromUrl = params.get("inviter")?.trim() || "";
-  const initialInviteCode = inviteFromUrl || localStorage.getItem("with-pending-invite") || "";
-  const initialInviterName = inviterFromUrl || localStorage.getItem("with-pending-inviter") || "";
   const [session, setSession] = useState(null);
   const sessionRef = useRef(null);
   const [checking, setChecking] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [checkError, setCheckError] = useState("");
-
-  useEffect(() => {
-    if (inviteFromUrl) localStorage.setItem("with-pending-invite", inviteFromUrl);
-    if (inviterFromUrl) localStorage.setItem("with-pending-inviter", inviterFromUrl);
-  }, [inviteFromUrl, inviterFromUrl]);
 
   async function checkMembership(nextSession) {
     if (!nextSession?.user) {
@@ -348,8 +384,6 @@ export default function OnboardingGate({ children }) {
         return;
       }
 
-      // TOKEN_REFRESHED, USER_UPDATED and other routine auth events should not
-      // blank the app or re-run onboarding checks. Keep the session current silently.
       sessionRef.current = nextSession;
       setSession(nextSession);
     });
@@ -382,7 +416,7 @@ export default function OnboardingGate({ children }) {
   }
 
   if (session && needsOnboarding) {
-    return <OnboardingScreen onComplete={finishOnboarding} initialInviteCode={initialInviteCode} inviterName={initialInviterName} />;
+    return <OnboardingScreen onComplete={finishOnboarding} />;
   }
 
   return children;

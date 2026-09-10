@@ -1,21 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { ...corsHeaders, "Content-Type": "application/json" },
-});
-
-const escapeHtml = (value: string) => value
-  .replaceAll("&", "&amp;")
-  .replaceAll("<", "&lt;")
-  .replaceAll(">", "&gt;")
-  .replaceAll('"', "&quot;")
-  .replaceAll("'", "&#039;");
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+const escapeHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 
 function randomToken() {
   const bytes = new Uint8Array(32);
@@ -44,7 +31,6 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "You must be signed in." }, 401);
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -57,18 +43,18 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const recipientEmail = String(body?.email || "").trim().toLowerCase();
-    const householdId = String(body?.householdId || "").trim();
-
+    let householdId = String(body?.householdId || "").trim();
+    const legacyInviteCode = String(body?.inviteCode || "").trim().toUpperCase();
     if (!recipientEmail || !recipientEmail.includes("@")) return json({ error: "Enter a valid email address." }, 400);
-    if (!householdId) return json({ error: "Choose a With first." }, 400);
     if (recipientEmail === String(userData.user.email || "").toLowerCase()) return json({ error: "You’re already in this With." }, 400);
 
-    const { data: membership, error: memberError } = await admin
-      .from("household_members")
-      .select("household_id")
-      .eq("household_id", householdId)
-      .eq("user_id", userData.user.id)
-      .maybeSingle();
+    if (!householdId && legacyInviteCode) {
+      const { data: householdByCode } = await admin.from("households").select("id").eq("invite_code", legacyInviteCode).maybeSingle();
+      householdId = householdByCode?.id || "";
+    }
+    if (!householdId) return json({ error: "Choose a With first." }, 400);
+
+    const { data: membership, error: memberError } = await admin.from("household_members").select("household_id").eq("household_id", householdId).eq("user_id", userData.user.id).maybeSingle();
     if (memberError || !membership?.household_id) return json({ error: "That With could not be found for your account." }, 403);
 
     const [{ data: household }, { data: profile }] = await Promise.all([
@@ -80,39 +66,14 @@ Deno.serve(async (req) => {
     const inviteToken = randomToken();
     const tokenHash = await sha256(inviteToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: existing } = await admin
-      .from("household_invitations")
-      .select("id")
-      .eq("household_id", householdId)
-      .eq("email", recipientEmail)
-      .eq("status", "pending")
-      .maybeSingle();
+    const { data: existing } = await admin.from("household_invitations").select("id").eq("household_id", householdId).eq("email", recipientEmail).eq("status", "pending").maybeSingle();
     let inviteId = existing?.id || null;
 
     if (inviteId) {
-      const { error } = await admin
-        .from("household_invitations")
-        .update({
-          token_hash: tokenHash,
-          invited_by_user_id: userData.user.id,
-          created_at: new Date().toISOString(),
-          expires_at: expiresAt,
-          accepted_at: null,
-        })
-        .eq("id", inviteId);
+      const { error } = await admin.from("household_invitations").update({ token_hash: tokenHash, invited_by_user_id: userData.user.id, created_at: new Date().toISOString(), expires_at: expiresAt, accepted_at: null }).eq("id", inviteId);
       if (error) throw error;
     } else {
-      const { data: created, error } = await admin
-        .from("household_invitations")
-        .insert({
-          household_id: householdId,
-          email: recipientEmail,
-          token_hash: tokenHash,
-          invited_by_user_id: userData.user.id,
-          expires_at: expiresAt,
-        })
-        .select("id")
-        .single();
+      const { data: created, error } = await admin.from("household_invitations").insert({ household_id: householdId, email: recipientEmail, token_hash: tokenHash, invited_by_user_id: userData.user.id, expires_at: expiresAt }).select("id").single();
       if (error) throw error;
       inviteId = created.id;
     }
@@ -129,10 +90,7 @@ Deno.serve(async (req) => {
 
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: fromEmail,
         to: [recipientEmail],

@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Tracker from './Tracker.jsx';
 import OnboardingGate from './OnboardingGate.jsx';
+import InvitationGate from './InvitationGate.jsx';
 import ErrorBoundary from './ErrorBoundary.jsx';
 import PrivacyPolicy from './PrivacyPolicy.jsx';
 
@@ -13,9 +14,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       {isPrivacy ? (
         <PrivacyPolicy />
       ) : (
-        <OnboardingGate>
-          <Tracker />
-        </OnboardingGate>
+        <InvitationGate>
+          <OnboardingGate>
+            <Tracker />
+          </OnboardingGate>
+        </InvitationGate>
       )}
     </ErrorBoundary>
   </React.StrictMode>
