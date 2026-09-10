@@ -1,12 +1,3 @@
-function weeksUntil(dateStr) {
-  if (!dateStr) return null;
-  const target = new Date(dateStr + "T12:00:00");
-  const now = new Date();
-  const ms = target - now;
-  if (ms <= 0) return 0;
-  return Math.ceil(ms / (7 * 24 * 60 * 60 * 1000));
-}
-
 import { useEffect, useState } from "react";
 import { brand } from "../brand.jsx";
 import { AsteriskMark, StarMark } from "../WithMarks.jsx";
@@ -60,7 +51,6 @@ export default function GoalsTab({
     }
   }, []);
 
-  const goalWeeks = weeksUntil(user.goalDate);
   const hasWeightGoal = user.goalWeight != null;
   const hasStatement = Boolean(user.goalStatement);
   const hasNutritionTargets = Boolean(user.targets.calories || user.targets.protein || user.targets.carbs || user.targets.fat || user.targets.fiberMin || user.targets.fiberMax);
@@ -85,10 +75,23 @@ export default function GoalsTab({
     (user.targets.fiberMin || user.targets.fiberMax) ? ["Fiber", `${user.targets.fiberMin || "—"}–${user.targets.fiberMax || "—"}g`] : null,
   ].filter(Boolean);
 
-  const trendDelta = gi ? gi.latest - gi.start : 0;
-  const trendDirectionText = !gi || Math.abs(trendDelta) < 0.05
-    ? "Your trend is about where you started."
-    : `${Math.abs(trendDelta).toFixed(1)} lb ${trendDelta < 0 ? "down" : "up"} from where you started`;
+  const actualDelta = gi ? gi.latestActual - gi.start : 0;
+  const progressDirectionText = !gi || Math.abs(actualDelta) < 0.05
+    ? "You’re about where you started."
+    : `${Math.abs(actualDelta).toFixed(1)} lb ${actualDelta < 0 ? "down" : "up"} from where you started`;
+
+  let actualProgressPct = gi?.progressPct ?? 0;
+  if (gi && gi.goal != null) {
+    if (gi.goal === gi.start) {
+      actualProgressPct = 100;
+    } else {
+      const direction = Math.sign(gi.goal - gi.start);
+      const plannedChange = Math.abs(gi.goal - gi.start);
+      const directionalProgress = (gi.latestActual - gi.start) * direction;
+      const progressAmount = Math.max(0, Math.min(plannedChange, directionalProgress));
+      actualProgressPct = plannedChange ? (progressAmount / plannedChange) * 100 : 100;
+    }
+  }
 
   return (
     <>
@@ -145,7 +148,7 @@ export default function GoalsTab({
                 <>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
                     <div>
-                      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 43, fontWeight: 600, lineHeight: 0.95, color: TEXT }}>{Math.round(gi.progressPct)}%</div>
+                      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 43, fontWeight: 600, lineHeight: 0.95, color: TEXT }}>{Math.round(actualProgressPct)}%</div>
                       <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 5 }}>of the way to your goal</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -155,13 +158,13 @@ export default function GoalsTab({
                   </div>
 
                   <div style={{ height: 7, background: SURFACE_2, borderRadius: 999, overflow: "hidden", marginBottom: 16 }}>
-                    <div style={{ width: `${Math.min(100, Math.max(0, gi.progressPct))}%`, height: "100%", background: brand.teal, borderRadius: 999 }} />
+                    <div style={{ width: `${Math.min(100, Math.max(0, actualProgressPct))}%`, height: "100%", background: brand.teal, borderRadius: 999 }} />
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 14 }}>
                     {[
                       ["Started", `${gi.start} lb`],
-                      ["Current trend", `${gi.latest.toFixed(1)} lb`],
+                      ["Current", `${gi.latestActual.toFixed(1)} lb`],
                       ["Goal", `${user.goalWeight} lb`],
                     ].map(([label, value]) => (
                       <div key={label} style={{ background: SURFACE_2, borderRadius: 12, padding: "10px 9px" }}>
@@ -172,13 +175,14 @@ export default function GoalsTab({
                   </div>
 
                   <div style={{ color: TEXT, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                    {Math.abs(trendDelta) >= 0.05 && <StarMark size={15} color={brand.sun} />}
-                    <span>{trendDirectionText}.</span>
+                    {Math.abs(actualDelta) >= 0.05 && <StarMark size={15} color={brand.sun} />}
+                    <span>{progressDirectionText}.</span>
                   </div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45 }}>
-                    Current trend uses your rolling 7-day average. Latest weigh-in: <strong style={{ color: TEXT }}>{gi.latestActual} lb</strong>.
-                    {user.goalDate && goalWeeks != null && <> {goalWeeks === 0 ? "Your goal date is here." : `${goalWeeks} ${goalWeeks === 1 ? "week" : "weeks"} from now.`}</>}
-                  </div>
+                  {gi.averageCount >= 2 && (
+                    <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45 }}>
+                      Your 7-day trend is <strong style={{ color: TEXT }}>{gi.latest.toFixed(1)} lb</strong> across {gi.averageCount} recent weigh-ins.
+                    </div>
+                  )}
                 </>
               ) : (
                 <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5 }}>
