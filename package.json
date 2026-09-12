@@ -6,17 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "recharts": "latest",
-    "lucide-react": "latest",
-    "@supabase/supabase-js": "latest",
-    "@zxing/browser": "latest"
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.2.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "recharts": "3.10.1",
+    "lucide-react": "1.43.0",
+    "@supabase/supabase-js": "2.116.0",
+    "@zxing/browser": "0.2.1"
   },
   "devDependencies": {}
 }
