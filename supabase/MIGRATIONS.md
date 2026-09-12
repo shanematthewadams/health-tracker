@@ -30,6 +30,7 @@ Recorded database versions at the V2 Phase 1 baseline:
 - `20260910002800_add_delete_with_rpc`
 - `20260912200507_harden_person_owned_rls`
 - `20260912200521_detach_person_data_from_with_deletes`
+- `20260912201404_add_person_history_indexes`
 
 The repository contains the corresponding SQL for the Phase 1 migrations using their exact applied versions.
 
