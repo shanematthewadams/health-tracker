@@ -1,3 +1,4 @@
+# Netlify branch deploys include staging for pre-production verification.
 [build]
   command = "npm run build"
   publish = "dist"
