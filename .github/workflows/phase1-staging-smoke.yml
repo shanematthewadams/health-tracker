@@ -34,7 +34,7 @@ jobs:
 
           echo "Expecting staging to serve $expected"
           for attempt in $(seq 1 24); do
-            if curl -fsSL --max-time 15 https://staging--health-tracker.netlify.app/ -o /tmp/staging.html; then
+            if curl -fsSL --max-time 15 https://staging--shane-and-alli-health-tracker.netlify.app/ -o /tmp/staging.html; then
               if grep -Fq "$expected" /tmp/staging.html; then
                 echo "Netlify staging matches this commit."
                 exit 0
