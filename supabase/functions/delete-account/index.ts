@@ -7,6 +7,7 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Missing authorization.");
@@ -20,40 +21,76 @@ Deno.serve(async (req) => {
     if (userError || !userData.user) throw new Error("Invalid session.");
     const userId = userData.user.id;
 
-    const { data: membership } = await admin
+    const { data: memberships, error: membershipsError } = await admin
       .from("household_members")
-      .select("household_id, role")
-      .eq("user_id", userId)
-      .maybeSingle();
+      .select("household_id, role, created_at")
+      .eq("user_id", userId);
+    if (membershipsError) throw membershipsError;
 
-    const householdId = membership?.household_id || null;
-    const wasOwner = membership?.role === "owner";
+    const { data: ownedProfiles, error: ownedProfilesError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId);
+    if (ownedProfilesError) throw ownedProfilesError;
 
-    // Removing the profile cascades the user's personal health-entry rows.
+    const profileIds = (ownedProfiles || []).map((profile) => profile.id);
+
+    // Delete the person's health history by profile ownership, never by With.
+    // Profile deletion also cascades these rows, but doing this explicitly keeps
+    // account deletion independent from legacy household foreign-key behavior.
+    if (profileIds.length) {
+      for (const table of [
+        "weight_entries",
+        "food_entries",
+        "activity_entries",
+        "step_entries",
+        "water_entries",
+        "fasting_entries",
+      ]) {
+        const { error: entryError } = await admin.from(table).delete().in("profile_id", profileIds);
+        if (entryError) throw entryError;
+      }
+    }
+
     const { error: profileError } = await admin.from("profiles").delete().eq("user_id", userId);
     if (profileError) throw profileError;
 
-    if (householdId) {
-      const { error: membershipError } = await admin.from("household_members").delete().eq("user_id", userId);
+    const priorMemberships = memberships || [];
+    if (priorMemberships.length) {
+      const { error: membershipError } = await admin
+        .from("household_members")
+        .delete()
+        .eq("user_id", userId);
       if (membershipError) throw membershipError;
 
-      const { data: remaining, error: remainingError } = await admin
-        .from("household_members")
-        .select("user_id, role, created_at")
-        .eq("household_id", householdId)
-        .order("created_at", { ascending: true });
-      if (remainingError) throw remainingError;
+      for (const membership of priorMemberships) {
+        const withId = membership.household_id;
+        if (!withId) continue;
 
-      if (!remaining?.length) {
-        const { error: householdError } = await admin.from("households").delete().eq("id", householdId);
-        if (householdError) throw householdError;
-      } else if (wasOwner && !remaining.some((m) => m.role === "owner")) {
-        const { error: promoteError } = await admin
+        const { data: remaining, error: remainingError } = await admin
           .from("household_members")
-          .update({ role: "owner" })
-          .eq("household_id", householdId)
-          .eq("user_id", remaining[0].user_id);
-        if (promoteError) throw promoteError;
+          .select("user_id, role, created_at")
+          .eq("household_id", withId)
+          .order("created_at", { ascending: true });
+        if (remainingError) throw remainingError;
+
+        if (!remaining?.length) {
+          const { error: householdError } = await admin
+            .from("households")
+            .delete()
+            .eq("id", withId);
+          if (householdError) throw householdError;
+          continue;
+        }
+
+        if (membership.role === "owner" && !remaining.some((member) => member.role === "owner")) {
+          const { error: promoteError } = await admin
+            .from("household_members")
+            .update({ role: "owner" })
+            .eq("household_id", withId)
+            .eq("user_id", remaining[0].user_id);
+          if (promoteError) throw promoteError;
+        }
       }
     }
 
@@ -65,7 +102,8 @@ Deno.serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || "Account deletion failed." }), {
+    const message = error instanceof Error ? error.message : "Account deletion failed.";
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
