@@ -21,13 +21,19 @@ const ICONS = {
   star: Star,
 };
 
+function numericLabel(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  return Number.isInteger(number) ? number.toLocaleString() : number.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
 function formatValue(metric, entry) {
   if (metric.value_type === "yes_no") return entry.boolean_value ? "Yes" : "No";
-  const value = Number(entry.numeric_value);
-  if (metric.value_type === "duration") return `${value:g} min`.replace(":g", "");
+  const value = numericLabel(entry.numeric_value);
+  if (metric.value_type === "duration") return `${value} min`;
   if (metric.value_type === "quantity") return `${value}${metric.unit ? ` ${metric.unit}` : ""}`;
   if (metric.value_type === "rating") return `${value} / 5`;
-  return value.toLocaleString();
+  return value;
 }
 
 function ratingSub(metric, entry) {
