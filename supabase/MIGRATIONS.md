@@ -53,6 +53,14 @@ Custom trackers belong to a person through `profile_id`. They support yes/no, co
 
 Quick Add preferences also belong to the person. `profile_quick_add_items` supports at most five ordered shortcuts. The standard Quick Add vocabulary is Food, Weight, Activity, Water, and Steps; Fasting is intentionally excluded because it is managed as a stateful Today interaction rather than a simple log shortcut. Existing profiles were backfilled to the five shortcuts they already had. The schema also supports a `custom_metric_id` shortcut so custom trackers can join Quick Add when custom logging is wired into Today and Log. Its composite custom-metric foreign key has a matching index for relationship checks and cascade work.
 
+## V2 Phase 3 fasting foundation
+
+The first Phase 3 migration extends the existing person-owned fasting records without replacing their established privacy model:
+
+- `20260913233500_add_fasting_v2_fields`
+
+Fasting remains a first-class standard tracker rather than a generic custom tracker. Completed fasts now have optional `goal_minutes` plus derived `duration_minutes` and `goal_reached` fields. A database trigger recalculates duration and goal status whenever the start time, end time, or goal changes, so editing historical fasts cannot leave stale summary values behind. Existing completed fasts were backfilled with their durations while retaining a null goal and null goal status rather than inventing historical targets.
+
 ## Rules for future database changes
 
 1. Audit the current schema and migration ledger first.
