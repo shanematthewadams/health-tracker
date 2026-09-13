@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Droplet, Footprints, Plus, Scale, Timer, Utensils } from "lucide-react";
+import {
+  Activity, BookOpen, Brain, Coffee, Droplet, Dumbbell, Flame, Footprints, Heart, Leaf,
+  Moon, Plus, Scale, Smile, Sparkles, Star, Sun, Timer, Trash2, Utensils,
+} from "lucide-react";
 import { brand, metricColors } from "../brand.jsx";
 import { supabase } from "../supabase.js";
 
@@ -19,6 +22,25 @@ const CUSTOM_TYPES = [
   { id: "quantity", label: "Amount", example: "Pages, miles, cups, anything measurable" },
 ];
 
+const CUSTOM_ICONS = [
+  { id: "sparkles", label: "Sparkles", icon: Sparkles },
+  { id: "heart", label: "Heart", icon: Heart },
+  { id: "brain", label: "Brain", icon: Brain },
+  { id: "book_open", label: "Book", icon: BookOpen },
+  { id: "leaf", label: "Leaf", icon: Leaf },
+  { id: "moon", label: "Moon", icon: Moon },
+  { id: "sun", label: "Sun", icon: Sun },
+  { id: "smile", label: "Smile", icon: Smile },
+  { id: "flame", label: "Flame", icon: Flame },
+  { id: "coffee", label: "Cup", icon: Coffee },
+  { id: "dumbbell", label: "Dumbbell", icon: Dumbbell },
+  { id: "footprints", label: "Footprints", icon: Footprints },
+  { id: "droplet", label: "Droplet", icon: Droplet },
+  { id: "timer", label: "Timer", icon: Timer },
+  { id: "star", label: "Star", icon: Star },
+];
+
+const CUSTOM_ICON_MAP = Object.fromEntries(CUSTOM_ICONS.map((item) => [item.id, item.icon]));
 const DEFAULT_PREF = { enabled: true, visibility: "all_withs" };
 
 function visibilityLabel(visibility, selectedIds, withs) {
@@ -78,8 +100,16 @@ export default function MyTrackersPanel({ session, styles }) {
   const [customName, setCustomName] = useState("");
   const [customType, setCustomType] = useState("duration");
   const [customUnit, setCustomUnit] = useState("");
+  const [customIcon, setCustomIcon] = useState("sparkles");
 
   const withMap = useMemo(() => Object.fromEntries(withs.map((item) => [item.id, item])), [withs]);
+
+  function resetCustomBuilder() {
+    setCustomName("");
+    setCustomType("duration");
+    setCustomUnit("");
+    setCustomIcon("sparkles");
+  }
 
   async function load() {
     if (!session?.user?.id) return;
@@ -103,7 +133,7 @@ export default function MyTrackersPanel({ session, styles }) {
         supabase.from("profile_metric_preferences").select("profile_id, metric_type, enabled, visibility").eq("profile_id", profile.id),
         supabase.from("household_members").select("household_id").eq("user_id", session.user.id),
         supabase.from("profile_metric_withs").select("metric_type, household_id").eq("profile_id", profile.id),
-        supabase.from("custom_metrics").select("id, profile_id, name, value_type, unit, enabled, visibility, sort_order, created_at").eq("profile_id", profile.id).order("sort_order").order("created_at"),
+        supabase.from("custom_metrics").select("id, profile_id, name, value_type, unit, icon_key, enabled, visibility, sort_order, created_at").eq("profile_id", profile.id).order("sort_order").order("created_at"),
       ]);
       for (const result of [prefResult, membershipResult, standardWithResult, customResult]) if (result.error) throw result.error;
 
@@ -226,6 +256,7 @@ export default function MyTrackersPanel({ session, styles }) {
       const { error: saveError } = await supabase.from("custom_metrics").update({
         enabled: next.enabled,
         visibility: next.visibility,
+        icon_key: next.icon_key || "sparkles",
         updated_at: new Date().toISOString(),
       }).eq("id", metricId);
       if (saveError) throw saveError;
@@ -289,19 +320,52 @@ export default function MyTrackersPanel({ session, styles }) {
         name,
         value_type: customType,
         unit,
+        icon_key: customIcon,
         enabled: true,
         visibility: "all_withs",
         sort_order: customMetrics.length,
-      }).select("id, profile_id, name, value_type, unit, enabled, visibility, sort_order, created_at").single();
+      }).select("id, profile_id, name, value_type, unit, icon_key, enabled, visibility, sort_order, created_at").single();
       if (createError) throw createError;
       setCustomMetrics((previous) => [...previous, created]);
-      setCustomName("");
-      setCustomType("duration");
-      setCustomUnit("");
+      resetCustomBuilder();
       setAddingCustom(false);
     } catch (createError) {
       console.error("Could not create custom tracker", createError);
       setError("We couldn’t create that tracker. Try again.");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
+  async function deleteCustomMetric(metric) {
+    if (!metric?.id) return;
+    setBusyKey(`delete:${metric.id}`);
+    setError("");
+    try {
+      const { count, error: countError } = await supabase
+        .from("custom_metric_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("metric_id", metric.id);
+      if (countError) throw countError;
+
+      const entryCount = count || 0;
+      const message = entryCount > 0
+        ? `Delete ${metric.name}? This will permanently remove the tracker and ${entryCount} ${entryCount === 1 ? "logged entry" : "logged entries"}. If you only want it out of the way, cancel and turn it off instead.`
+        : `Delete ${metric.name}? This removes the custom tracker. You can also cancel and simply turn it off.`;
+      if (!window.confirm(message)) return;
+
+      const { error: deleteError } = await supabase.from("custom_metrics").delete().eq("id", metric.id);
+      if (deleteError) throw deleteError;
+      setCustomMetrics((previous) => previous.filter((item) => item.id !== metric.id));
+      setCustomWiths((previous) => {
+        const next = { ...previous };
+        delete next[metric.id];
+        return next;
+      });
+      if (expandedPrivacy === `custom:${metric.id}`) setExpandedPrivacy("");
+    } catch (deleteError) {
+      console.error("Could not delete custom tracker", deleteError);
+      setError("We couldn’t delete that custom tracker. Try again.");
     } finally {
       setBusyKey("");
     }
@@ -346,7 +410,7 @@ export default function MyTrackersPanel({ session, styles }) {
     );
   }
 
-  function TrackerRow({ icon: Icon, color, label, description, enabled, visibility, selectedIds, itemKey, onEnabled, onVisibility, onToggleWith, customMeta = null }) {
+  function TrackerRow({ icon: Icon, color, label, description, enabled, visibility, selectedIds, itemKey, onEnabled, onVisibility, onToggleWith, customMeta = null, actions = null }) {
     return (
       <div style={{ padding: "13px 0", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ display: "grid", gridTemplateColumns: "34px minmax(0, 1fr) auto", gap: 10, alignItems: "center" }}>
@@ -363,6 +427,7 @@ export default function MyTrackersPanel({ session, styles }) {
         <div style={{ paddingLeft: 44, opacity: enabled ? 1 : 0.7 }}>
           <PrivacyControls itemKey={itemKey} visibility={visibility} selectedIds={selectedIds} onVisibility={onVisibility} onToggleWith={onToggleWith} />
           {!enabled && <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginTop: 5 }}>Off for now. Your history stays right where it is.</div>}
+          {actions && <div style={{ marginTop: 7 }}>{actions}</div>}
         </div>
       </div>
     );
@@ -417,10 +482,11 @@ export default function MyTrackersPanel({ session, styles }) {
         {customMetrics.map((metric) => {
           const type = CUSTOM_TYPES.find((item) => item.id === metric.value_type);
           const meta = metric.value_type === "duration" ? "Tracked in minutes" : metric.unit ? `Tracked in ${metric.unit}` : type?.label;
+          const CustomIcon = CUSTOM_ICON_MAP[metric.icon_key] || Sparkles;
           return (
             <TrackerRow
               key={metric.id}
-              icon={Timer}
+              icon={CustomIcon}
               color={brand.teal}
               label={metric.name}
               description={type?.example || "Your custom tracker"}
@@ -432,6 +498,16 @@ export default function MyTrackersPanel({ session, styles }) {
               onEnabled={(enabled) => saveCustom(metric.id, { enabled })}
               onVisibility={(visibility) => saveCustom(metric.id, { visibility })}
               onToggleWith={(householdId, checked) => toggleCustomWith(metric.id, householdId, checked)}
+              actions={(
+                <button
+                  type="button"
+                  disabled={busyKey === `delete:${metric.id}`}
+                  onClick={() => deleteCustomMetric(metric)}
+                  style={{ border: "none", background: "transparent", color: WARN, display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 0", fontSize: 10, fontWeight: 700 }}
+                >
+                  <Trash2 size={12} strokeWidth={1.9} /> {busyKey === `delete:${metric.id}` ? "Removing…" : "Delete tracker"}
+                </button>
+              )}
             />
           );
         })}
@@ -444,25 +520,72 @@ export default function MyTrackersPanel({ session, styles }) {
           <div style={{ background: SURFACE_2, borderRadius: 12, padding: 13, marginTop: 12 }}>
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, color: TEXT, marginBottom: 10 }}>Add a tracker</div>
             <div style={fieldLabel}>What do you want to track?</div>
-            <input value={customName} maxLength={60} onChange={(event) => setCustomName(event.target.value)} placeholder="Mindfulness" style={{ ...inputStyle, marginBottom: 11 }} />
+            <input value={customName} maxLength={60} onChange={(event) => setCustomName(event.target.value)} placeholder="Mindfulness" style={{ ...inputStyle, marginBottom: 13 }} />
+
+            <div style={fieldLabel}>Give it a little personality</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7, marginBottom: 14 }}>
+              {CUSTOM_ICONS.map(({ id, label, icon: Icon }) => {
+                const selected = customIcon === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-label={label}
+                    title={label}
+                    aria-pressed={selected}
+                    onClick={() => setCustomIcon(id)}
+                    style={{
+                      height: 42,
+                      display: "grid",
+                      placeItems: "center",
+                      borderRadius: 9,
+                      border: `${selected ? 2 : 1}px solid ${selected ? brand.teal : BORDER}`,
+                      background: selected ? brand.surface : "transparent",
+                      color: selected ? brand.tealDark : TEXT_MUTED,
+                      padding: 0,
+                    }}
+                  >
+                    <Icon size={18} strokeWidth={selected ? 2.2 : 1.8} />
+                  </button>
+                );
+              })}
+            </div>
 
             <div style={fieldLabel}>How should it be measured?</div>
-            <select value={customType} onChange={(event) => { setCustomType(event.target.value); setCustomUnit(""); }} style={{ ...inputStyle, marginBottom: 11 }}>
-              {CUSTOM_TYPES.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}
-            </select>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 12 }}>
+              {CUSTOM_TYPES.map((type) => {
+                const selected = customType === type.id;
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => { setCustomType(type.id); setCustomUnit(""); }}
+                    style={{
+                      textAlign: "left",
+                      border: `${selected ? 2 : 1}px solid ${selected ? brand.teal : BORDER}`,
+                      background: selected ? brand.surface : "transparent",
+                      borderRadius: 9,
+                      padding: "9px 10px",
+                      color: TEXT,
+                    }}
+                  >
+                    <span style={{ display: "block", fontSize: 12, fontWeight: 800 }}>{type.label}</span>
+                    <span style={{ display: "block", fontSize: 10, lineHeight: 1.35, color: TEXT_MUTED, marginTop: 2 }}>{type.example}</span>
+                  </button>
+                );
+              })}
+            </div>
 
             {customType === "quantity" && (
               <>
-                <div style={fieldLabel}>Unit</div>
-                <input value={customUnit} maxLength={24} onChange={(event) => setCustomUnit(event.target.value)} placeholder="pages, miles, cups…" style={{ ...inputStyle, marginBottom: 11 }} />
+                <div style={fieldLabel}>What unit should With use?</div>
+                <input value={customUnit} maxLength={24} onChange={(event) => setCustomUnit(event.target.value)} placeholder="pages, miles, cups…" style={{ ...inputStyle, marginBottom: 12 }} />
               </>
             )}
 
-            <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginBottom: 12 }}>
-              {CUSTOM_TYPES.find((type) => type.id === customType)?.example}
-            </div>
-            <div style={{ display: "flex", gap: 9 }}>
-              <button type="button" onClick={() => { setAddingCustom(false); setCustomName(""); setCustomType("duration"); setCustomUnit(""); setError(""); }} style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: "9px 3px", fontSize: 12, fontWeight: 700 }}>Cancel</button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 9 }}>
+              <button type="button" onClick={() => { setAddingCustom(false); resetCustomBuilder(); setError(""); }} style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: "9px 3px", fontSize: 12, fontWeight: 700 }}>Cancel</button>
               <button type="button" disabled={busyKey === "create-custom"} onClick={createCustomMetric} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", minHeight: 40, padding: "9px 15px", fontSize: 13 }}>
                 {busyKey === "create-custom" ? "Adding…" : "Add tracker"}
               </button>
