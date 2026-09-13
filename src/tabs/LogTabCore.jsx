@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { brand, metricColors } from "../brand.jsx";
 import { Search, Pencil, Trash2, Utensils, Scale, Dumbbell, Droplet, Footprints, ChevronDown } from "lucide-react";
+import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
+
+const LOG_TABS = [
+  ["food", "Food", Utensils, metricColors.food],
+  ["weight", "Weight", Scale, metricColors.weight],
+  ["activity", "Activity", Dumbbell, metricColors.activity],
+  ["water", "Water", Droplet, metricColors.water],
+  ["steps", "Steps", Footprints, metricColors.steps],
+];
 
 function fmtDate(d) {
   const dt = new Date(d + "T00:00:00");
@@ -37,6 +46,10 @@ export default function LogTab(props) {
   } = props;
 
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, cardStyle, headingStyle, fieldLabel, inputStyle, bigButton } = styles;
+  const { trackerEnabled } = useOwnTrackerPreferences(activeCanEdit);
+  const visibleLogTabs = useMemo(() => LOG_TABS.filter(([id]) => trackerEnabled(id)), [trackerEnabled]);
+  const fastingVisible = trackerEnabled("fasting") || Boolean(activeFasts[activeUser]);
+  const currentTrackerVisible = trackerEnabled(logTab);
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
   const [pendingCreateName, setPendingCreateName] = useState("");
   const [foodSummaryOpen, setFoodSummaryOpen] = useState(false);
@@ -188,6 +201,12 @@ export default function LogTab(props) {
     localStorage.setItem("with-log-tab", id);
   };
 
+  useEffect(() => {
+    if (!activeCanEdit || currentTrackerVisible) return;
+    const fallback = visibleLogTabs[0]?.[0];
+    if (fallback) changeLogTab(fallback);
+  }, [activeCanEdit, currentTrackerVisible, visibleLogTabs]);
+
   const beginEditFood = (food) => {
     if (!activeCanEdit) return;
     setFoodSummaryOpen(false);
@@ -212,30 +231,31 @@ export default function LogTab(props) {
       {showWalkthroughIntro && (
         <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>Track what matters to you.</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>Food, weight, activity, water and steps all live here. Use all of them, some of them, or just what’s useful today.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>The trackers you’ve chosen live here. Use all of them, some of them, or just what’s useful today.</div>
           <button type="button" onClick={() => setShowWalkthroughIntro(false)} style={{ background: "none", border: "none", color: brand.tealDark, padding: 0, fontSize: 12, fontWeight: 800 }}>Got it</button>
         </section>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 0 8px", marginBottom: 6 }}>
-        {[
-          ["food", "Food", Utensils, metricColors.food],
-          ["weight", "Weight", Scale, metricColors.weight],
-          ["activity", "Activity", Dumbbell, metricColors.activity],
-          ["water", "Water", Droplet, metricColors.water],
-          ["steps", "Steps", Footprints, metricColors.steps],
-        ].map(([id, label, Icon, metricColor]) => {
-          const active = logTab === id;
-          return (
-            <button key={id} aria-label={label} title={label} onClick={() => changeLogTab(id)} style={{ flex: active ? "0 0 auto" : "1 1 0", minWidth: active ? "max-content" : 0, minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: active ? 6 : 0, border: `1px solid ${active ? brand.teal : BORDER}`, background: active ? brand.surfaceSoft : SURFACE, color: active ? TEXT : TEXT_MUTED, borderRadius: 999, padding: active ? "7px 12px" : "7px 0", fontSize: 12, fontWeight: 700, transition: "all .16s ease", overflow: "hidden" }}>
-              <Icon style={{ width: 14, height: 14, flexShrink: 0, color: metricColor }} strokeWidth={2.2} />
-              {active && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
-            </button>
-          );
-        })}
-      </div>
+      {visibleLogTabs.length > 0 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 0 8px", marginBottom: 6 }}>
+          {visibleLogTabs.map(([id, label, Icon, metricColor]) => {
+            const active = logTab === id;
+            return (
+              <button key={id} aria-label={label} title={label} onClick={() => changeLogTab(id)} style={{ flex: active ? "0 0 auto" : "1 1 0", minWidth: active ? "max-content" : 0, minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: active ? 6 : 0, border: `1px solid ${active ? brand.teal : BORDER}`, background: active ? brand.surfaceSoft : SURFACE, color: active ? TEXT : TEXT_MUTED, borderRadius: 999, padding: active ? "7px 12px" : "7px 0", fontSize: 12, fontWeight: 700, transition: "all .16s ease", overflow: "hidden" }}>
+                <Icon style={{ width: 14, height: 14, flexShrink: 0, color: metricColor }} strokeWidth={2.2} />
+                {active && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      ) : activeCanEdit ? (
+        <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, marginBottom: 5 }}>Nothing to log right now.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5 }}>You’ve turned off all of the standard logging trackers. Your old entries are still safe, and you can turn any tracker back on from Profile → My Trackers.</div>
+        </section>
+      ) : null}
 
-      {logTab === "food" ? (
+      {currentTrackerVisible && (logTab === "food" ? (
         <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
           <button type="button" aria-expanded={foodSummaryOpen} aria-controls="log-food-summary-detail" onClick={() => setFoodSummaryOpen((open) => !open)} style={{ width: "100%", minHeight: 42, display: "grid", gridTemplateColumns: "auto auto minmax(0, 1fr) auto", alignItems: "center", gap: 7, background: "transparent", border: "none", padding: "9px 11px", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35, textAlign: "left" }}>
             <span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span>
@@ -288,17 +308,17 @@ export default function LogTab(props) {
         </div>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 7, background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "9px 11px", marginBottom: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.35 }}><span style={{ fontWeight: 800, color: TEXT, flexShrink: 0 }}>Today</span><span>·</span><span>{context}</span></div>
-      )}
+      ))}
 
-      {logTab === "food" && <>
-        {activeFasts[activeUser] ? (
+      {trackerEnabled("food") && logTab === "food" && <>
+        {fastingVisible && activeFasts[activeUser] ? (
           <div style={{ ...cardStyle, background: brand.surface, borderColor: BORDER, borderRadius: 14, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)}</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>You can still log food from earlier.</div></div>
               {activeCanEdit && <button onClick={() => openFastEditor(activeFasts[activeUser])} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>Edit</button>}
             </div>
           </div>
-        ) : activeCanEdit && !fastPromptDismissedToday ? (
+        ) : fastingVisible && activeCanEdit && !fastPromptDismissedToday ? (
           <div style={{ ...cardStyle, background: brand.surface, borderColor: BORDER, borderRadius: 14, padding: "1rem 1.1rem", boxShadow: "0 2px 7px rgba(63,52,39,.045)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div><div style={{ fontWeight: 700, fontSize: 13 }}>Fasting today?</div><div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 2 }}>WITH can adjust your food prompts while you fast.</div></div>
@@ -310,7 +330,7 @@ export default function LogTab(props) {
           </div>
         ) : null}
 
-        {activeCanEdit && fastEditorOpen && (
+        {fastingVisible && activeCanEdit && fastEditorOpen && (
           <div style={{ ...cardStyle, padding: "1.05rem 1.1rem" }}>
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
             <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 12 }}>It defaults to right now. Backdating is completely fine.</div>
@@ -416,7 +436,7 @@ export default function LogTab(props) {
         </div>
       </>}
 
-      {logTab === "weight" && <div style={cardStyle}>
+      {trackerEnabled("weight") && logTab === "weight" && <div style={cardStyle}>
         <div style={headingStyle}>Weight</div><div style={fieldLabel}>Weight (lb)</div>
         <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
@@ -425,7 +445,7 @@ export default function LogTab(props) {
         {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
       </div>}
 
-      {logTab === "activity" && <div id="log-activity-form" style={{ ...cardStyle, scrollMarginTop: 112 }}>
+      {trackerEnabled("activity") && logTab === "activity" && <div id="log-activity-form" style={{ ...cardStyle, scrollMarginTop: 112 }}>
         <div style={{ ...headingStyle, marginBottom: 6 }}>{editingActivityId ? "Edit activity" : "Activity"}</div>
         <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>{editingActivityId ? "Update the activity, calories burned, or date." : "Add movement from your day."}</div>
         <div style={fieldLabel}>Activity</div><input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
@@ -443,7 +463,7 @@ export default function LogTab(props) {
         </div>}
       </div>}
 
-      {logTab === "water" && <div style={cardStyle}>
+      {trackerEnabled("water") && logTab === "water" && <div style={cardStyle}>
         <div style={headingStyle}>Water</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => { const pendingKey = `water-shortcut-${index}`; return <button key={`${oz}-${index}`} onClick={() => addWater(oz, pendingKey)} disabled={!!logBusy} aria-busy={logBusy === pendingKey} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600, opacity: logBusy ? 0.62 : 1 }}>{logBusy === pendingKey ? "Adding…" : `+${oz} oz`}</button>; })}</div>
         <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
@@ -452,7 +472,7 @@ export default function LogTab(props) {
         <button onClick={() => addWater()} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "water"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "water" ? "Adding…" : buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
       </div>}
 
-      {logTab === "steps" && <div style={cardStyle}>
+      {trackerEnabled("steps") && logTab === "steps" && <div style={cardStyle}>
         <div style={headingStyle}>Steps</div><div style={fieldLabel}>Step count</div>
         <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
