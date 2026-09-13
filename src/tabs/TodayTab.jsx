@@ -84,6 +84,18 @@ export default function TodayTab(props) {
   }, [props.data, props.activeUser]);
 
   useEffect(() => {
+    function handleFastGoalUpdated(event) {
+      const fast = props.activeFasts?.[props.activeUser];
+      if (!fast || fast.id !== event.detail?.id) return;
+      fast.goal_minutes = event.detail.goalMinutes;
+      setRevision((value) => value + 1);
+    }
+
+    window.addEventListener("with-fast-goal-updated", handleFastGoalUpdated);
+    return () => window.removeEventListener("with-fast-goal-updated", handleFastGoalUpdated);
+  }, [props.activeFasts, props.activeUser]);
+
+  useEffect(() => {
     function handleTodayDate(event) {
       if (event.detail?.selectedDate) setSelectedDate(event.detail.selectedDate);
     }
