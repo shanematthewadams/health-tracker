@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "./supabase.js";
 
+function announceCustomTrackerChange(detail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("with-custom-tracker-saved", { detail }));
+}
+
 export function useCustomTrackerLogging(profileId, canEdit = false, entryDate = null) {
   const [metrics, setMetrics] = useState([]);
   const [entries, setEntries] = useState({});
@@ -70,6 +75,7 @@ export function useCustomTrackerLogging(profileId, canEdit = false, entryDate = 
       return false;
     }
     setEntries((current) => ({ ...current, [metric.id]: data }));
+    announceCustomTrackerChange({ action: "save", metricId: metric.id, profileId, entryDate, entry: data });
     setSavingId("");
     return true;
   }, [canEdit, profileId, entryDate]);
@@ -93,9 +99,10 @@ export function useCustomTrackerLogging(profileId, canEdit = false, entryDate = 
       delete next[metricId];
       return next;
     });
+    announceCustomTrackerChange({ action: "delete", metricId, profileId, entryDate });
     setSavingId("");
     return true;
-  }, [canEdit, entryDate]);
+  }, [canEdit, profileId, entryDate]);
 
   return { metrics, entries, loading, savingId, error, reload: load, saveValue, deleteValue };
 }
