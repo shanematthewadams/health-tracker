@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import TodayTabBase from "./TodayTabBase.jsx";
 import CustomTodayLoggedSection from "../components/CustomTodayLoggedSection.jsx";
 
+function shiftDate(dateStr, delta) {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
 function replaceDateEntry(list, date, nextEntry) {
   const next = (list || []).filter((entry) => entry.date !== date);
   next.push(nextEntry);
@@ -86,11 +92,22 @@ export default function TodayTab(props) {
 
   useEffect(() => { setSelectedDate(props.today); }, [props.activeUser, props.today]);
 
+  function captureDateNavigation(event) {
+    const button = event.target?.closest?.("button[aria-label]");
+    if (!button) return;
+    const label = button.getAttribute("aria-label");
+    if (label === "Previous day") setSelectedDate((date) => shiftDate(date, -1));
+    if (label === "Next day") setSelectedDate((date) => shiftDate(date, 1));
+  }
+
   return (
     <>
-      <TodayTabBase {...props} />
+      <div onClickCapture={captureDateNavigation}>
+        <TodayTabBase {...props} />
+      </div>
       <CustomTodayLoggedSection
         activeUser={props.activeUser}
+        activeCanEdit={props.activeCanEdit}
         profileNameForProfile={props.profileNameForProfile}
         selectedDate={selectedDate}
         styles={props.styles}
