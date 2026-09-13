@@ -1,0 +1,28 @@
+name: Phase 1 Netlify marker check
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  verify-marker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm Netlify staging serves marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker='WITH_PHASE1_NETLIFY_STAGING_CHECK_2026-09-12_130211'
+          url='https://staging--shane-and-alli-health-tracker.netlify.app/phase1-netlify-check.txt'
+          for attempt in $(seq 1 36); do
+            body=$(curl -fsSL --max-time 15 "$url" || true)
+            if [ "$body" = "$marker" ]; then
+              echo 'Netlify staging is serving the post-reconnect staging branch.'
+              exit 0
+            fi
+            echo "Marker not live yet (attempt $attempt/36)."
+            sleep 5
+          done
+          echo 'Netlify staging never served the expected marker.'
+          exit 1
