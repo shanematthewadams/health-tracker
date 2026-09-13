@@ -14,6 +14,7 @@ const logTab = readFileSync("src/tabs/LogTabCore.jsx", "utf8") + "\n" + readFile
 const customLogging = readFileSync("src/useCustomTrackerLogging.js", "utf8");
 const customLogger = readFileSync("src/components/CustomTrackerLogger.jsx", "utf8");
 const customLogSection = readFileSync("src/components/CustomTrackersLogSection.jsx", "utf8");
+const customToday = readFileSync("src/components/CustomTodayLoggedSection.jsx", "utf8");
 
 const standardTrackers = ["weight", "food", "activity", "water", "steps", "fasting"];
 
@@ -105,6 +106,26 @@ test("custom tracker logging uses one value per tracker per date", () => {
   assert.match(customLogSection, /value=\{entryDate\}/i);
   assert.match(customLogSection, /onChange=\{\(event\) => setEntryDate\(event\.target\.value\)\}/i);
   assert.match(logTab, /<CustomTrackersLogSection/i);
+});
+
+test("Today shows only custom trackers logged for the viewed date", () => {
+  assert.match(customToday, /eq\("entry_date", selectedDate\)/i);
+  assert.match(customToday, /filter\(\(row\) => row\.entry\)/i);
+  assert.match(customToday, /metric\.value_type === "yes_no"/i);
+  assert.match(customToday, /metric\.value_type === "duration"/i);
+  assert.match(customToday, /metric\.value_type === "quantity"/i);
+  assert.match(customToday, /metric\.value_type === "rating"/i);
+  assert.match(todayTab, /captureDateNavigation/i);
+  assert.match(todayTab, /label === "Previous day"/i);
+  assert.match(todayTab, /label === "Next day"/i);
+});
+
+test("custom Today values are RLS-backed and shared views remain read-only", () => {
+  assert.match(customToday, /from\("custom_metrics"\)/i);
+  assert.match(customToday, /from\("custom_metric_entries"\)/i);
+  assert.match(customToday, /activeCanEdit \? "My trackers"/i);
+  assert.doesNotMatch(customToday, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/i);
+  assert.match(customLogging, /with-custom-tracker-saved/i);
 });
 
 test("disabling a tracker is UI state, not health-history deletion", () => {
