@@ -70,6 +70,7 @@ function applyQuickAddRow(data, activeUser, detail) {
 export default function TodayTab(props) {
   const [, setRevision] = useState(0);
   const [selectedDate, setSelectedDate] = useState(props.today);
+  const [todayResetKey, setTodayResetKey] = useState(0);
 
   useEffect(() => {
     function handleStandardQuickAdd(event) {
@@ -90,6 +91,18 @@ export default function TodayTab(props) {
     return () => window.removeEventListener("with-today-date-changed", handleTodayDate);
   }, []);
 
+  useEffect(() => {
+    function handleTodayNavRetap(event) {
+      const button = event.target?.closest?.("button");
+      if (!button || button.textContent?.trim() !== "Today") return;
+      setSelectedDate(props.today);
+      setTodayResetKey((value) => value + 1);
+    }
+
+    document.addEventListener("click", handleTodayNavRetap);
+    return () => document.removeEventListener("click", handleTodayNavRetap);
+  }, [props.today]);
+
   useEffect(() => { setSelectedDate(props.today); }, [props.activeUser, props.today]);
 
   function captureDateNavigation(event) {
@@ -103,7 +116,7 @@ export default function TodayTab(props) {
   return (
     <>
       <div onClickCapture={captureDateNavigation}>
-        <TodayTabBase {...props} />
+        <TodayTabBase key={todayResetKey} {...props} />
       </div>
       <CustomTodayLoggedSection
         activeUser={props.activeUser}
