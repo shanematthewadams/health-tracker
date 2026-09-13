@@ -45,7 +45,7 @@ function ratingSub(metric, entry) {
   return "5-point scale";
 }
 
-export default function CustomTodayLoggedSection({ activeUser, profileNameForProfile, selectedDate, styles }) {
+export default function CustomTodayLoggedSection({ activeUser, activeCanEdit, profileNameForProfile, selectedDate, styles }) {
   const { BORDER, TEXT, TEXT_MUTED } = styles;
   const [metrics, setMetrics] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -107,7 +107,7 @@ export default function CustomTodayLoggedSection({ activeUser, profileNameForPro
 
   return (
     <section style={{ marginTop: 4, marginBottom: 24 }}>
-      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>My trackers</div>
+      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>{activeCanEdit ? "My trackers" : `${activeUser}'s trackers`}</div>
       <div style={{ height: 3, width: 46, background: brand.teal, marginTop: 7 }} />
       <div style={{ marginTop: 10 }}>
         {rows.map(({ metric, entry }) => {
