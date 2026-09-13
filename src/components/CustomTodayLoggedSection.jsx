@@ -57,7 +57,7 @@ export default function CustomTodayLoggedSection({ activeUser, activeCanEdit, pr
 
     const { data: metricRows, error: metricError } = await supabase
       .from("custom_metrics")
-      .select("id,profile_id,name,value_type,unit,sort_order,icon_key,rating_low_label,rating_high_label")
+      .select("id,profile_id,name,value_type,unit,enabled,sort_order,icon_key,rating_low_label,rating_high_label")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
 
@@ -69,6 +69,7 @@ export default function CustomTodayLoggedSection({ activeUser, activeCanEdit, pr
     }
 
     const activeMetrics = (metricRows || []).filter((metric) => {
+      if (!metric.enabled) return false;
       const name = profileNameForProfile?.(metric.profile_id) || metric.profile_id;
       return name === activeUser;
     });
