@@ -1,5 +1,6 @@
 import LogTabBase from "./LogTabBase.jsx";
 import CustomTrackersLogSection from "../components/CustomTrackersLogSection.jsx";
+import FastingHistorySection from "../components/FastingHistorySection.jsx";
 
 export default function LogTab(props) {
   const initialDate = {
@@ -17,6 +18,10 @@ export default function LogTab(props) {
         activeCanEdit={props.activeCanEdit}
         today={props.today}
         initialDate={initialDate}
+        styles={props.styles}
+      />
+      <FastingHistorySection
+        activeCanEdit={props.activeCanEdit}
         styles={props.styles}
       />
     </>
