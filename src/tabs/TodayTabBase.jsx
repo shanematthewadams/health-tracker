@@ -5,6 +5,7 @@ import { SunMark, WaveMark } from "../WithMarks.jsx";
 import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
 import { useQuickAddPreferences } from "../useQuickAddPreferences.js";
 import QuickAddSection from "../components/QuickAddSection.jsx";
+import FastingTodaySection from "../components/FastingTodaySection.jsx";
 
 function greeting(timeZone) {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
@@ -429,51 +430,27 @@ export default function TodayTab({
         )}
       </section>}
 
-      {isToday && isMine && !firstTodayVisible && fastingVisible && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
-        <section style={{ marginBottom: 28, paddingBottom: 22 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={sectionLabel}>{activeFasts[activeUser] ? "Fasting" : "A note for today"}</div>
-              <div style={straightRule(PEN.orange)} />
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, color: PEN.ink, marginTop: 10 }}>
-                {activeFasts[activeUser] ? "You’re fasting" : "Fasting today?"}
-              </div>
-              <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>
-                {activeFasts[activeUser]
-                  ? `Started ${new Date(activeFasts[activeUser].started_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} · ${fastElapsed(activeFasts[activeUser].started_at)}`
-                  : "WITH can adjust your Today prompts while you fast."}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-              {activeFasts[activeUser] ? (
-                <>
-                  <button onClick={() => openFastEditor(activeFasts[activeUser])} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Edit</button>
-                  <button onClick={endFast} disabled={fastBusy} style={{ background: brand.surface, color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>{fastBusy ? "Ending…" : "End fast"}</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={dismissFastPromptToday} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Not today</button>
-                  <button onClick={() => openFastEditor()} disabled={fastBusy} style={{ background: brand.surface, color: TEXT, border: `1px solid ${PEN.rule}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {isToday && isMine && fastingVisible && fastEditorOpen && (
-        <div style={{ background: brand.surface, border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <div><div style={fieldLabel}>Date</div><input type="date" max={today} value={fastStartDate} onChange={(e) => setFastStartDate(e.target.value)} style={{ ...inputStyle, width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", padding: "10px 9px", fontSize: 15 }} /></div>
-            <div><div style={fieldLabel}>Time</div><input type="time" value={fastStartTime} onChange={(e) => setFastStartTime(e.target.value)} style={inputStyle} /></div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <button onClick={() => setFastEditorOpen(false)} disabled={fastBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, borderRadius: 7 }}>Cancel</button>
-            <button onClick={activeFasts[activeUser] ? updateFastStart : startFast} disabled={fastBusy} style={{ ...bigButton(brand.teal, brand.inkOn), borderRadius: 7 }}>{fastBusy ? "Saving…" : activeFasts[activeUser] ? "Save start" : "Start fast"}</button>
-          </div>
-        </div>
+      {isToday && isMine && !firstTodayVisible && (
+        <FastingTodaySection
+          activeFast={activeFasts[activeUser] || null}
+          visible={fastingVisible}
+          promptDismissed={fastPromptDismissedToday}
+          editorOpen={fastEditorOpen}
+          fastBusy={fastBusy}
+          startDate={fastStartDate}
+          startTime={fastStartTime}
+          setStartDate={setFastStartDate}
+          setStartTime={setFastStartTime}
+          setEditorOpen={setFastEditorOpen}
+          dismissPrompt={dismissFastPromptToday}
+          openEditor={openFastEditor}
+          startFast={startFast}
+          updateFastStart={updateFastStart}
+          endFast={endFast}
+          today={today}
+          timeZone={timeZone}
+          styles={styles}
+        />
       )}
 
       {isMine && (
