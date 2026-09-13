@@ -61,6 +61,10 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
     setStandardSuccess("");
   }, [selectedDate]);
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("with-today-date-changed", { detail: { selectedDate } }));
+  }, [selectedDate]);
+
   const customOptions = useMemo(() => custom.metrics.map((metric) => ({ id: `custom:${metric.id}`, label: metric.name, icon: ICONS[metric.icon_key] || Sparkles, color: brand.teal, metric })), [custom.metrics]);
   const availableOptions = useMemo(() => [...STANDARD_OPTIONS.filter((option) => trackerEnabled(option.id)), ...customOptions], [trackerEnabled, customOptions]);
   const visibleQuickAdd = useMemo(() => {
