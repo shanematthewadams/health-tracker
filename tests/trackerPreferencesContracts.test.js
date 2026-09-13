@@ -9,8 +9,11 @@ const quickAddMigration = readFileSync("supabase/migrations/20260913142607_add_q
 const trackerPanel = readFileSync("src/components/MyTrackersPanel.jsx", "utf8");
 const quickAddSection = readFileSync("src/components/QuickAddSection.jsx", "utf8");
 const quickAddHook = readFileSync("src/useQuickAddPreferences.js", "utf8");
-const todayTab = readFileSync("src/tabs/TodayTab.jsx", "utf8");
-const logTab = readFileSync("src/tabs/LogTabCore.jsx", "utf8");
+const todayTab = readFileSync("src/tabs/TodayTabBase.jsx", "utf8") + "\n" + readFileSync("src/tabs/TodayTab.jsx", "utf8");
+const logTab = readFileSync("src/tabs/LogTabCore.jsx", "utf8") + "\n" + readFileSync("src/tabs/LogTab.jsx", "utf8");
+const customLogging = readFileSync("src/useCustomTrackerLogging.js", "utf8");
+const customLogger = readFileSync("src/components/CustomTrackerLogger.jsx", "utf8");
+const customLogSection = readFileSync("src/components/CustomTrackersLogSection.jsx", "utf8");
 
 const standardTrackers = ["weight", "food", "activity", "water", "steps", "fasting"];
 
@@ -47,6 +50,9 @@ test("rating trackers use a validated five-point scale with optional endpoint la
   assert.match(trackerPanel, /id: "rating", label: "Rating"/i);
   assert.match(trackerPanel, /1 means…/i);
   assert.match(trackerPanel, /5 means…/i);
+  assert.match(customLogger, /\[1,2,3,4,5\]/i);
+  assert.match(customLogger, /rating_low_label \|\| "Low"/i);
+  assert.match(customLogger, /rating_high_label \|\| "High"/i);
 });
 
 test("custom trackers use a bounded icon vocabulary", () => {
@@ -75,6 +81,30 @@ test("Today uses the personal Quick Add editor instead of a hard-coded shortcut 
   assert.match(todayTab, /<QuickAddSection/i);
   assert.match(todayTab, /quickAddIds=\{quickAddIds\}/i);
   assert.doesNotMatch(todayTab, /const quick = \[/i);
+});
+
+test("standard Quick Add writes to the date being viewed", () => {
+  assert.match(quickAddSection, /openLog\("food", selectedDate\)/i);
+  assert.match(quickAddSection, /from\("weight_entries"\)[\s\S]*entry_date: selectedDate[\s\S]*onConflict: "profile_id,entry_date"/i);
+  assert.match(quickAddSection, /from\("step_entries"\)[\s\S]*entry_date: selectedDate[\s\S]*onConflict: "profile_id,entry_date"/i);
+  assert.match(quickAddSection, /from\("water_entries"\)[\s\S]*entry_date: selectedDate/i);
+  assert.match(quickAddSection, /from\("activity_entries"\)[\s\S]*entry_date: selectedDate/i);
+  assert.doesNotMatch(quickAddSection, /entry_date:\s*today/i);
+});
+
+test("standard Quick Add refreshes Today without changing the selected date", () => {
+  assert.match(quickAddSection, /with-standard-quick-add-saved/i);
+  assert.match(todayTab, /addEventListener\("with-standard-quick-add-saved"/i);
+  assert.match(todayTab, /row\.entry_date/i);
+  assert.match(todayTab, /setRevision\(\(value\) => value \+ 1\)/i);
+});
+
+test("custom tracker logging uses one value per tracker per date", () => {
+  assert.match(customLogging, /entry_date:\s*entryDate/i);
+  assert.match(customLogging, /onConflict:\s*"metric_id,entry_date"/i);
+  assert.match(customLogSection, /value=\{entryDate\}/i);
+  assert.match(customLogSection, /onChange=\{\(event\) => setEntryDate\(event\.target\.value\)\}/i);
+  assert.match(logTab, /<CustomTrackersLogSection/i);
 });
 
 test("disabling a tracker is UI state, not health-history deletion", () => {
