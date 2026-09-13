@@ -26,7 +26,7 @@ export const metricColors = {
   steps: "#D9A642",
 };
 
-export function BrandLogo({ compact = false, style = {} }) {
+function logoMark(compact, style) {
   return (
     <span
       aria-label="With"
@@ -47,6 +47,37 @@ export function BrandLogo({ compact = false, style = {} }) {
         ...style,
       }}
     />
+  );
+}
+
+export function BrandLogo({ compact = false, style = {} }) {
+  if (!compact) return logoMark(false, style);
+
+  function goToToday() {
+    const todayButton = Array.from(document.querySelectorAll("button"))
+      .find((button) => button.textContent?.trim() === "Today");
+    todayButton?.click();
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label="Go to Today"
+      onClick={goToToday}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "transparent",
+        border: "none",
+        padding: 0,
+        margin: 0,
+        lineHeight: 0,
+        cursor: "pointer",
+      }}
+    >
+      {logoMark(true, style)}
+    </button>
   );
 }
 
