@@ -2,6 +2,7 @@ import { brand, metricColors } from "../brand.jsx";
 import { useEffect, useState } from "react";
 import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2, Target } from "lucide-react";
 import { SunMark, WaveMark } from "../WithMarks.jsx";
+import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
 
 function greeting(timeZone) {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
@@ -94,6 +95,8 @@ export default function TodayTab({
     ? `${goalWeeks} ${goalWeeks === 1 ? "week" : "weeks"} to ${goalDateLabel(u.goalDate)}`
     : "";
   const isMine = activeCanEdit;
+  const { trackerEnabled } = useOwnTrackerPreferences(isMine);
+  const fastingVisible = trackerEnabled("fasting") || Boolean(activeFasts[activeUser]);
   const intention = intentions?.[activeUser] || "";
   const [editingIntention, setEditingIntention] = useState(false);
   const [intentionDraft, setIntentionDraft] = useState(intention);
@@ -151,7 +154,12 @@ export default function TodayTab({
     water: dayWater,
     steps: dayStepsEntry ? dayStepsEntry.count : null,
   };
-  const hasAnything = dayFoods.length > 0 || dayActivities.length > 0 || ts.water > 0 || ts.steps != null || dayWeight.length > 0;
+  const hasAnything =
+    (trackerEnabled("food") && dayFoods.length > 0) ||
+    (trackerEnabled("activity") && dayActivities.length > 0) ||
+    (trackerEnabled("water") && ts.water > 0) ||
+    (trackerEnabled("steps") && ts.steps != null) ||
+    (trackerEnabled("weight") && dayWeight.length > 0);
 
   const mealOrder = ["Breakfast", "Lunch", "Dinner", "Snack"];
   const foodGroups = dayFoods.reduce((groups, food) => {
@@ -175,7 +183,7 @@ export default function TodayTab({
     ["Activity", "activity", Dumbbell, PEN.green],
     ["Water", "water", Droplet, PEN.purple],
     ["Steps", "steps", Footprints, PEN.orange],
-  ];
+  ].filter(([, kind]) => trackerEnabled(kind));
 
   const metricRows = [
     {
@@ -183,18 +191,18 @@ export default function TodayTab({
       label: "Activity",
       icon: Dumbbell,
       color: PEN.green,
-      show: dayActivities.length > 0,
+      show: trackerEnabled("activity") && dayActivities.length > 0,
       value: dayActivities.length === 1 ? dayActivities[0].name : `${dayActivities.length} activities`,
       sub: `${Math.round(totalActivityCals)} cal burned`,
     },
-    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: ts.water > 0, value: targets.water ? `${Math.round(ts.water)} / ${targets.water} oz` : `${Math.round(ts.water)} oz`, sub: targets.water ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
-    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: ts.steps != null, value: ts.steps != null ? (targets.steps ? `${ts.steps.toLocaleString()} / ${targets.steps.toLocaleString()}` : ts.steps.toLocaleString()) : "", sub: targets.steps ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
+    { id: "water", label: "Water", icon: Droplet, color: PEN.purple, show: trackerEnabled("water") && ts.water > 0, value: targets.water ? `${Math.round(ts.water)} / ${targets.water} oz` : `${Math.round(ts.water)} oz`, sub: targets.water ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
+    { id: "steps", label: "Steps", icon: Footprints, color: PEN.orange, show: trackerEnabled("steps") && ts.steps != null, value: ts.steps != null ? (targets.steps ? `${ts.steps.toLocaleString()} / ${targets.steps.toLocaleString()}` : ts.steps.toLocaleString()) : "", sub: targets.steps ? "Daily target" : (isToday ? "Logged today" : "Logged that day") },
     {
       id: "weight",
       label: "Weight",
       icon: Scale,
       color: PEN.red,
-      show: latestDayWeight != null,
+      show: trackerEnabled("weight") && latestDayWeight != null,
       value: averageWeight != null ? `${averageWeight.toFixed(1)} lb` : "",
       sub: [
         averageWeight != null ? averageLabel : null,
@@ -421,7 +429,7 @@ export default function TodayTab({
         )}
       </section>}
 
-      {isToday && isMine && !firstTodayVisible && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
+      {isToday && isMine && !firstTodayVisible && fastingVisible && (activeFasts[activeUser] || !fastPromptDismissedToday) && (
         <section style={{ marginBottom: 28, paddingBottom: 22 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ minWidth: 0 }}>
@@ -453,7 +461,7 @@ export default function TodayTab({
         </section>
       )}
 
-      {isToday && isMine && fastEditorOpen && (
+      {isToday && isMine && fastingVisible && fastEditorOpen && (
         <div style={{ background: brand.surface, border: `1px solid ${PEN.rule}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{activeFasts[activeUser] ? "Edit fast start" : "When did your fast start?"}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, marginBottom: 14 }}>It defaults to right now. Backdating is completely fine.</div>
@@ -468,10 +476,10 @@ export default function TodayTab({
         </div>
       )}
 
-      {isMine && (
+      {isMine && quick.length > 0 && (
         <section id="today-quick-add" style={{ marginBottom: 30 }}>
           <div style={sectionLabel}>Quick add</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7, marginTop: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${quick.length}, 1fr)`, gap: 7, marginTop: 10 }}>
             {quick.map(([label, kind, Icon, color]) => (
               <button
                 key={label}
@@ -505,13 +513,13 @@ export default function TodayTab({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <SunMark size={18} color={PEN.orange} />
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: PEN.ink }}>
-              {isMine ? (activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
+              {isMine ? (fastingVisible && activeFasts[activeUser] ? "Your day is underway." : "Nothing here yet.") : "Nothing shared yet."}
             </div>
           </div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginTop: 6, maxWidth: 390 }}>
             {isMine
-              ? (activeFasts[activeUser]
-                ? "You’re fasting right now. You can still add water, activity, weight or steps."
+              ? (fastingVisible && activeFasts[activeUser]
+                ? "You’re fasting right now. Add anything else you’re tracking whenever it’s useful."
                 : "Add something whenever you’re ready. A little information is still useful information.")
               : `${activeName} hasn’t added anything today.`}
           </div>
@@ -549,66 +557,68 @@ export default function TodayTab({
               </button>
             ))}
 
-            <button
-              onClick={() => setFoodDetailOpen(true)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                background: "transparent",
-                color: TEXT,
-                border: "none",
-                borderBottom: `1px solid ${PEN.rule}`,
-                borderRadius: 0,
-                padding: "12px 0",
-                display: "grid",
-                gridTemplateColumns: "22px 1fr auto",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <Utensils style={{ width: 16, height: 16, color: PEN.blue }} strokeWidth={2} />
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>Food</div>
-                <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>
-                  {dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged
+            {trackerEnabled("food") && <>
+              <button
+                onClick={() => setFoodDetailOpen(true)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  background: "transparent",
+                  color: TEXT,
+                  border: "none",
+                  borderBottom: `1px solid ${PEN.rule}`,
+                  borderRadius: 0,
+                  padding: "12px 0",
+                  display: "grid",
+                  gridTemplateColumns: "22px 1fr auto",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Utensils style={{ width: 16, height: 16, color: PEN.blue }} strokeWidth={2} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: ".05em" }}>Food</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>
+                    {dayFoods.length} {dayFoods.length === 1 ? "item" : "items"} logged
+                  </div>
                 </div>
-              </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>
-                {Math.round(ts.calories)}{targets.calories ? ` / ${targets.calories}` : ""} cal
-              </div>
-            </button>
-
-            {isToday && activeFasts[activeUser] && dayFoods.length === 0 ? (
-              <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "12px 0 2px 32px" }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
-            ) : (
-              <div style={{ padding: "12px 0 2px 32px" }}>
-                {targets.calories && <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "0 0 14px" }}>
-                  <div style={{ width: `${Math.min(100, ts.calories / targets.calories * 100)}%`, height: "100%", background: PEN.blue }} />
-                </div>}
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
-                  {[
-                    ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
-                    ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
-                    ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
-                    ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
-                  ].map(([label, value, target, color]) => (
-                    <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
-                      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
-                      <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
-                      <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
-                        {value} {target ? <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target}g</span> : <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>g</span>}
-                      </span>
-                    </div>
-                  ))}
+                <div style={{ fontSize: 17, fontWeight: 800, color: PEN.ink }}>
+                  {Math.round(ts.calories)}{targets.calories ? ` / ${targets.calories}` : ""} cal
                 </div>
-              </div>
-            )}
+              </button>
+
+              {isToday && fastingVisible && activeFasts[activeUser] && dayFoods.length === 0 ? (
+                <div style={{ color: TEXT_MUTED, fontSize: 13, padding: "12px 0 2px 32px" }}>Fasting · {fastElapsed(activeFasts[activeUser].started_at)} · food logging is still available for earlier meals.</div>
+              ) : (
+                <div style={{ padding: "12px 0 2px 32px" }}>
+                  {targets.calories && <div style={{ height: 4, background: PEN.soft, overflow: "hidden", margin: "0 0 14px" }}>
+                    <div style={{ width: `${Math.min(100, ts.calories / targets.calories * 100)}%`, height: "100%", background: PEN.blue }} />
+                  </div>}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 14px" }}>
+                    {[
+                      ["Protein", Math.round(ts.protein), targets.protein, PEN.green],
+                      ["Carbs", Math.round(ts.carbs), targets.carbs, PEN.orange],
+                      ["Fat", Math.round(ts.fat), targets.fat, PEN.purple],
+                      ["Fiber", Math.round(ts.fiber), targets.fiberMin, PEN.red],
+                    ].map(([label, value, target, color]) => (
+                      <div key={label} style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", alignItems: "center", gap: 7 }}>
+                        <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
+                        <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{label}</span>
+                        <span className="num" style={{ fontSize: 13, color: PEN.ink, fontWeight: 700 }}>
+                          {value} {target ? <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>/ {target}g</span> : <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>g</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>}
           </div>
         </section>
       )}
 
-      {foodDetailOpen && (
+      {foodDetailOpen && trackerEnabled("food") && (
         <div
           onClick={() => setFoodDetailOpen(false)}
           style={{
