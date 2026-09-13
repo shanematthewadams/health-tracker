@@ -20,6 +20,7 @@ const CUSTOM_TYPES = [
   { id: "count", label: "Count", example: "Glasses, sessions, servings" },
   { id: "duration", label: "Minutes", example: "Mindfulness, reading, stretching" },
   { id: "quantity", label: "Amount", example: "Pages, miles, cups, anything measurable" },
+  { id: "rating", label: "Rating", example: "Mood, energy, stress, pain" },
 ];
 
 const CUSTOM_ICONS = [
@@ -101,6 +102,8 @@ export default function MyTrackersPanel({ session, styles }) {
   const [customType, setCustomType] = useState("duration");
   const [customUnit, setCustomUnit] = useState("");
   const [customIcon, setCustomIcon] = useState("sparkles");
+  const [customLowLabel, setCustomLowLabel] = useState("");
+  const [customHighLabel, setCustomHighLabel] = useState("");
 
   const withMap = useMemo(() => Object.fromEntries(withs.map((item) => [item.id, item])), [withs]);
 
@@ -109,6 +112,8 @@ export default function MyTrackersPanel({ session, styles }) {
     setCustomType("duration");
     setCustomUnit("");
     setCustomIcon("sparkles");
+    setCustomLowLabel("");
+    setCustomHighLabel("");
   }
 
   async function load() {
@@ -133,7 +138,7 @@ export default function MyTrackersPanel({ session, styles }) {
         supabase.from("profile_metric_preferences").select("profile_id, metric_type, enabled, visibility").eq("profile_id", profile.id),
         supabase.from("household_members").select("household_id").eq("user_id", session.user.id),
         supabase.from("profile_metric_withs").select("metric_type, household_id").eq("profile_id", profile.id),
-        supabase.from("custom_metrics").select("id, profile_id, name, value_type, unit, icon_key, enabled, visibility, sort_order, created_at").eq("profile_id", profile.id).order("sort_order").order("created_at"),
+        supabase.from("custom_metrics").select("id, profile_id, name, value_type, unit, icon_key, rating_low_label, rating_high_label, enabled, visibility, sort_order, created_at").eq("profile_id", profile.id).order("sort_order").order("created_at"),
       ]);
       for (const result of [prefResult, membershipResult, standardWithResult, customResult]) if (result.error) throw result.error;
 
@@ -203,6 +208,15 @@ export default function MyTrackersPanel({ session, styles }) {
       }, { onConflict: "profile_id,metric_type" });
       if (saveError) throw saveError;
 
+      if (patch.enabled === false && metricType !== "fasting") {
+        const { error: quickAddError } = await supabase
+          .from("profile_quick_add_items")
+          .delete()
+          .eq("profile_id", profileId)
+          .eq("standard_metric_type", metricType);
+        if (quickAddError) throw quickAddError;
+      }
+
       if (patch.visibility === "selected_withs" && !(standardWiths[metricType]?.size)) {
         const ids = withs.map((item) => item.id);
         if (ids.length) {
@@ -260,6 +274,16 @@ export default function MyTrackersPanel({ session, styles }) {
         updated_at: new Date().toISOString(),
       }).eq("id", metricId);
       if (saveError) throw saveError;
+
+      if (patch.enabled === false) {
+        const { error: quickAddError } = await supabase
+          .from("profile_quick_add_items")
+          .delete()
+          .eq("profile_id", profileId)
+          .eq("custom_metric_id", metricId);
+        if (quickAddError) throw quickAddError;
+      }
+
       if (patch.visibility === "selected_withs" && !(customWiths[metricId]?.size)) {
         const ids = withs.map((item) => item.id);
         if (ids.length) {
@@ -315,16 +339,20 @@ export default function MyTrackersPanel({ session, styles }) {
     setBusyKey("create-custom");
     setError("");
     try {
+      const ratingLowLabel = customType === "rating" ? (customLowLabel.trim() || null) : null;
+      const ratingHighLabel = customType === "rating" ? (customHighLabel.trim() || null) : null;
       const { data: created, error: createError } = await supabase.from("custom_metrics").insert({
         profile_id: profileId,
         name,
         value_type: customType,
         unit,
         icon_key: customIcon,
+        rating_low_label: ratingLowLabel,
+        rating_high_label: ratingHighLabel,
         enabled: true,
         visibility: "all_withs",
         sort_order: customMetrics.length,
-      }).select("id, profile_id, name, value_type, unit, icon_key, enabled, visibility, sort_order, created_at").single();
+      }).select("id, profile_id, name, value_type, unit, icon_key, rating_low_label, rating_high_label, enabled, visibility, sort_order, created_at").single();
       if (createError) throw createError;
       setCustomMetrics((previous) => [...previous, created]);
       resetCustomBuilder();
@@ -477,11 +505,17 @@ export default function MyTrackersPanel({ session, styles }) {
 
       <div style={{ marginTop: 18 }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, color: TEXT }}>Your own trackers</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>Make something that With didn’t think of. Mindfulness in minutes. Reading in pages. Whatever is useful to you.</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>Make something that With didn’t think of. Mindfulness in minutes. Reading in pages. Mood on a five-point scale. Whatever is useful to you.</div>
 
         {customMetrics.map((metric) => {
           const type = CUSTOM_TYPES.find((item) => item.id === metric.value_type);
-          const meta = metric.value_type === "duration" ? "Tracked in minutes" : metric.unit ? `Tracked in ${metric.unit}` : type?.label;
+          const meta = metric.value_type === "duration"
+            ? "Tracked in minutes"
+            : metric.value_type === "rating"
+              ? `${metric.rating_low_label || "Low"} → ${metric.rating_high_label || "High"} · 5-point scale`
+              : metric.unit
+                ? `Tracked in ${metric.unit}`
+                : type?.label;
           const CustomIcon = CUSTOM_ICON_MAP[metric.icon_key] || Sparkles;
           return (
             <TrackerRow
@@ -560,7 +594,14 @@ export default function MyTrackersPanel({ session, styles }) {
                     key={type.id}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => { setCustomType(type.id); setCustomUnit(""); }}
+                    onClick={() => {
+                      setCustomType(type.id);
+                      setCustomUnit("");
+                      if (type.id !== "rating") {
+                        setCustomLowLabel("");
+                        setCustomHighLabel("");
+                      }
+                    }}
                     style={{
                       textAlign: "left",
                       border: `${selected ? 2 : 1}px solid ${selected ? brand.teal : BORDER}`,
@@ -581,6 +622,25 @@ export default function MyTrackersPanel({ session, styles }) {
               <>
                 <div style={fieldLabel}>What unit should With use?</div>
                 <input value={customUnit} maxLength={24} onChange={(event) => setCustomUnit(event.target.value)} placeholder="pages, miles, cups…" style={{ ...inputStyle, marginBottom: 12 }} />
+              </>
+            )}
+
+            {customType === "rating" && (
+              <>
+                <div style={fieldLabel}>What should the ends of the scale mean?</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 5 }}>
+                  <div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>1 means…</div>
+                    <input value={customLowLabel} maxLength={24} onChange={(event) => setCustomLowLabel(event.target.value)} placeholder="Low" style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>5 means…</div>
+                    <input value={customHighLabel} maxLength={24} onChange={(event) => setCustomHighLabel(event.target.value)} placeholder="High" style={inputStyle} />
+                  </div>
+                </div>
+                <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.4, marginBottom: 12 }}>
+                  With uses five points between them. For Mood, that might be “Rough” to “Great.”
+                </div>
               </>
             )}
 
