@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { brand, metricColors } from "../brand.jsx";
 import { Search, Pencil, Trash2, Utensils, Scale, Dumbbell, Droplet, Footprints, ChevronDown } from "lucide-react";
 import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
+import CustomTrackersLogSection from "../components/CustomTrackersLogSection.jsx";
 
 const LOG_TABS = [
   ["food", "Food", Utensils, metricColors.food],
@@ -250,8 +251,8 @@ export default function LogTab(props) {
         </div>
       ) : activeCanEdit ? (
         <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, marginBottom: 5 }}>Nothing to log right now.</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5 }}>You’ve turned off all of the standard logging trackers. Your old entries are still safe, and you can turn any tracker back on from Profile → My Trackers.</div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, fontWeight: 600, marginBottom: 5 }}>No standard trackers are on.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5 }}>Your old entries are still safe. Personal trackers you’ve created are available below, and standard trackers can be turned back on from Profile → My Trackers.</div>
         </section>
       ) : null}
 
@@ -347,138 +348,26 @@ export default function LogTab(props) {
 
         <div id="log-food-form" style={{ ...cardStyle, marginBottom: "1rem", scrollMarginTop: 112 }}>
           <div style={{ ...headingStyle, marginBottom: 12 }}>{editingFoodId ? "Edit Logged Food" : "Food"}</div>
-
-          {!editingFoodId && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Search foods</div>
-              <input type="text" placeholder="Search foods or type a new one" value={savedSearch} onFocus={() => setFoodSearchOpen(true)} onBlur={() => window.setTimeout(() => setFoodSearchOpen(false), 160)} onChange={(e) => { setSavedSearch(e.target.value); setFoodSearchOpen(true); }} style={{ ...inputStyle, marginBottom: 0 }} />
-
-              {foodSearchOpen && (
-                <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 8, marginTop: 7 }}>
-                  {!savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", padding: "1px 3px 7px" }}>Recent</div>}
-                  {pendingCreateName && duplicateCandidates.length > 0 ? (
-                    <div style={{ padding: 3 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: TEXT, marginBottom: 4 }}>A similar food is already here.</div>
-                      <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>Use an existing food if it matches. Different brand or serving? Creating another is completely fine.</div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {duplicateCandidates.map((food) => (
-                          <button key={food.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { chooseSavedFood(food); setPendingCreateName(""); setFoodSearchOpen(false); }} style={{ textAlign: "left", background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700 }}>{food.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11 }}>{Math.round(food.calories)} cal</span></div>
-                            <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2 }}>{food.serving_label || food.serving_description || "1 serving"}</div>
-                          </button>
-                        ))}
-                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => startCreatingFood(pendingCreateName, true)} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>Create “{pendingCreateName}” anyway</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gap: 6, maxHeight: 245, overflowY: "auto", overflowX: "hidden", paddingRight: 5 }}>
-                      {searchResults.map((food) => (
-                        <button key={`${food.source || "global"}-${food.id}`} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { chooseSavedFood(food); setFoodSearchOpen(false); }} style={{ textAlign: "left", background: "transparent", border: `1px solid ${BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px", minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>{Math.round(food.calories)} cal</span></div>
-                          <div className="num" style={{ color: TEXT_MUTED, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.serving_label || food.serving_description || "1 serving"} · {Math.round(food.fat)}g fat · {Math.round(food.carbs)}g carbs · {Math.round(food.fiber)}g fiber · {Math.round(food.protein)}g protein</div>
-                          {food.brand && <div style={{ color: TEXT_MUTED, fontSize: 9, marginTop: 2 }}>{food.brand}</div>}
-                        </button>
-                      ))}
-                      {savedSearch.trim() && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => startCreatingFood(savedSearch.trim())} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>+ Create “{savedSearch.trim()}”</button>}
-                      {searchResults.length === 0 && !savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 3px" }}>No recent foods yet. Search for something or create your first one.</div>}
-                      {searchResults.length === 0 && savedSearch.trim() && <div style={{ color: TEXT_MUTED, fontSize: 11, padding: "2px 3px" }}>No matching foods yet.</div>}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {selectedSavedFoodId && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 12px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Logging</div><div style={{ fontSize: 15, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div></div>
-              <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0", flexShrink: 0 }}>Change</button>
-            </div>
-          )}
-
+          {!editingFoodId && <div style={{ marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 6, ...fieldLabel }}><Search style={{ width: 13, height: 13 }} /> Search foods</div><input type="text" placeholder="Search foods or type a new one" value={savedSearch} onFocus={() => setFoodSearchOpen(true)} onBlur={() => window.setTimeout(() => setFoodSearchOpen(false), 160)} onChange={(e) => { setSavedSearch(e.target.value); setFoodSearchOpen(true); }} style={{ ...inputStyle, marginBottom: 0 }} />{foodSearchOpen && <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 8, marginTop: 7 }}><div style={{ display: "grid", gap: 6, maxHeight: 245, overflowY: "auto", overflowX: "hidden", paddingRight: 5 }}>{searchResults.map((food) => <button key={`${food.source || "global"}-${food.id}`} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { chooseSavedFood(food); setFoodSearchOpen(false); }} style={{ textAlign: "left", background: "transparent", border: `1px solid ${BORDER}`, color: TEXT, borderRadius: 8, padding: "9px 10px", minWidth: 0 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{food.name}</span><span className="num" style={{ color: TEXT_MUTED, fontSize: 11, flexShrink: 0 }}>{Math.round(food.calories)} cal</span></div></button>)}{savedSearch.trim() && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => startCreatingFood(savedSearch.trim())} style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px dashed ${brand.teal}`, color: TEXT, borderRadius: 8, padding: "10px 11px", fontSize: 12, fontWeight: 700 }}>+ Create “{savedSearch.trim()}”</button>}</div></div>}</div>}
           {editingFoodId && <><div style={fieldLabel}>Food name</div><input type="text" placeholder="Food name" value={foodName} onChange={(e) => setFoodName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /></>}
-
-          {(selectedSavedFoodId || editingFoodId) && <>
-            <div style={fieldLabel}>{editingFoodId ? "Servings" : "Quantity"}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginBottom: 10 }}>
-              <input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} />
-              <div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{editingFoodId && foodServingLabel === "logged amount" ? "× logged amount" : `${foodServingLabel} each`}</div>
-            </div>
-          </>}
-
-          {foodName && !editingFoodId && !selectedSavedFoodId && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "0 0 10px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Creating</div><div style={{ fontSize: 14, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{foodName}</div></div>
-              <button type="button" onClick={() => { clearFoodForm(); setSavedSearch(""); }} style={{ background: "transparent", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Change</button>
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div><div style={fieldLabel}>Date</div><div style={{ height: 46, border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden" }}><input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={{ width: "100%", maxWidth: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 8px", fontSize: 15, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }} /></div></div>
-            <div><div style={fieldLabel}>Meal</div><div style={{ height: 46, border: `1px solid ${BORDER}`, borderRadius: 8, background: SURFACE, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden" }}><select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={{ width: "100%", maxWidth: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 8px", fontSize: 15, fontFamily: "'DM Sans', -apple-system, sans-serif", lineHeight: 1, boxSizing: "border-box", minWidth: 0, appearance: "auto", WebkitAppearance: "auto" }}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div></div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Fat (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Carbs (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={inputStyle} /></div>
-            <div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div>
-          </div>
-
-          {!selectedSavedFoodId && !editingFoodId && <>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}><div style={{ ...fieldLabel, marginBottom: 0 }}>Serving description</div><details style={{ position: "relative" }}><summary aria-label="What is serving description?" style={{ listStyle: "none", cursor: "pointer", width: 18, height: 18, borderRadius: "50%", border: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: 11, fontWeight: 800, display: "grid", placeItems: "center" }}>?</summary><div style={{ position: "absolute", zIndex: 5, left: 0, top: 24, width: 250, background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 9, padding: 10, boxShadow: "0 5px 18px rgba(37,36,34,.12)", color: TEXT, fontSize: 11, lineHeight: 1.45 }}>Describe the amount these nutrition numbers represent, like “1 bar” or “2 tbsp.” With uses this as the base serving when the food is logged again.</div></details></div>
-            <input type="text" placeholder="e.g. 1 bar, 2 tbsp, 3/4 cup" value={foodServingLabel} onChange={(e) => setFoodServingLabel(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-          </>}
+          {(selectedSavedFoodId || editingFoodId) && <><div style={fieldLabel}>{editingFoodId ? "Servings" : "Quantity"}</div><div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8, marginBottom: 10 }}><input type="number" step="0.25" min="0.25" inputMode="decimal" value={foodQuantity} onChange={(e) => changeQuantity(e.target.value)} style={inputStyle} /><div style={{ display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, background: SURFACE_2, color: TEXT_MUTED, fontSize: 13 }}>{editingFoodId && foodServingLabel === "logged amount" ? "× logged amount" : `${foodServingLabel} each`}</div></div></>}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}><div><div style={fieldLabel}>Date</div><input type="date" value={foodDate} onChange={(e) => setFoodDate(e.target.value)} style={inputStyle} /></div><div><div style={fieldLabel}>Meal</div><select value={foodMeal} onChange={(e) => setFoodMeal(e.target.value)} style={inputStyle}><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}><div><div style={fieldLabel}>Calories</div><input type="number" inputMode="numeric" value={foodCals} onChange={(e) => setFoodCals(e.target.value)} style={inputStyle} /></div><div><div style={fieldLabel}>Fat (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFat} onChange={(e) => setFoodFat(e.target.value)} style={inputStyle} /></div><div><div style={fieldLabel}>Carbs (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodCarbs} onChange={(e) => setFoodCarbs(e.target.value)} style={inputStyle} /></div><div><div style={fieldLabel}>Fiber (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodFiber} onChange={(e) => setFoodFiber(e.target.value)} style={inputStyle} /></div><div><div style={fieldLabel}>Protein (g)</div><input type="number" step="0.1" inputMode="decimal" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} style={inputStyle} /></div></div>
           <div style={fieldLabel}>Notes (optional)</div><input type="text" placeholder="Restaurant, brand, whatever helps" value={foodNotes} onChange={(e) => setFoodNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
           {foodError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{foodError}</div>}
-          <button onClick={addFood} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "food"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "food" ? (editingFoodId ? "Saving…" : "Logging…") : buttonSuccess === "food" ? "✓ Saved" : editingFoodId ? "Save changes" : selectedSavedFoodId ? `Log ${foodQuantity || 1} × serving` : "Log food"}</button>
-          {editingFoodId && <button onClick={async () => { await deleteFood(editingFoodId); clearFoodForm(); }} style={{ width: "100%", marginTop: 10, padding: 10, background: "transparent", border: "none", color: WARN, fontSize: 12, fontWeight: 700 }}>Delete logged food</button>}
+          <button onClick={addFood} disabled={!activeCanEdit || !!logBusy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "food" ? "Logging…" : buttonSuccess === "food" ? "✓ Saved" : editingFoodId ? "Save changes" : "Log food"}</button>
         </div>
       </>}
 
-      {trackerEnabled("weight") && logTab === "weight" && <div style={cardStyle}>
-        <div style={headingStyle}>Weight</div><div style={fieldLabel}>Weight (lb)</div>
-        <input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}
-        <button onClick={addWeight} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "weight"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "weight" ? "Saving…" : buttonSuccess === "weight" ? "✓ Logged" : (weightDate === today && data[activeUser].weights.some((w) => w.date === today)) ? "Update today’s weight" : "Log weight"}</button>
-        {data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}
-      </div>}
+      {trackerEnabled("weight") && logTab === "weight" && <div style={cardStyle}><div style={headingStyle}>Weight</div><div style={fieldLabel}>Weight (lb)</div><input type="number" step="0.1" inputMode="decimal" placeholder="e.g. 182.4" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /><div style={fieldLabel}>Date</div><input type="date" value={weightDate} onChange={(e) => setWeightDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />{weightError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{weightError}</div>}<button onClick={addWeight} disabled={!activeCanEdit || !!logBusy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "weight" ? "Saving…" : buttonSuccess === "weight" ? "✓ Logged" : "Log weight"}</button>{data[activeUser].weights.length > 0 && <div style={{ marginTop: 14 }}>{data[activeUser].weights.slice().reverse().slice(0, 3).map((w) => <div key={w.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}><span style={{ color: TEXT_MUTED }}>{fmtDate(w.date)}</span><span className="num">{w.weight} lb</span><button onClick={() => deleteWeight(w.id)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12 }}>remove</button></div>)}</div>}</div>}
 
-      {trackerEnabled("activity") && logTab === "activity" && <div id="log-activity-form" style={{ ...cardStyle, scrollMarginTop: 112 }}>
-        <div style={{ ...headingStyle, marginBottom: 6 }}>{editingActivityId ? "Edit activity" : "Activity"}</div>
-        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 14 }}>{editingActivityId ? "Update the activity, calories burned, or date." : "Add movement from your day."}</div>
-        <div style={fieldLabel}>Activity</div><input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Calories burned</div><input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {activityError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{activityError}</div>}
-        <div style={{ display: "grid", gridTemplateColumns: editingActivityId ? "1fr 1fr" : "1fr", gap: 8 }}>
-          {editingActivityId && <button type="button" onClick={cancelActivityEdit} disabled={!!logBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>}
-          <button onClick={addActivity} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "activity"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "activity" ? (editingActivityId ? "Saving…" : "Logging…") : buttonSuccess === "activity" ? "✓ Saved" : editingActivityId ? "Save activity" : "Log activity"}</button>
-        </div>
-        {actDate !== today && data[activeUser].activities.filter((a) => a.date === actDate).length > 0 && <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
-          <div style={{ ...fieldLabel, marginBottom: 6 }}>Activities for {fmtDate(actDate)}</div>
-          {data[activeUser].activities.filter((a) => a.date === actDate).map((a) => <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div><div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>{Math.round(a.caloriesBurned)} cal burned</div></div>{activeCanEdit && <button type="button" onClick={() => editActivity(a)} aria-label={`Edit ${a.name}`} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 6, display: "grid", placeItems: "center" }}><Pencil style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}{activeCanEdit && <button type="button" onClick={() => deleteActivity(a.id)} aria-label={`Delete ${a.name}`} style={{ background: "none", border: "none", color: WARN, padding: 6, display: "grid", placeItems: "center" }}><Trash2 style={{ width: 15, height: 15 }} strokeWidth={1.8} /></button>}</div>)}
-          <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 9 }}>{Math.round(data[activeUser].activities.filter((a) => a.date === actDate).reduce((sum, a) => sum + a.caloriesBurned, 0))} calories burned total</div>
-        </div>}
-      </div>}
+      {trackerEnabled("activity") && logTab === "activity" && <div id="log-activity-form" style={{ ...cardStyle, scrollMarginTop: 112 }}><div style={{ ...headingStyle, marginBottom: 6 }}>{editingActivityId ? "Edit activity" : "Activity"}</div><div style={fieldLabel}>Activity</div><input type="text" placeholder="e.g. run, lifting, walk" value={actName} onChange={(e) => setActName(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /><div style={fieldLabel}>Calories burned</div><input type="number" inputMode="numeric" value={actCals} onChange={(e) => setActCals(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /><div style={fieldLabel}>Date</div><input type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />{activityError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{activityError}</div>}<button onClick={addActivity} disabled={!activeCanEdit || !!logBusy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "activity" ? "Logging…" : buttonSuccess === "activity" ? "✓ Saved" : editingActivityId ? "Save activity" : "Log activity"}</button></div>}
 
-      {trackerEnabled("water") && logTab === "water" && <div style={cardStyle}>
-        <div style={headingStyle}>Water</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => { const pendingKey = `water-shortcut-${index}`; return <button key={`${oz}-${index}`} onClick={() => addWater(oz, pendingKey)} disabled={!!logBusy} aria-busy={logBusy === pendingKey} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600, opacity: logBusy ? 0.62 : 1 }}>{logBusy === pendingKey ? "Adding…" : `+${oz} oz`}</button>; })}</div>
-        <div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {waterError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{waterError}</div>}
-        <button onClick={() => addWater()} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "water"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "water" ? "Adding…" : buttonSuccess === "water" ? "✓ Added" : "Add water"}</button>
-      </div>}
+      {trackerEnabled("water") && logTab === "water" && <div style={cardStyle}><div style={headingStyle}>Water</div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>{waterShortcuts.map((oz, index) => { const pendingKey = `water-shortcut-${index}`; return <button key={`${oz}-${index}`} onClick={() => addWater(oz, pendingKey)} disabled={!!logBusy} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 600 }}>+{oz} oz</button>; })}</div><div style={fieldLabel}>Custom amount (oz)</div><input type="number" inputMode="numeric" value={waterOz} onChange={(e) => setWaterOz(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /><div style={fieldLabel}>Date</div><input type="date" value={waterDate} onChange={(e) => setWaterDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />{waterError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{waterError}</div>}<button onClick={() => addWater()} disabled={!activeCanEdit || !!logBusy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>Add water</button></div>}
 
-      {trackerEnabled("steps") && logTab === "steps" && <div style={cardStyle}>
-        <div style={headingStyle}>Steps</div><div style={fieldLabel}>Step count</div>
-        <input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-        <div style={fieldLabel}>Date</div><div style={{ width: "100%", height: 46, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 1px 0 rgba(45,35,25,.03)", overflow: "hidden", marginBottom: 12 }}><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ width: "100%", height: "100%", border: "none", background: "transparent", color: TEXT, padding: "0 14px", fontSize: 16, fontFamily: "'DM Sans', -apple-system, sans-serif", boxSizing: "border-box", minWidth: 0, maxWidth: "100%" }} /></div>
-        {stepsError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{stepsError}</div>}
-        <button onClick={saveSteps} disabled={!activeCanEdit || !!logBusy} aria-busy={logBusy === "steps"} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>{logBusy === "steps" ? "Saving…" : buttonSuccess === "steps" ? "✓ Saved" : (stepsDate === today && ts.steps != null) ? "Update today’s steps" : "Save steps"}</button>
-      </div>}
+      {trackerEnabled("steps") && logTab === "steps" && <div style={cardStyle}><div style={headingStyle}>Steps</div><div style={fieldLabel}>Step count</div><input type="number" inputMode="numeric" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} /><div style={fieldLabel}>Date</div><input type="date" value={stepsDate} onChange={(e) => setStepsDate(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />{stepsError && <div style={{ color: WARN, fontSize: 12, marginBottom: 8 }}>{stepsError}</div>}<button onClick={saveSteps} disabled={!activeCanEdit || !!logBusy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: logBusy ? 0.68 : 1 }}>Save steps</button></div>}
+
+      <CustomTrackersLogSection activeCanEdit={activeCanEdit} today={today} initialDate={currentLogDate} styles={styles} />
     </>
   );
 }
