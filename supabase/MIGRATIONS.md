@@ -45,12 +45,13 @@ The Phase 2 migrations add personal tracker preferences, tracker-level sharing c
 - `20260913132655_fix_custom_metric_owner_select`
 - `20260913133241_add_custom_metric_icons`
 - `20260913142607_add_quick_add_preferences_and_rating`
+- `20260913143526_index_quick_add_custom_metric_fk`
 
 Standard tracker preferences default to enabled and shared with all current Withs so the production frontend continues to behave as it did before these tables existed. Disabling a tracker is a presentation/logging preference and does not delete history. Sharing is a separate RLS-enforced setting.
 
 Custom trackers belong to a person through `profile_id`. They support yes/no, count, duration, quantity, and rating values and use the same private / all Withs / selected Withs visibility model. Rating values are whole numbers from 1 through 5, with optional low/high endpoint labels such as `Rough` → `Great`. Owners can always read their own custom tracker definitions, including immediately after creation. Custom tracker icons use a deliberately bounded icon key vocabulary so stored values stay stable even if the frontend icon library changes.
 
-Quick Add preferences also belong to the person. `profile_quick_add_items` supports at most five ordered shortcuts. The standard Quick Add vocabulary is Food, Weight, Activity, Water, and Steps; Fasting is intentionally excluded because it is managed as a stateful Today interaction rather than a simple log shortcut. Existing profiles were backfilled to the five shortcuts they already had. The schema also supports a `custom_metric_id` shortcut so custom trackers can join Quick Add when custom logging is wired into Today and Log.
+Quick Add preferences also belong to the person. `profile_quick_add_items` supports at most five ordered shortcuts. The standard Quick Add vocabulary is Food, Weight, Activity, Water, and Steps; Fasting is intentionally excluded because it is managed as a stateful Today interaction rather than a simple log shortcut. Existing profiles were backfilled to the five shortcuts they already had. The schema also supports a `custom_metric_id` shortcut so custom trackers can join Quick Add when custom logging is wired into Today and Log. Its composite custom-metric foreign key has a matching index for relationship checks and cascade work.
 
 ## Rules for future database changes
 
