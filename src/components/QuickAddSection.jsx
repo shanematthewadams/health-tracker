@@ -74,7 +74,7 @@ export default function QuickAddSection({
           onClick={() => setEditing((value) => !value)}
           style={{ border: "none", background: "transparent", color: brand.tealDark, padding: "3px 0", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 800 }}
         >
-          <Pencil size={12} strokeWidth={2} /> {editing ? "Done" : "Edit"}
+          {!editing && <Pencil size={12} strokeWidth={2} />} {editing ? "Cancel" : "Edit"}
         </button>
       </div>
 
