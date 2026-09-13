@@ -42,10 +42,12 @@ The first Phase 2 migrations add personal tracker preferences, tracker-level sha
 - `20260913030717_lock_down_public_metric_helper`
 - `20260913030836_add_custom_trackers`
 - `20260913030900_index_tracker_relationships`
+- `20260913132655_fix_custom_metric_owner_select`
+- `20260913133241_add_custom_metric_icons`
 
 Standard tracker preferences default to enabled and shared with all current Withs so the production frontend continues to behave as it did before these tables existed. Disabling a tracker is a presentation/logging preference and does not delete history. Sharing is a separate RLS-enforced setting.
 
-Custom trackers belong to a person through `profile_id`. They support yes/no, count, duration, and quantity values and use the same private / all Withs / selected Withs visibility model.
+Custom trackers belong to a person through `profile_id`. They support yes/no, count, duration, and quantity values and use the same private / all Withs / selected Withs visibility model. Owners can always read their own custom tracker definitions, including immediately after creation. Custom tracker icons use a deliberately bounded icon key vocabulary so stored values stay stable even if the frontend icon library changes.
 
 ## Rules for future database changes
 
