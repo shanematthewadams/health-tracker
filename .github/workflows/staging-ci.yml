@@ -14,6 +14,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare My Trackers Profile integration
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/tabs/ProfileTab.jsx')
+          text = path.read_text()
+          import_anchor = 'import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";\n'
+          import_line = 'import MyTrackersPanel from "../components/MyTrackersPanel.jsx";\n'
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('ProfileWithsPanel import anchor not found')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+          water_anchor = '''      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
+        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Water</div>'''
+          panel = '''      <MyTrackersPanel
+        session={session}
+        styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
+      />
+
+'''
+          if panel not in text:
+              if water_anchor not in text:
+                  raise SystemExit('Water section anchor not found')
+              text = text.replace(water_anchor, panel + water_anchor, 1)
+          path.write_text(text)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patched-profile-tab
+          path: src/tabs/ProfileTab.jsx
       - uses: actions/setup-node@v4
         with:
           node-version: 22
