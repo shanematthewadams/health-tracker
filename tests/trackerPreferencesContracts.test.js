@@ -5,7 +5,10 @@ import { readFileSync } from "node:fs";
 const standardMigration = readFileSync("supabase/migrations/20260913030615_add_profile_metric_preferences.sql", "utf8");
 const customMigration = readFileSync("supabase/migrations/20260913030836_add_custom_trackers.sql", "utf8");
 const iconMigration = readFileSync("supabase/migrations/20260913133241_add_custom_metric_icons.sql", "utf8");
+const quickAddMigration = readFileSync("supabase/migrations/20260913142607_add_quick_add_preferences_and_rating.sql", "utf8");
 const trackerPanel = readFileSync("src/components/MyTrackersPanel.jsx", "utf8");
+const quickAddSection = readFileSync("src/components/QuickAddSection.jsx", "utf8");
+const quickAddHook = readFileSync("src/useQuickAddPreferences.js", "utf8");
 const todayTab = readFileSync("src/tabs/TodayTab.jsx", "utf8");
 const logTab = readFileSync("src/tabs/LogTabCore.jsx", "utf8");
 
@@ -26,13 +29,24 @@ test("metric visibility is enforced through the relationship-aware RLS helper", 
   assert.match(standardMigration, /coalesce\(pref\.visibility, 'all_withs'\) <> 'private'/i);
 });
 
-test("custom trackers support all four V2 value types and person ownership", () => {
+test("custom trackers support the original four value types and person ownership", () => {
   for (const valueType of ["yes_no", "count", "duration", "quantity"]) {
     assert.match(customMigration, new RegExp(`'${valueType}'`, "i"));
   }
   assert.match(customMigration, /profile_id uuid not null references public\.profiles\(id\) on delete cascade/i);
   assert.match(customMigration, /unique \(metric_id, entry_date\)/i);
   assert.match(customMigration, /private\.can_view_custom_metric/i);
+});
+
+test("rating trackers use a validated five-point scale with optional endpoint labels", () => {
+  assert.match(quickAddMigration, /value_type in \('yes_no','count','duration','quantity','rating'\)/i);
+  assert.match(quickAddMigration, /rating_low_label text/i);
+  assert.match(quickAddMigration, /rating_high_label text/i);
+  assert.match(quickAddMigration, /new\.numeric_value < 1 or new\.numeric_value > 5/i);
+  assert.match(quickAddMigration, /new\.numeric_value <> trunc\(new\.numeric_value\)/i);
+  assert.match(trackerPanel, /id: "rating", label: "Rating"/i);
+  assert.match(trackerPanel, /1 means…/i);
+  assert.match(trackerPanel, /5 means…/i);
 });
 
 test("custom trackers use a bounded icon vocabulary", () => {
@@ -44,10 +58,30 @@ test("custom trackers use a bounded icon vocabulary", () => {
   assert.match(trackerPanel, /icon_key: customIcon/);
 });
 
+test("Quick Add stores at most five owner-controlled shortcuts and keeps fasting separate", () => {
+  assert.match(quickAddMigration, /position smallint not null check \(position between 1 and 5\)/i);
+  assert.match(quickAddMigration, /standard_metric_type in \('food','weight','activity','water','steps'\)/i);
+  assert.doesNotMatch(quickAddMigration, /standard_metric_type in \([^\)]*'fasting'/i);
+  assert.match(quickAddMigration, /custom_metric_id uuid/i);
+  assert.match(quickAddMigration, /private\.owns_profile\(profile_id\)/i);
+  assert.match(quickAddHook, /DEFAULT_QUICK_ADD_IDS = \["food", "weight", "activity", "water", "steps"\]/i);
+  assert.match(quickAddHook, /slice\(0, 5\)/i);
+  assert.match(quickAddSection, /Choose up to five shortcuts/i);
+  assert.match(quickAddSection, /Fasting keeps its own Today controls/i);
+});
+
+test("Today uses the personal Quick Add editor instead of a hard-coded shortcut list", () => {
+  assert.match(todayTab, /useQuickAddPreferences\(isMine\)/i);
+  assert.match(todayTab, /<QuickAddSection/i);
+  assert.match(todayTab, /quickAddIds=\{quickAddIds\}/i);
+  assert.doesNotMatch(todayTab, /const quick = \[/i);
+});
+
 test("disabling a tracker is UI state, not health-history deletion", () => {
   assert.match(trackerPanel, /enabled: next\.enabled/i);
   assert.doesNotMatch(trackerPanel, /from\("(?:weight_entries|food_entries|activity_entries|water_entries|step_entries|fasting_entries|custom_metric_entries)"\)\.delete/i);
   assert.match(trackerPanel, /Your history stays right where it is\./i);
+  assert.match(trackerPanel, /from\("profile_quick_add_items"\)/i);
 });
 
 test("custom tracker deletion is explicit and warns when history exists", () => {
@@ -59,8 +93,8 @@ test("custom tracker deletion is explicit and warns when history exists", () => 
 
 test("Today and Log honor the owner's enabled tracker choices", () => {
   assert.match(todayTab, /useOwnTrackerPreferences\(isMine\)/);
-  assert.match(todayTab, /\.filter\(\(\[, kind\]\) => trackerEnabled\(kind\)\)/);
   assert.match(todayTab, /trackerEnabled\("food"\)/);
+  assert.match(quickAddSection, /trackerEnabled\(option\.id\)/);
   assert.match(logTab, /useOwnTrackerPreferences\(activeCanEdit\)/);
   assert.match(logTab, /LOG_TABS\.filter\(\(\[id\]\) => trackerEnabled\(id\)\)/);
   assert.match(logTab, /You’ve turned off all of the standard logging trackers/i);
