@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Utensils, Scale, Dumbbell, Droplet, Footprints, Pencil, ChevronLeft, ChevronRight, X, Trash2, Target } from "lucide-react";
 import { SunMark, WaveMark } from "../WithMarks.jsx";
 import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
+import { useQuickAddPreferences } from "../useQuickAddPreferences.js";
+import QuickAddSection from "../components/QuickAddSection.jsx";
 
 function greeting(timeZone) {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
@@ -96,6 +98,12 @@ export default function TodayTab({
     : "";
   const isMine = activeCanEdit;
   const { trackerEnabled } = useOwnTrackerPreferences(isMine);
+  const {
+    quickAddIds,
+    saving: quickAddSaving,
+    error: quickAddError,
+    saveQuickAddIds,
+  } = useQuickAddPreferences(isMine);
   const fastingVisible = trackerEnabled("fasting") || Boolean(activeFasts[activeUser]);
   const intention = intentions?.[activeUser] || "";
   const [editingIntention, setEditingIntention] = useState(false);
@@ -176,14 +184,6 @@ export default function TodayTab({
     setSelectedDate(today);
     setFoodDetailOpen(false);
   }, [activeUser, intention, today]);
-
-  const quick = [
-    ["Food", "food", Utensils, PEN.blue],
-    ["Weight", "weight", Scale, PEN.red],
-    ["Activity", "activity", Dumbbell, PEN.green],
-    ["Water", "water", Droplet, PEN.purple],
-    ["Steps", "steps", Footprints, PEN.orange],
-  ].filter(([, kind]) => trackerEnabled(kind));
 
   const metricRows = [
     {
@@ -476,36 +476,17 @@ export default function TodayTab({
         </div>
       )}
 
-      {isMine && quick.length > 0 && (
-        <section id="today-quick-add" style={{ marginBottom: 30 }}>
-          <div style={sectionLabel}>Quick add</div>
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${quick.length}, 1fr)`, gap: 7, marginTop: 10 }}>
-            {quick.map(([label, kind, Icon, color]) => (
-              <button
-                key={label}
-                onClick={() => openLog(kind, selectedDate)}
-                style={{
-                  background: "transparent",
-                  color: PEN.ink,
-                  border: `1px solid ${PEN.rule}`,
-                  borderTop: `3px solid ${color}`,
-                  borderRadius: 9,
-                  padding: "10px 3px 9px",
-                  boxShadow: "none",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-              >
-                <Icon style={{ width: 15, height: 15, color }} strokeWidth={2} />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+      {isMine && (
+        <QuickAddSection
+          quickAddIds={quickAddIds}
+          trackerEnabled={trackerEnabled}
+          saveQuickAddIds={saveQuickAddIds}
+          saving={quickAddSaving}
+          error={quickAddError}
+          openLog={openLog}
+          selectedDate={selectedDate}
+          styles={styles}
+        />
       )}
 
       {!hasAnything ? (
