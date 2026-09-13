@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import TodayTabBase from "./TodayTabBase.jsx";
+import CustomTodayLoggedSection from "../components/CustomTodayLoggedSection.jsx";
 
 function replaceDateEntry(list, date, nextEntry) {
   const next = (list || []).filter((entry) => entry.date !== date);
@@ -62,6 +63,7 @@ function applyQuickAddRow(data, activeUser, detail) {
 
 export default function TodayTab(props) {
   const [, setRevision] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(props.today);
 
   useEffect(() => {
     function handleStandardQuickAdd(event) {
@@ -74,5 +76,25 @@ export default function TodayTab(props) {
     return () => window.removeEventListener("with-standard-quick-add-saved", handleStandardQuickAdd);
   }, [props.data, props.activeUser]);
 
-  return <TodayTabBase {...props} />;
+  useEffect(() => {
+    function handleTodayDate(event) {
+      if (event.detail?.selectedDate) setSelectedDate(event.detail.selectedDate);
+    }
+    window.addEventListener("with-today-date-changed", handleTodayDate);
+    return () => window.removeEventListener("with-today-date-changed", handleTodayDate);
+  }, []);
+
+  useEffect(() => { setSelectedDate(props.today); }, [props.activeUser, props.today]);
+
+  return (
+    <>
+      <TodayTabBase {...props} />
+      <CustomTodayLoggedSection
+        activeUser={props.activeUser}
+        profileNameForProfile={props.profileNameForProfile}
+        selectedDate={selectedDate}
+        styles={props.styles}
+      />
+    </>
+  );
 }
