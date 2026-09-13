@@ -40,7 +40,7 @@ export default function CurrentFastCard({ activeFast, fastBusy, openFastEditor, 
     setGoalError("");
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
     return () => window.clearInterval(timer);
-  }, [activeFast?.id]);
+  }, [activeFast?.id, activeFast?.goal_minutes]);
 
   const elapsedMinutes = useMemo(() => {
     if (!activeFast?.started_at) return 0;
