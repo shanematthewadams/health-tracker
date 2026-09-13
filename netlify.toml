@@ -1,4 +1,5 @@
 # Netlify branch deploys include staging for pre-production verification.
+# Git connection refreshed on 2026-09-12; this comment intentionally triggers a post-reconnect staging deploy.
 [build]
   command = "npm run build"
   publish = "dist"
