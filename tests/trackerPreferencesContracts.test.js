@@ -100,6 +100,14 @@ test("standard Quick Add refreshes Today without changing the selected date", ()
   assert.match(todayTab, /setRevision\(\(value\) => value \+ 1\)/i);
 });
 
+test("tapping the active Today tab returns a browsed date to today", () => {
+  assert.match(todayTab, /handleTodayNavRetap/i);
+  assert.match(todayTab, /button\.textContent\?\.trim\(\) !== "Today"/i);
+  assert.match(todayTab, /setSelectedDate\(props\.today\)/i);
+  assert.match(todayTab, /setTodayResetKey\(\(value\) => value \+ 1\)/i);
+  assert.match(todayTab, /<TodayTabBase key=\{todayResetKey\}/i);
+});
+
 test("custom tracker logging uses one value per tracker per date", () => {
   assert.match(customLogging, /entry_date:\s*entryDate/i);
   assert.match(customLogging, /onConflict:\s*"metric_id,entry_date"/i);
