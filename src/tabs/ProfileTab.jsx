@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Share2, Check, LogOut, Users } from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
 import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
+import MyTrackersPanel from "../components/MyTrackersPanel.jsx";
 import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
 
@@ -301,6 +302,11 @@ export default function ProfileTab({
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.25 }}>{goalSentence}</div>
         <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{goal?.goalWeight ? "Manage goals" : "Set a goal"}</button>
       </section>
+
+      <MyTrackersPanel
+        session={session}
+        styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
+      />
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
         <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Water</div>
