@@ -34,6 +34,19 @@ Recorded database versions at the V2 Phase 1 baseline:
 
 The repository contains the corresponding SQL for the Phase 1 migrations using their exact applied versions.
 
+## V2 Phase 2 tracker foundation
+
+The first Phase 2 migrations add personal tracker preferences, tracker-level sharing controls, and custom tracker storage while keeping existing production behavior backward-compatible:
+
+- `20260913030615_add_profile_metric_preferences`
+- `20260913030717_lock_down_public_metric_helper`
+- `20260913030836_add_custom_trackers`
+- `20260913030900_index_tracker_relationships`
+
+Standard tracker preferences default to enabled and shared with all current Withs so the production frontend continues to behave as it did before these tables existed. Disabling a tracker is a presentation/logging preference and does not delete history. Sharing is a separate RLS-enforced setting.
+
+Custom trackers belong to a person through `profile_id`. They support yes/no, count, duration, and quantity values and use the same private / all Withs / selected Withs visibility model.
+
 ## Rules for future database changes
 
 1. Audit the current schema and migration ledger first.
