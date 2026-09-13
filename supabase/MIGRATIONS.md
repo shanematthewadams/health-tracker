@@ -36,7 +36,7 @@ The repository contains the corresponding SQL for the Phase 1 migrations using t
 
 ## V2 Phase 2 tracker foundation
 
-The first Phase 2 migrations add personal tracker preferences, tracker-level sharing controls, and custom tracker storage while keeping existing production behavior backward-compatible:
+The Phase 2 migrations add personal tracker preferences, tracker-level sharing controls, custom tracker storage, icons, Quick Add preferences, and the generic rating tracker type while keeping the production frontend backward-compatible:
 
 - `20260913030615_add_profile_metric_preferences`
 - `20260913030717_lock_down_public_metric_helper`
@@ -44,10 +44,13 @@ The first Phase 2 migrations add personal tracker preferences, tracker-level sha
 - `20260913030900_index_tracker_relationships`
 - `20260913132655_fix_custom_metric_owner_select`
 - `20260913133241_add_custom_metric_icons`
+- `20260913142607_add_quick_add_preferences_and_rating`
 
 Standard tracker preferences default to enabled and shared with all current Withs so the production frontend continues to behave as it did before these tables existed. Disabling a tracker is a presentation/logging preference and does not delete history. Sharing is a separate RLS-enforced setting.
 
-Custom trackers belong to a person through `profile_id`. They support yes/no, count, duration, and quantity values and use the same private / all Withs / selected Withs visibility model. Owners can always read their own custom tracker definitions, including immediately after creation. Custom tracker icons use a deliberately bounded icon key vocabulary so stored values stay stable even if the frontend icon library changes.
+Custom trackers belong to a person through `profile_id`. They support yes/no, count, duration, quantity, and rating values and use the same private / all Withs / selected Withs visibility model. Rating values are whole numbers from 1 through 5, with optional low/high endpoint labels such as `Rough` → `Great`. Owners can always read their own custom tracker definitions, including immediately after creation. Custom tracker icons use a deliberately bounded icon key vocabulary so stored values stay stable even if the frontend icon library changes.
+
+Quick Add preferences also belong to the person. `profile_quick_add_items` supports at most five ordered shortcuts. The standard Quick Add vocabulary is Food, Weight, Activity, Water, and Steps; Fasting is intentionally excluded because it is managed as a stateful Today interaction rather than a simple log shortcut. Existing profiles were backfilled to the five shortcuts they already had. The schema also supports a `custom_metric_id` shortcut so custom trackers can join Quick Add when custom logging is wired into Today and Log.
 
 ## Rules for future database changes
 
