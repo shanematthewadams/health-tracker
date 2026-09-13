@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const standardMigration = readFileSync("supabase/migrations/20260913030615_add_profile_metric_preferences.sql", "utf8");
 const customMigration = readFileSync("supabase/migrations/20260913030836_add_custom_trackers.sql", "utf8");
+const iconMigration = readFileSync("supabase/migrations/20260913133241_add_custom_metric_icons.sql", "utf8");
 const trackerPanel = readFileSync("src/components/MyTrackersPanel.jsx", "utf8");
 const todayTab = readFileSync("src/tabs/TodayTab.jsx", "utf8");
 const logTab = readFileSync("src/tabs/LogTabCore.jsx", "utf8");
@@ -34,10 +35,26 @@ test("custom trackers support all four V2 value types and person ownership", () 
   assert.match(customMigration, /private\.can_view_custom_metric/i);
 });
 
+test("custom trackers use a bounded icon vocabulary", () => {
+  assert.match(iconMigration, /icon_key text not null default 'sparkles'/i);
+  for (const icon of ["sparkles", "heart", "brain", "book_open", "leaf", "moon", "sun", "smile", "flame", "coffee", "dumbbell", "footprints", "droplet", "timer", "star"]) {
+    assert.match(iconMigration, new RegExp(`'${icon}'`, "i"));
+  }
+  assert.match(trackerPanel, /const CUSTOM_ICONS = \[/);
+  assert.match(trackerPanel, /icon_key: customIcon/);
+});
+
 test("disabling a tracker is UI state, not health-history deletion", () => {
   assert.match(trackerPanel, /enabled: next\.enabled/i);
   assert.doesNotMatch(trackerPanel, /from\("(?:weight_entries|food_entries|activity_entries|water_entries|step_entries|fasting_entries|custom_metric_entries)"\)\.delete/i);
   assert.match(trackerPanel, /Your history stays right where it is\./i);
+});
+
+test("custom tracker deletion is explicit and warns when history exists", () => {
+  assert.match(trackerPanel, /select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(trackerPanel, /permanently remove the tracker and/);
+  assert.match(trackerPanel, /turn it off instead/);
+  assert.match(trackerPanel, /from\("custom_metrics"\)\.delete\(\)/);
 });
 
 test("Today and Log honor the owner's enabled tracker choices", () => {
