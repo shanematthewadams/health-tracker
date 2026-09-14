@@ -223,10 +223,10 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
       )}
 
       {visibleQuickAdd.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", gap: 6, marginTop: 7, paddingBottom: 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${visibleQuickAdd.length}, minmax(0, 1fr))`, gap: 4, marginTop: 7 }}>
           {visibleQuickAdd.map((option) => {
             const Icon = option.icon;
-            return <button key={option.id} onClick={() => activate(option)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "7px 10px", boxShadow: "none", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6, minHeight: 32, flexShrink: 0 }}><Icon style={{ width: 14, height: 14, color: option.color, flexShrink: 0 }} strokeWidth={1.9} /><span style={{ maxWidth: 118, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span></button>;
+            return <button key={option.id} onClick={() => activate(option)} style={{ minWidth: 0, background: "transparent", color: TEXT, border: "none", borderRadius: 8, padding: "7px 2px 6px", boxShadow: "none", fontSize: 10, fontWeight: 700, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, minHeight: 44 }}><Icon style={{ width: 15, height: 15, color: option.color, flexShrink: 0 }} strokeWidth={1.9} /><span style={{ width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{option.label}</span></button>;
           })}
         </div>
       ) : !editing ? <button type="button" onClick={() => setEditing(true)} style={{ marginTop: 7, border: "none", background: "transparent", padding: "3px 0", color: TEXT_MUTED, fontSize: 11, fontWeight: 700 }}>Choose shortcuts</button> : null}
