@@ -88,12 +88,17 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState("duration");
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
   useEffect(() => {
     const refresh = () => setRevision((value) => value + 1);
     window.addEventListener("with-fasting-history-changed", refresh);
     return () => window.removeEventListener("with-fasting-history-changed", refresh);
   }, []);
+
+  useEffect(() => {
+    setSelectedCalendarDate(null);
+  }, [profileId, range]);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +163,7 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
     });
     return map;
   }, [rows]);
+  const selectedCalendarFast = selectedCalendarDate ? calendarByDate.get(selectedCalendarDate) : null;
 
   const toggleStyle = (active) => ({
     border: `1px solid ${active ? brand.teal : brand.border}`,
@@ -264,34 +270,58 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
                         const fast = inRange ? calendarByDate.get(date) : null;
                         const hasFast = Boolean(fast);
                         const day = Number(date.slice(-2));
-                        const title = hasFast
-                          ? `${shortDate(`${date}T12:00:00`)} · ${fast.count > 1 ? `${fast.count} fasts` : formatDuration(fast.minutes)}`
+                        const detailLabel = hasFast
+                          ? `${shortDate(`${date}T12:00:00`)} · ${fast.count > 1 ? `${fast.count} fasts · ${formatDuration(fast.minutes)} total` : formatDuration(fast.minutes)}`
                           : inRange ? `${shortDate(`${date}T12:00:00`)} · no intentional fast recorded` : "";
+                        const isSelected = selectedCalendarDate === date;
                         return (
-                          <div
+                          <button
+                            type="button"
                             key={date}
-                            title={title}
+                            title={detailLabel}
+                            aria-label={detailLabel || undefined}
+                            aria-pressed={hasFast ? isSelected : undefined}
+                            disabled={!hasFast}
+                            onClick={() => {
+                              if (!hasFast) return;
+                              setSelectedCalendarDate((current) => current === date ? null : date);
+                            }}
                             style={{
                               height: 34,
+                              padding: 0,
                               borderRadius: 7,
-                              border: `1px solid ${hasFast ? alphaHex(metricColors.steps, 0.45) : inRange ? BORDER : "transparent"}`,
-                              background: hasFast ? alphaHex(metricColors.steps, 0.16) : "transparent",
+                              border: `1px solid ${hasFast ? alphaHex(metricColors.steps, isSelected ? 0.8 : 0.45) : inRange ? BORDER : "transparent"}`,
+                              background: hasFast ? alphaHex(metricColors.steps, isSelected ? 0.24 : 0.16) : "transparent",
                               opacity: inRange ? 1 : 0.28,
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
+                              cursor: hasFast ? "pointer" : "default",
+                              font: "inherit",
                             }}
                           >
-                            <div className="num" style={{ color: hasFast ? metricColors.steps : TEXT_MUTED, fontSize: 11, fontWeight: hasFast ? 800 : 600 }}>{day}</div>
-                          </div>
+                            <span className="num" style={{ color: hasFast ? metricColors.steps : TEXT_MUTED, fontSize: 11, fontWeight: hasFast ? 800 : 600 }}>{day}</span>
+                          </button>
                         );
                       })}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {selectedCalendarFast ? (
+                <div style={{ marginTop: 7, padding: "8px 10px", borderRadius: 8, background: alphaHex(metricColors.steps, 0.1), color: TEXT, fontSize: 11, lineHeight: 1.4 }}>
+                  <strong>{shortDate(`${selectedCalendarDate}T12:00:00`)}</strong>
+                  <span style={{ color: TEXT_MUTED }}>
+                    {selectedCalendarFast.count > 1
+                      ? ` · ${selectedCalendarFast.count} fasts · ${formatDuration(selectedCalendarFast.minutes)} total`
+                      : ` · ${formatDuration(selectedCalendarFast.minutes)}`}
+                  </span>
+                </div>
+              ) : null}
+
               <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.45, marginTop: 7 }}>
-                Marked days are intentional completed fasts. Overnight fasts appear once, on the day they ended.
+                Marked days are intentional completed fasts. Tap a marked day to see its duration; on desktop, hover works too. Overnight fasts appear once, on the day they ended.
               </div>
             </>
           )}
