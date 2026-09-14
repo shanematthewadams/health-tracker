@@ -166,6 +166,8 @@ export default function TodayTab(props) {
                 activeCanEdit={props.activeCanEdit}
                 personName={activeName}
                 today={props.today}
+                profileColorForProfile={props.profileColor}
+                profileTextForProfile={props.profileText}
                 styles={props.styles}
               />
               {activeFast && !props.activeCanEdit ? (
