@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Timer, X } from "lucide-react";
+import { Pencil, Timer, Trash2, X } from "lucide-react";
 import { brand } from "../brand.jsx";
 import { supabase } from "../supabase.js";
 import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
@@ -73,12 +73,14 @@ export default function FastingHistorySection({ activeCanEdit, styles }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [goalHours, setGoalHours] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -132,6 +134,7 @@ export default function FastingHistorySection({ activeCanEdit, styles }) {
     const start = localDateTimeParts(row.started_at, timeZone);
     const end = localDateTimeParts(row.ended_at, timeZone);
     setEditingId(row.id);
+    setDeleteConfirmId("");
     setStartDate(start.date);
     setStartTime(start.time);
     setEndDate(end.date);
@@ -142,11 +145,12 @@ export default function FastingHistorySection({ activeCanEdit, styles }) {
 
   function cancelEdit() {
     setEditingId("");
+    setDeleteConfirmId("");
     setError("");
   }
 
   async function saveEdit() {
-    if (!editingRow || saving) return;
+    if (!editingRow || saving || deleting) return;
     const started = zonedDateTimeToDate(startDate, startTime, timeZone);
     const ended = zonedDateTimeToDate(endDate, endTime, timeZone);
     if (Number.isNaN(started.getTime()) || Number.isNaN(ended.getTime())) {
@@ -190,9 +194,33 @@ export default function FastingHistorySection({ activeCanEdit, styles }) {
     } else {
       setRows((current) => current.map((row) => row.id === data.id ? data : row).sort((a, b) => b.started_at.localeCompare(a.started_at)));
       setEditingId("");
+      setDeleteConfirmId("");
       window.dispatchEvent(new CustomEvent("with-fasting-history-changed", { detail: { row: data } }));
     }
     setSaving(false);
+  }
+
+  async function deleteFast(row) {
+    if (!row?.id || !profileId || deleting || saving) return;
+    setDeleting(true);
+    setError("");
+    const { data, error: deleteError } = await supabase
+      .from("fasting_entries")
+      .delete()
+      .eq("id", row.id)
+      .eq("profile_id", profileId)
+      .select("id")
+      .maybeSingle();
+
+    if (deleteError || !data?.id) {
+      setError("We couldn’t delete that fast. Try again.");
+    } else {
+      setRows((current) => current.filter((item) => item.id !== row.id));
+      setEditingId("");
+      setDeleteConfirmId("");
+      window.dispatchEvent(new CustomEvent("with-fasting-history-changed", { detail: { deletedId: row.id } }));
+    }
+    setDeleting(false);
   }
 
   if (!activeCanEdit || !trackerEnabled("fasting")) return null;
@@ -246,7 +274,27 @@ export default function FastingHistorySection({ activeCanEdit, styles }) {
                 <input type="number" min="0.25" step="0.25" inputMode="decimal" value={goalHours} onChange={(event) => setGoalHours(event.target.value)} placeholder="No goal" style={inputStyle} />
               </div>
               {error && <div style={{ color: WARN, fontSize: 11, marginTop: 8 }}>{error}</div>}
-              <button type="button" disabled={saving} onClick={saveEdit} style={{ ...bigButton(brand.teal, brand.inkOn), marginTop: 10, opacity: saving ? 0.65 : 1 }}>{saving ? "Saving…" : "Save fast"}</button>
+              <button type="button" disabled={saving || deleting} onClick={saveEdit} style={{ ...bigButton(brand.teal, brand.inkOn), marginTop: 10, opacity: saving || deleting ? 0.65 : 1 }}>{saving ? "Saving…" : "Save fast"}</button>
+
+              {deleteConfirmId !== row.id ? (
+                <button
+                  type="button"
+                  disabled={saving || deleting}
+                  onClick={() => { setDeleteConfirmId(row.id); setError(""); }}
+                  style={{ ...bigButton(SURFACE, "#A64B43"), border: "1px solid #D6AAA5", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
+                >
+                  <Trash2 size={14} strokeWidth={1.8} /> Delete fast
+                </button>
+              ) : (
+                <div style={{ marginTop: 10, padding: 11, background: SURFACE, border: "1px solid #D6AAA5", borderRadius: 9 }}>
+                  <div style={{ color: TEXT, fontSize: 13, fontWeight: 800 }}>Delete this fast?</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 4 }}>This will permanently remove it from your fasting history and Trends.</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 10 }}>
+                    <button type="button" disabled={deleting} onClick={() => setDeleteConfirmId("")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>Cancel</button>
+                    <button type="button" disabled={deleting} onClick={() => deleteFast(row)} style={{ ...bigButton("#A64B43", "#fff"), opacity: deleting ? 0.65 : 1 }}>{deleting ? "Deleting…" : "Delete fast"}</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

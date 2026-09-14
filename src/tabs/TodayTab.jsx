@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import TodayTabBase from "./TodayTabBase.jsx";
 import CustomTodayLoggedSection from "../components/CustomTodayLoggedSection.jsx";
+import SharedActiveFastCard from "../components/SharedActiveFastCard.jsx";
 
 function shiftDate(dateStr, delta) {
   const d = new Date(dateStr + "T12:00:00Z");
@@ -71,6 +73,9 @@ export default function TodayTab(props) {
   const [, setRevision] = useState(0);
   const [selectedDate, setSelectedDate] = useState(props.today);
   const [todayResetKey, setTodayResetKey] = useState(0);
+  const [sharedFastTarget, setSharedFastTarget] = useState(null);
+  const baseWrapRef = useRef(null);
+  const activeFast = props.activeFasts?.[props.activeUser] || null;
 
   useEffect(() => {
     function handleStandardQuickAdd(event) {
@@ -117,6 +122,27 @@ export default function TodayTab(props) {
 
   useEffect(() => { setSelectedDate(props.today); }, [props.activeUser, props.today]);
 
+  useEffect(() => {
+    setSharedFastTarget(null);
+    const wrapper = baseWrapRef.current;
+    wrapper?.querySelector("[data-with-shared-fast-anchor]")?.remove();
+    if (props.activeCanEdit || !activeFast) return undefined;
+
+    const todayRoot = wrapper?.firstElementChild;
+    const todayHeader = todayRoot?.firstElementChild;
+    if (!todayRoot || !todayHeader) return undefined;
+
+    const anchor = document.createElement("div");
+    anchor.dataset.withSharedFastAnchor = "true";
+    todayHeader.insertAdjacentElement("afterend", anchor);
+    setSharedFastTarget(anchor);
+
+    return () => {
+      setSharedFastTarget(null);
+      anchor.remove();
+    };
+  }, [props.activeCanEdit, props.activeUser, activeFast?.id, todayResetKey]);
+
   function captureDateNavigation(event) {
     const button = event.target?.closest?.("button[aria-label]");
     if (!button) return;
@@ -127,9 +153,20 @@ export default function TodayTab(props) {
 
   return (
     <>
-      <div onClickCapture={captureDateNavigation}>
+      <div ref={baseWrapRef} onClickCapture={captureDateNavigation}>
         <TodayTabBase key={todayResetKey} {...props} />
       </div>
+      {sharedFastTarget && activeFast && !props.activeCanEdit && selectedDate === props.today
+        ? createPortal(
+            <SharedActiveFastCard
+              activeFast={activeFast}
+              personName={props.profileNameForProfile?.(props.activeUser) || props.activeUser}
+              timeZone={props.timeZone}
+              styles={props.styles}
+            />,
+            sharedFastTarget,
+          )
+        : null}
       <CustomTodayLoggedSection
         activeUser={props.activeUser}
         activeCanEdit={props.activeCanEdit}
