@@ -47,14 +47,28 @@ test("dismissing the fasting prompt keeps a persistent start action under Quick 
   assert.match(fastingToday, /activeFast \? \([\s\S]*CurrentFastCard/i);
 });
 
-test("fasting trends use only completed fasts and never turn blank days into zero", () => {
+test("fasting trends summarize only completed intentional fasts", () => {
   assert.match(fastingTrends, /\.not\("ended_at", "is", null\)/i);
   assert.match(fastingTrends, /duration_minutes/i);
-  assert.match(fastingTrends, /Typical duration/i);
-  assert.match(fastingTrends, /median of completed fasts/i);
-  assert.match(fastingTrends, /Days without a fast are left blank rather than counted as zero/i);
-  assert.match(fastingTrends, /goal_minutes/i);
-  assert.match(fastingTrends, /goal_reached/i);
+  assert.match(fastingTrends, /Average duration/i);
+  assert.match(fastingTrends, /Total fasted/i);
+  assert.match(fastingTrends, /Days with a fast/i);
+  assert.match(fastingTrends, /Average goal:/i);
+  assert.match(fastingTrends, /Only completed intentional fasts are plotted/i);
+  assert.match(fastingTrends, /Days without a recorded fast are not treated as fasting days/i);
+  assert.doesNotMatch(fastingTrends, /median of completed fasts|Typical duration/i);
+});
+
+test("fasting trends switch between duration and calendar without adding streak mechanics", () => {
+  assert.match(fastingTrends, /const \[view, setView\] = useState\("duration"\)/i);
+  assert.match(fastingTrends, /setView\("duration"\)[\s\S]*Duration/i);
+  assert.match(fastingTrends, /setView\("calendar"\)[\s\S]*Calendar/i);
+  assert.match(fastingTrends, /view === "duration"/i);
+  assert.match(fastingTrends, /calendarCells\(monthKey\)/i);
+  assert.match(fastingTrends, /date: localDateKey\(entry\.ended_at\)/i);
+  assert.match(fastingTrends, /Overnight fasts appear once, on the day they ended/i);
+  assert.match(fastingTrends, /ReferenceLine y=\{averageGoalHours\}/i);
+  assert.doesNotMatch(fastingTrends, /streak/i);
 });
 
 test("individual Trends includes the fasting section", () => {
