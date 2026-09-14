@@ -56,6 +56,13 @@ test("daily notes are intentionally constrained and emoji-friendly without socia
   assert.doesNotMatch(support, /likes?|comments?|followers?|feed|ranking|leaderboard|streak|reaction count/i);
 });
 
+test("sent support state requires a persisted note and lookup errors cannot masquerade as sent", () => {
+  assert.match(support, /setSenderStatus\("error"\)/i);
+  assert.match(support, /senderStatus === "sent" && sentNote/i);
+  assert.match(support, /senderStatus === "error"[\s\S]*Support isn’t available right now\.[\s\S]*Try again/i);
+  assert.match(support, /\) : sentNote \? \(/i);
+});
+
 test("received support uses the With language and can be dismissed", () => {
   assert.match(support, /\{note\.senderName\} is With You/i);
   assert.match(support, /\.eq\("recipient_profile_id", activeUser\)[\s\S]*\.eq\("support_date", today\)[\s\S]*\.is\("dismissed_at", null\)/i);
