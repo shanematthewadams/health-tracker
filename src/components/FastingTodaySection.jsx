@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { Timer } from "lucide-react";
-import { brand, metricColors } from "../brand.jsx";
+import { brand } from "../brand.jsx";
 import { supabase } from "../supabase.js";
 import CurrentFastCard from "./CurrentFastCard.jsx";
 
 export default function FastingTodaySection({
   activeFast,
   visible,
-  promptDismissed,
   editorOpen,
   fastBusy,
   startDate,
@@ -16,7 +14,6 @@ export default function FastingTodaySection({
   setStartDate,
   setStartTime,
   setEditorOpen,
-  dismissPrompt,
   openEditor,
   startFast,
   updateFastStart,
@@ -24,13 +21,12 @@ export default function FastingTodaySection({
   today,
   timeZone,
   styles,
+  showStartAction = false,
 }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, inputStyle, bigButton } = styles;
-  const orange = metricColors.steps;
   const [startGoalHours, setStartGoalHours] = useState("");
   const [pendingGoalMinutes, setPendingGoalMinutes] = useState(undefined);
   const [goalError, setGoalError] = useState("");
-  const [quickAddTarget, setQuickAddTarget] = useState(null);
 
   useEffect(() => {
     if (!editorOpen || activeFast) return;
@@ -38,15 +34,13 @@ export default function FastingTodaySection({
   }, [editorOpen, activeFast]);
 
   useEffect(() => {
-    if (!promptDismissed || activeFast) {
-      setQuickAddTarget(null);
-      return;
+    function handleStartRequest() {
+      if (!visible) return;
+      openEditor();
     }
-    const frame = window.requestAnimationFrame(() => {
-      setQuickAddTarget(document.getElementById("today-quick-add"));
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [promptDismissed, activeFast]);
+    window.addEventListener("with-start-fast-requested", handleStartRequest);
+    return () => window.removeEventListener("with-start-fast-requested", handleStartRequest);
+  }, [visible, openEditor]);
 
   useEffect(() => {
     if (!activeFast?.id || pendingGoalMinutes === undefined) return;
@@ -125,41 +119,9 @@ export default function FastingTodaySection({
     </div>
   ) : null;
 
-  if (!activeFast && promptDismissed) {
-    if (!quickAddTarget) return null;
-    return createPortal(
-      <div style={{ marginTop: 10 }}>
-        <button
-          type="button"
-          onClick={() => openEditor()}
-          disabled={fastBusy}
-          style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            background: "transparent",
-            color: brand.tealDark,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 9,
-            padding: "10px 12px",
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          <Timer size={14} strokeWidth={2} />
-          Start a fast
-        </button>
-        {editorPanel && <div style={{ marginTop: 10 }}>{editorPanel}</div>}
-      </div>,
-      quickAddTarget,
-    );
-  }
-
-  return (
-    <>
-      {activeFast ? (
+  if (activeFast) {
+    return (
+      <>
         <CurrentFastCard
           activeFast={activeFast}
           fastBusy={fastBusy}
@@ -168,23 +130,25 @@ export default function FastingTodaySection({
           timeZone={timeZone}
           styles={styles}
         />
-      ) : (
-        <section style={{ marginBottom: 28, paddingBottom: 22 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>A note for today</div>
-              <div style={{ height: 3, width: 46, background: orange, marginTop: 7 }} />
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 19, fontWeight: 600, color: TEXT, marginTop: 10 }}>Fasting today?</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>With can adjust your Today prompts while you fast.</div>
-            </div>
-            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-              <button onClick={dismissPrompt} disabled={fastBusy} style={{ background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 7, padding: "9px 10px", fontSize: 12, fontWeight: 700 }}>Not today</button>
-              <button onClick={() => openEditor()} disabled={fastBusy} style={{ background: brand.surface, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, fontWeight: 700 }}>Start fast</button>
-            </div>
+        {editorPanel}
+      </>
+    );
+  }
+
+  if (showStartAction) {
+    return (
+      <section style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, color: TEXT, fontSize: 13, fontWeight: 800 }}><Timer size={15} strokeWidth={1.9} /> Fasting</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginTop: 3 }}>Start one here whenever you want to track it.</div>
           </div>
-        </section>
-      )}
-      {editorPanel}
-    </>
-  );
+          <button type="button" onClick={openEditor} disabled={fastBusy} style={{ background: "transparent", color: brand.tealDark, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>Start fast</button>
+        </div>
+        {editorPanel && <div style={{ marginTop: 10 }}>{editorPanel}</div>}
+      </section>
+    );
+  }
+
+  return editorPanel;
 }
