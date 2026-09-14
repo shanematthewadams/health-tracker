@@ -63,10 +63,18 @@ test("sent support state requires a persisted note and lookup errors cannot masq
   assert.match(support, /\) : sentNote \? \(/i);
 });
 
+test("support resolves the viewed person to a profile inside the active With", () => {
+  assert.match(support, /\.from\("household_members"\)[\s\S]*\.eq\("household_id", householdId\)/i);
+  assert.match(support, /\.from\("profiles"\)[\s\S]*\.in\("user_id", memberUserIds\)[\s\S]*\.eq\("name", personName \|\| activeUser\)/i);
+  assert.match(support, /targetProfileId = matchingProfiles\[0\]\.id/i);
+  assert.doesNotMatch(support, /\.eq\("recipient_profile_id", activeUser\)/i);
+});
+
 test("received support uses the With language and can be dismissed", () => {
   assert.match(support, /\{note\.senderName\} is With You/i);
-  assert.match(support, /\.eq\("recipient_profile_id", activeUser\)[\s\S]*\.eq\("support_date", today\)[\s\S]*\.is\("dismissed_at", null\)/i);
+  assert.match(support, /\.eq\("recipient_profile_id", targetProfileId\)[\s\S]*\.eq\("support_date", today\)[\s\S]*\.is\("dismissed_at", null\)/i);
   assert.match(support, /\.update\(\{ dismissed_at: new Date\(\)\.toISOString\(\) \}\)/i);
+  assert.match(support, /\.eq\("recipient_profile_id", recipientProfileId\)/i);
   assert.match(support, /Dismiss \$\{note\.senderName\}'s support note/i);
 });
 
