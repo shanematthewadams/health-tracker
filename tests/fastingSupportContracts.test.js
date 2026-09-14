@@ -27,7 +27,9 @@ test("fasting Trends refreshes naturally when fasting history changes", () => {
 test("shared active fasting status uses the already RLS-filtered active fast map", () => {
   assert.match(tracker, /\.from\("fasting_entries"\)\.select\("\*"\)\.in\("profile_id", profileIds\)/i);
   assert.match(tracker, /\(fastsRes\?\.data \|\| \[\]\)\.filter\(\(f\) => !f\.ended_at\)[\s\S]*fastMap/i);
-  assert.match(todayTab, /!props\.activeCanEdit[\s\S]*activeFast[\s\S]*SharedActiveFastCard/i);
+  assert.match(todayTab, /if \(props\.activeCanEdit \|\| !activeFast\) return undefined/i);
+  assert.match(todayTab, /sharedFastTarget && activeFast && !props\.activeCanEdit && selectedDate === props\.today/i);
+  assert.match(todayTab, /<SharedActiveFastCard/i);
   assert.match(sharedFast, /\{personName\} is fasting/i);
   assert.match(sharedFast, /Started \{startedLabel\(activeFast\.started_at, timeZone\)\}/i);
   assert.doesNotMatch(sharedFast, /goal|streak|rank|longest|achievement|leaderboard/i);
