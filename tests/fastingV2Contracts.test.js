@@ -59,16 +59,19 @@ test("fasting trends summarize only completed intentional fasts", () => {
   assert.doesNotMatch(fastingTrends, /median of completed fasts|Typical duration/i);
 });
 
-test("fasting trends switch between duration and calendar without adding streak mechanics", () => {
+test("fasting trends switch between duration and an exact rolling calendar without streak mechanics", () => {
   assert.match(fastingTrends, /const \[view, setView\] = useState\("duration"\)/i);
   assert.match(fastingTrends, /setView\("duration"\)[\s\S]*Duration/i);
   assert.match(fastingTrends, /setView\("calendar"\)[\s\S]*Calendar/i);
   assert.match(fastingTrends, /view === "duration"/i);
-  assert.match(fastingTrends, /calendarCells\(monthKey\)/i);
+  assert.match(fastingTrends, /dateKeysInRange\(startDate, today\)/i);
+  assert.match(fastingTrends, /calendarSlots\.map\(\(date, index\)/i);
+  assert.match(fastingTrends, /isMonthBoundary/i);
+  assert.match(fastingTrends, /calendar follows this exact \{range\}-day window/i);
   assert.match(fastingTrends, /date: localDateKey\(entry\.ended_at\)/i);
   assert.match(fastingTrends, /Overnight fasts appear once, on the day they ended/i);
   assert.match(fastingTrends, /ReferenceLine y=\{averageGoalHours\}/i);
-  assert.doesNotMatch(fastingTrends, /streak/i);
+  assert.doesNotMatch(fastingTrends, /monthKeysInRange|calendarCells\(monthKey\)|streak/i);
 });
 
 test("fasting calendar exposes duration by hover or tap without crowding the day cell", () => {
