@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { brand } from "../brand.jsx";
 import { AsteriskMark, StarMark } from "../WithMarks.jsx";
+import CustomTrackerGoalsSection from "../components/CustomTrackerGoalsSection.jsx";
 
 export default function GoalsTab({
   activeUser,
@@ -44,12 +45,19 @@ export default function GoalsTab({
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, cardStyle, fieldLabel, inputStyle, bigButton } = styles;
   const user = data[activeUser];
   const [showWalkthroughIntro, setShowWalkthroughIntro] = useState(() => Boolean(walkthrough?.active && !walkthrough?.goalsIntroSeen));
+  const [customGoalFocusId, setCustomGoalFocusId] = useState(() => sessionStorage.getItem("with-custom-goal-focus") || "");
+  const [customGoalProfileId] = useState(() => sessionStorage.getItem("with-custom-goal-profile") || "");
+  const standardEditingGoals = editingGoals && !customGoalFocusId;
 
   useEffect(() => {
     if (showWalkthroughIntro && walkthrough?.active && !walkthrough?.goalsIntroSeen) {
       updateWalkthrough?.({ goalsIntroSeen: true });
     }
   }, []);
+
+  useEffect(() => {
+    if (customGoalFocusId && editingGoals) setEditingGoals(false);
+  }, [customGoalFocusId, editingGoals, setEditingGoals]);
 
   const hasWeightGoal = user.goalWeight != null;
   const hasStatement = Boolean(user.goalStatement);
@@ -110,7 +118,7 @@ export default function GoalsTab({
         </section>
       )}
 
-      {!hasAnything && !editingGoals ? (
+      {!hasAnything && !standardEditingGoals ? (
         <div style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER }}>
           <div style={{ ...sectionLabel, marginBottom: 10 }}>Your goals</div>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 7 }}>Choose what you’re working toward.</div>
@@ -123,7 +131,7 @@ export default function GoalsTab({
             </button>
           )}
         </div>
-      ) : !editingGoals ? (
+      ) : !standardEditingGoals ? (
         <>
           {hasStatement && (
             <section style={{ ...cardStyle, padding: "1.2rem 1.15rem", borderTop: "3px solid " + brand.teal }}>
@@ -303,6 +311,21 @@ export default function GoalsTab({
             </button>
           </div>
         </div>
+      )}
+
+      {!standardEditingGoals && (
+        <CustomTrackerGoalsSection
+          profileId={customGoalProfileId || undefined}
+          profileName={activeUser}
+          activeCanEdit={activeCanEdit}
+          focusMetricId={customGoalFocusId}
+          onFocusHandled={() => {
+            sessionStorage.removeItem("with-custom-goal-focus");
+            sessionStorage.removeItem("with-custom-goal-profile");
+            setCustomGoalFocusId("");
+          }}
+          styles={styles}
+        />
       )}
     </>
   );
