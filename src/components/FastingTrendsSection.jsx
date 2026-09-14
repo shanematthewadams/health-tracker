@@ -278,18 +278,11 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
                               background: hasFast ? alphaHex(metricColors.steps, 0.16) : "transparent",
                               opacity: inRange ? 1 : 0.28,
                               display: "flex",
-                              flexDirection: "column",
                               alignItems: "center",
                               justifyContent: "center",
-                              lineHeight: 1,
                             }}
                           >
-                            <div className="num" style={{ color: hasFast ? TEXT : TEXT_MUTED, fontSize: 10, fontWeight: hasFast ? 800 : 600 }}>{day}</div>
-                            {hasFast ? (
-                              <div className="num" style={{ color: metricColors.steps, fontSize: 7, fontWeight: 800, marginTop: 3 }}>
-                                {fast.count > 1 ? `${fast.count}×` : formatDuration(fast.minutes)}
-                              </div>
-                            ) : null}
+                            <div className="num" style={{ color: hasFast ? metricColors.steps : TEXT_MUTED, fontSize: 11, fontWeight: hasFast ? 800 : 600 }}>{day}</div>
                           </div>
                         );
                       })}
