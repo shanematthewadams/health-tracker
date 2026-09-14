@@ -106,6 +106,11 @@ export default function GoalsTab({
       <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What matters to you, and the things you want to keep an eye on.</div>
+        {activeCanEdit && (
+          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 6 }}>
+            Want a little help remembering? Gentle logging reminders are available in Profile and stay off unless you turn them on. No pressure.
+          </div>
+        )}
       </div>
 
       {showWalkthroughIntro && hasAnything && (
