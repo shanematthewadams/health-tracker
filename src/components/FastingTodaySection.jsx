@@ -43,6 +43,10 @@ export default function FastingTodaySection({
   }, [visible, openEditor]);
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent("with-fast-state-changed", { detail: { active: Boolean(activeFast) } }));
+  }, [activeFast?.id]);
+
+  useEffect(() => {
     if (!activeFast?.id || pendingGoalMinutes === undefined) return;
     let cancelled = false;
 
