@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Timer } from "lucide-react";
 import { brand, metricColors } from "../brand.jsx";
 import { supabase } from "../supabase.js";
 import CurrentFastCard from "./CurrentFastCard.jsx";
@@ -111,7 +112,32 @@ export default function FastingTodaySection({
             </div>
           </div>
         </section>
-      ) : null}
+      ) : (
+        <section style={{ marginBottom: 20 }}>
+          <button
+            type="button"
+            onClick={() => openEditor()}
+            disabled={fastBusy}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 7,
+              background: "transparent",
+              color: brand.tealDark,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 9,
+              padding: "10px 12px",
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            <Timer size={14} strokeWidth={2} />
+            Start a fast
+          </button>
+        </section>
+      )}
 
       {editorOpen && (
         <div style={{ background: brand.surface, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
