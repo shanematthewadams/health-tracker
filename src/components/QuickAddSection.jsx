@@ -223,10 +223,10 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
       )}
 
       {visibleQuickAdd.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
+        <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", gap: 6, marginTop: 7, paddingBottom: 2 }}>
           {visibleQuickAdd.map((option) => {
             const Icon = option.icon;
-            return <button key={option.id} onClick={() => activate(option)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "7px 10px", boxShadow: "none", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6, minHeight: 32 }}><Icon style={{ width: 14, height: 14, color: option.color, flexShrink: 0 }} strokeWidth={1.9} /><span style={{ maxWidth: 118, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span></button>;
+            return <button key={option.id} onClick={() => activate(option)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "7px 10px", boxShadow: "none", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6, minHeight: 32, flexShrink: 0 }}><Icon style={{ width: 14, height: 14, color: option.color, flexShrink: 0 }} strokeWidth={1.9} /><span style={{ maxWidth: 118, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span></button>;
           })}
         </div>
       ) : !editing ? <button type="button" onClick={() => setEditing(true)} style={{ marginTop: 7, border: "none", background: "transparent", padding: "3px 0", color: TEXT_MUTED, fontSize: 11, fontWeight: 700 }}>Choose shortcuts</button> : null}
