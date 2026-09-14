@@ -39,37 +39,30 @@ function average(values) {
   return present.reduce((sum, value) => sum + value, 0) / present.length;
 }
 
-function monthKeysInRange(startDate, endDate) {
-  const cursor = new Date(`${startDate.slice(0, 7)}-01T12:00:00Z`);
-  const end = new Date(`${endDate.slice(0, 7)}-01T12:00:00Z`);
+function dateKeysInRange(startDate, endDate) {
+  const cursor = new Date(`${startDate}T12:00:00Z`);
+  const end = new Date(`${endDate}T12:00:00Z`);
   const keys = [];
   while (cursor <= end) {
-    keys.push(cursor.toISOString().slice(0, 7));
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    keys.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return keys;
 }
 
-function monthLabel(monthKey) {
-  return new Date(`${monthKey}-01T12:00:00Z`).toLocaleDateString(undefined, {
-    month: "long",
+function rangeDateLabel(startDate, endDate) {
+  const start = new Date(`${startDate}T12:00:00Z`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  const end = new Date(`${endDate}T12:00:00Z`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
     year: "numeric",
     timeZone: "UTC",
   });
-}
-
-function calendarCells(monthKey) {
-  const first = new Date(`${monthKey}-01T12:00:00Z`);
-  const year = first.getUTCFullYear();
-  const month = first.getUTCMonth();
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0, 12)).getUTCDate();
-  const leading = first.getUTCDay();
-  const cells = Array.from({ length: leading }, () => null);
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push(`${monthKey}-${String(day).padStart(2, "0")}`);
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
+  return `${start} – ${end}`;
 }
 
 function alphaHex(hex, alpha) {
@@ -154,7 +147,12 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
   const fastDays = new Set(rows.map((row) => row.date));
   const fastDayPercent = Math.round((fastDays.size / range) * 100);
   const reachedRows = goalRows.filter((row) => row.goalReached === true);
-  const monthKeys = useMemo(() => monthKeysInRange(startDate, today), [startDate, today]);
+  const calendarDates = useMemo(() => dateKeysInRange(startDate, today), [startDate, today]);
+  const leadingCalendarBlanks = useMemo(() => new Date(`${startDate}T12:00:00Z`).getUTCDay(), [startDate]);
+  const calendarSlots = useMemo(
+    () => [...Array.from({ length: leadingCalendarBlanks }, () => null), ...calendarDates],
+    [leadingCalendarBlanks, calendarDates],
+  );
   const calendarByDate = useMemo(() => {
     const map = new Map();
     rows.forEach((row) => {
@@ -164,6 +162,7 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
     return map;
   }, [rows]);
   const selectedCalendarFast = selectedCalendarDate ? calendarByDate.get(selectedCalendarDate) : null;
+  const calendarCellHeight = range >= 90 ? 28 : 34;
 
   const toggleStyle = (active) => ({
     border: `1px solid ${active ? brand.teal : brand.border}`,
@@ -254,59 +253,58 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
             </>
           ) : (
             <>
-              <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "4px 1px 6px", marginTop: 12, WebkitOverflowScrolling: "touch" }}>
-                {monthKeys.map((monthKey) => (
-                  <div key={monthKey} style={{ minWidth: 232, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 9px 9px", background: brand.surface }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: TEXT, marginBottom: 8 }}>{monthLabel(monthKey)}</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 3, marginBottom: 3 }}>
-                      {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
-                        <div key={`${day}-${index}`} style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 8, fontWeight: 800 }}>{day}</div>
-                      ))}
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 3 }}>
-                      {calendarCells(monthKey).map((date, index) => {
-                        if (!date) return <div key={`blank-${index}`} style={{ height: 34 }} />;
-                        const inRange = date >= startDate && date <= today;
-                        const fast = inRange ? calendarByDate.get(date) : null;
-                        const hasFast = Boolean(fast);
-                        const day = Number(date.slice(-2));
-                        const detailLabel = hasFast
-                          ? `${shortDate(`${date}T12:00:00`)} · ${fast.count > 1 ? `${fast.count} fasts · ${formatDuration(fast.minutes)} total` : formatDuration(fast.minutes)}`
-                          : inRange ? `${shortDate(`${date}T12:00:00`)} · no intentional fast recorded` : "";
-                        const isSelected = selectedCalendarDate === date;
-                        return (
-                          <button
-                            type="button"
-                            key={date}
-                            title={detailLabel}
-                            aria-label={detailLabel || undefined}
-                            aria-pressed={hasFast ? isSelected : undefined}
-                            disabled={!hasFast}
-                            onClick={() => {
-                              if (!hasFast) return;
-                              setSelectedCalendarDate((current) => current === date ? null : date);
-                            }}
-                            style={{
-                              height: 34,
-                              padding: 0,
-                              borderRadius: 7,
-                              border: `1px solid ${hasFast ? alphaHex(metricColors.steps, isSelected ? 0.8 : 0.45) : inRange ? BORDER : "transparent"}`,
-                              background: hasFast ? alphaHex(metricColors.steps, isSelected ? 0.24 : 0.16) : "transparent",
-                              opacity: inRange ? 1 : 0.28,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: hasFast ? "pointer" : "default",
-                              font: "inherit",
-                            }}
-                          >
-                            <span className="num" style={{ color: hasFast ? metricColors.steps : TEXT_MUTED, fontSize: 11, fontWeight: hasFast ? 800 : 600 }}>{day}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              <div style={{ marginTop: 12, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 9px 9px", background: brand.surface }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: TEXT }}>{rangeDateLabel(startDate, today)}</div>
+                  <div style={{ fontSize: 9, color: TEXT_MUTED }}>{range} days</div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 3, marginBottom: 3 }}>
+                  {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                    <div key={`${day}-${index}`} style={{ textAlign: "center", color: TEXT_MUTED, fontSize: 8, fontWeight: 800 }}>{day}</div>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 3 }}>
+                  {calendarSlots.map((date, index) => {
+                    if (!date) return <div key={`blank-${index}`} style={{ height: calendarCellHeight }} />;
+                    const fast = calendarByDate.get(date);
+                    const hasFast = Boolean(fast);
+                    const day = Number(date.slice(-2));
+                    const detailLabel = hasFast
+                      ? `${shortDate(`${date}T12:00:00`)} · ${fast.count > 1 ? `${fast.count} fasts · ${formatDuration(fast.minutes)} total` : formatDuration(fast.minutes)}`
+                      : `${shortDate(`${date}T12:00:00`)} · no intentional fast recorded`;
+                    const isSelected = selectedCalendarDate === date;
+                    const isMonthBoundary = date !== startDate && date.slice(-2) === "01";
+                    return (
+                      <button
+                        type="button"
+                        key={date}
+                        title={detailLabel}
+                        aria-label={detailLabel}
+                        aria-pressed={hasFast ? isSelected : undefined}
+                        disabled={!hasFast}
+                        onClick={() => {
+                          if (!hasFast) return;
+                          setSelectedCalendarDate((current) => current === date ? null : date);
+                        }}
+                        style={{
+                          height: calendarCellHeight,
+                          padding: 0,
+                          borderRadius: 7,
+                          border: `1px solid ${hasFast ? alphaHex(metricColors.steps, isSelected ? 0.8 : 0.45) : BORDER}`,
+                          background: hasFast ? alphaHex(metricColors.steps, isSelected ? 0.24 : 0.16) : "transparent",
+                          boxShadow: isMonthBoundary ? `inset 2px 0 0 ${alphaHex(metricColors.steps, 0.34)}` : "none",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: hasFast ? "pointer" : "default",
+                          font: "inherit",
+                        }}
+                      >
+                        <span className="num" style={{ color: hasFast ? metricColors.steps : TEXT_MUTED, fontSize: range >= 90 ? 10 : 11, fontWeight: hasFast ? 800 : 600 }}>{day}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {selectedCalendarFast ? (
@@ -321,7 +319,7 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
               ) : null}
 
               <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.45, marginTop: 7 }}>
-                Marked days are intentional completed fasts. Tap a marked day to see its duration; on desktop, hover works too. Overnight fasts appear once, on the day they ended.
+                Marked days are intentional completed fasts. The calendar follows this exact {range}-day window; a subtle divider marks a new month. Tap a marked day to see its duration; on desktop, hover works too. Overnight fasts appear once, on the day they ended.
               </div>
             </>
           )}
