@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { brand } from "../brand.jsx";
 import { AsteriskMark, StarMark } from "../WithMarks.jsx";
 import CustomTrackerGoalsSection from "../components/CustomTrackerGoalsSection.jsx";
+import NutritionTargetCalculator from "../components/NutritionTargetCalculator.jsx";
 
 export default function GoalsTab({
   activeUser,
@@ -64,6 +65,15 @@ export default function GoalsTab({
   const hasNutritionTargets = Boolean(user.targets.calories || user.targets.protein || user.targets.carbs || user.targets.fat || user.targets.fiberMin || user.targets.fiberMax);
   const hasDailyTargets = Boolean(hasNutritionTargets || user.targets.water || user.targets.steps);
   const hasAnything = Boolean(hasStatement || hasWeightGoal || user.goalDate || hasDailyTargets);
+  const latestWeightEntry = user.weights?.length ? user.weights[user.weights.length - 1] : null;
+  const calculatorCurrentWeight = gi?.averageCount >= 2
+    ? gi.latest
+    : gi?.latestActual ?? latestWeightEntry?.weight ?? null;
+  const calculatorWeightSource = gi?.averageCount >= 2
+    ? `your 7-day weight trend across ${gi.averageCount} recent weigh-ins`
+    : calculatorCurrentWeight != null
+      ? "your latest logged weight"
+      : "";
 
   const sectionLabel = {
     fontSize: 11,
@@ -270,6 +280,19 @@ export default function GoalsTab({
               </div>
             </div>
           </div>
+
+          <NutritionTargetCalculator
+            currentWeight={calculatorCurrentWeight}
+            currentWeightSource={calculatorWeightSource}
+            goalWeight={goalInput}
+            goalDate={goalDateInput}
+            setTBmr={setTBmr}
+            setTCal={setTCal}
+            setTProtein={setTProtein}
+            setTCarbs={setTCarbs}
+            setTFat={setTFat}
+            styles={styles}
+          />
 
           <div style={{ ...sectionLabel, marginBottom: 5 }}>Daily targets</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Set only the numbers you actually want to aim for.</div>
