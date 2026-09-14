@@ -30,7 +30,6 @@ export default function CurrentFastCard({ activeFast, fastBusy, openFastEditor, 
   const [goalHours, setGoalHours] = useState(activeFast?.goal_minutes ? String(Number(activeFast.goal_minutes) / 60) : "");
   const [goalBusy, setGoalBusy] = useState(false);
   const [goalError, setGoalError] = useState("");
-  const [supporters, setSupporters] = useState([]);
 
   useEffect(() => {
     if (!activeFast?.id) return undefined;
@@ -42,37 +41,6 @@ export default function CurrentFastCard({ activeFast, fastBusy, openFastEditor, 
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, [activeFast?.id, activeFast?.goal_minutes]);
-
-  useEffect(() => {
-    if (!activeFast?.id) {
-      setSupporters([]);
-      return undefined;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data: supportRows, error: supportError } = await supabase
-        .from("fasting_supports")
-        .select("sender_profile_id,created_at")
-        .eq("fasting_entry_id", activeFast.id)
-        .order("created_at", { ascending: true });
-      if (cancelled || supportError || !supportRows?.length) {
-        if (!cancelled) setSupporters([]);
-        return;
-      }
-
-      const senderIds = [...new Set(supportRows.map((row) => row.sender_profile_id).filter(Boolean))];
-      const { data: senderProfiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id,name")
-        .in("id", senderIds);
-      if (cancelled || profileError) return;
-      const names = new Map((senderProfiles || []).map((profile) => [profile.id, profile.name]));
-      setSupporters(supportRows
-        .map((row) => ({ id: row.sender_profile_id, name: names.get(row.sender_profile_id) }))
-        .filter((supporter) => supporter.name));
-    })();
-    return () => { cancelled = true; };
-  }, [activeFast?.id]);
 
   const elapsedMinutes = useMemo(() => {
     if (!activeFast?.started_at) return 0;
@@ -138,17 +106,6 @@ export default function CurrentFastCard({ activeFast, fastBusy, openFastEditor, 
 
       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 34, lineHeight: 1, fontWeight: 600, color: TEXT, marginTop: 15 }}>{durationLabel(elapsedMinutes)}</div>
       <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 6 }}>Started {startLabel(activeFast.started_at, timeZone)}</div>
-
-      {supporters.length > 0 && (
-        <div style={{ marginTop: 14, padding: "11px 12px", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10 }}>
-          {supporters.map((supporter, index) => (
-            <div key={supporter.id} style={{ marginTop: index ? 9 : 0, paddingTop: index ? 9 : 0, borderTop: index ? `1px solid ${BORDER}` : "none" }}>
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, color: TEXT }}>{supporter.name} is With You</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 2 }}>Rooting for you.</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {hasGoal && (
         <div style={{ marginTop: 16 }}>
