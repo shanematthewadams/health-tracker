@@ -15,7 +15,15 @@ function profileStyle(profile) {
   };
 }
 
-export default function DailySupportSection({ activeUser, activeCanEdit, personName, today, styles }) {
+export default function DailySupportSection({
+  activeUser,
+  activeCanEdit,
+  personName,
+  today,
+  profileColorForProfile,
+  profileTextForProfile,
+  styles,
+}) {
   const { BORDER, TEXT, TEXT_MUTED, SURFACE, SURFACE_2, cardStyle, inputStyle, bigButton } = styles;
   const householdId = readStoredActiveWithId();
   const [senderProfileId, setSenderProfileId] = useState(null);
@@ -32,6 +40,17 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
 
   const trimmedDraft = draft.trim();
   const canSave = Boolean(senderProfileId && recipientProfileId) && trimmedDraft.length > 0 && trimmedDraft.length <= MAX_LENGTH && !busy;
+  const senderColor = senderProfileId && profileColorForProfile
+    ? profileColorForProfile(senderProfileId)
+    : senderStyle.color;
+  const senderTextColor = senderProfileId && profileTextForProfile
+    ? profileTextForProfile(senderProfileId)
+    : brand.inkOn;
+  const colorForNote = (note) => (
+    note?.sender_profile_id && profileColorForProfile
+      ? profileColorForProfile(note.sender_profile_id)
+      : note?.color || brand.teal
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -253,32 +272,35 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     if (!receivedNotes.length) return null;
     return (
       <div data-support-note-received={receivedIds} style={{ marginBottom: 22 }}>
-        {receivedNotes.map((note) => (
-          <section
-            key={note.id}
-            style={{ ...cardStyle, marginBottom: 12, padding: "1.15rem", borderTop: `3px solid ${note.color}`, background: SURFACE, position: "relative" }}
-          >
-            <button
-              type="button"
-              aria-label={`Dismiss ${note.senderName}'s support note`}
-              disabled={busy}
-              onClick={() => dismissNote(note.id)}
-              style={{ position: "absolute", right: 12, top: 12, border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}
+        {receivedNotes.map((note) => {
+          const noteColor = colorForNote(note);
+          return (
+            <section
+              key={note.id}
+              style={{ ...cardStyle, marginBottom: 12, padding: "1.15rem", borderTop: `3px solid ${noteColor}`, background: SURFACE, position: "relative" }}
             >
-              <X size={15} strokeWidth={1.8} />
-            </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, paddingRight: 28 }}>
-              <WithMark id={note.withmark} size={16} color={note.color} />
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>With you today</div>
-            </div>
-            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, color: note.color, lineHeight: 1.15, paddingRight: 28 }}>
-              {note.senderName} is With You
-            </div>
-            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, lineHeight: 1.42, color: TEXT, marginTop: 8, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-              {note.message}
-            </div>
-          </section>
-        ))}
+              <button
+                type="button"
+                aria-label={`Dismiss ${note.senderName}'s support note`}
+                disabled={busy}
+                onClick={() => dismissNote(note.id)}
+                style={{ position: "absolute", right: 12, top: 12, border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}
+              >
+                <X size={15} strokeWidth={1.8} />
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, paddingRight: 28 }}>
+                <WithMark id={note.withmark} size={16} color={noteColor} />
+                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>With you today</div>
+              </div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, color: noteColor, lineHeight: 1.15, paddingRight: 28 }}>
+                {note.senderName} is With You
+              </div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, lineHeight: 1.42, color: TEXT, marginTop: 8, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                {note.message}
+              </div>
+            </section>
+          );
+        })}
         {error && <div role="alert" style={{ color: brand.warn, fontSize: 11, marginTop: 10 }}>{error}</div>}
       </div>
     );
@@ -290,14 +312,14 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     return (
       <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <WithMark id={senderStyle.withmark} size={16} color={senderStyle.color} />
+          <WithMark id={senderStyle.withmark} size={16} color={senderColor} />
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Support</div>
         </div>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: TEXT, lineHeight: 1.15, marginTop: 8 }}>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: senderColor, lineHeight: 1.15, marginTop: 8 }}>
           Be With {personName} today
         </div>
         <div role="alert" style={{ color: brand.warn, fontSize: 12, marginTop: 12 }}>Support isn’t available right now.</div>
-        <button type="button" onClick={() => setReloadKey((value) => value + 1)} style={{ border: "none", background: "transparent", color: senderStyle.color, padding: "10px 0 0", fontSize: 12, fontWeight: 800 }}>Try again</button>
+        <button type="button" onClick={() => setReloadKey((value) => value + 1)} style={{ border: "none", background: "transparent", color: senderColor, padding: "10px 0 0", fontSize: 12, fontWeight: 800 }}>Try again</button>
       </section>
     );
   }
@@ -305,14 +327,14 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   const composing = senderStatus === "compose";
 
   return (
-    <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", borderTop: `3px solid ${senderStyle.color}`, background: SURFACE }}>
+    <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", borderTop: `3px solid ${senderColor}`, background: SURFACE }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <WithMark id={senderStyle.withmark} size={16} color={senderStyle.color} />
+            <WithMark id={senderStyle.withmark} size={16} color={senderColor} />
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Support</div>
           </div>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: TEXT, lineHeight: 1.15, marginTop: 8 }}>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: senderColor, lineHeight: 1.15, marginTop: 8 }}>
             {senderStatus === "sent" && sentNote ? `You’re With ${personName} today` : `Be With ${personName} today`}
           </div>
         </div>
@@ -345,7 +367,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
                 Cancel
               </button>
             )}
-            <button type="button" disabled={!canSave} onClick={saveNote} style={{ ...bigButton(senderStyle.color, brand.inkOn), width: "auto", padding: "10px 16px", opacity: canSave ? 1 : 0.55 }}>
+            <button type="button" disabled={!canSave} onClick={saveNote} style={{ ...bigButton(senderColor, senderTextColor), width: "auto", padding: "10px 16px", opacity: canSave ? 1 : 0.55 }}>
               {busy ? "Saving…" : sentNote ? "Save note" : "Send support"}
             </button>
           </div>
