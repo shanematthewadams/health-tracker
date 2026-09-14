@@ -194,22 +194,22 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
   }
 
   return (
-    <section id="today-quick-add" style={{ marginBottom: 30 }}>
+    <section id="today-quick-add" style={{ marginBottom: 22 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Quick add</div>
-        <button type="button" onClick={() => setEditing((value) => !value)} style={{ border: "none", background: "transparent", color: brand.tealDark, padding: "3px 0", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 800 }}>
-          {!editing && <Pencil size={12} strokeWidth={2} />} {editing ? "Cancel" : "Edit"}
+        <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>Quick add</div>
+        <button type="button" onClick={() => setEditing((value) => !value)} style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: "3px 0", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700 }}>
+          {!editing && <Pencil size={11} strokeWidth={1.9} />} {editing ? "Cancel" : "Manage"}
         </button>
       </div>
 
       {editing && (
-        <div style={{ marginTop: 9, marginBottom: 11, background: SURFACE_2, borderRadius: 10, padding: 11 }}>
+        <div style={{ marginTop: 8, marginBottom: 10, background: SURFACE_2, borderRadius: 10, padding: 11 }}>
           <div style={{ color: TEXT, fontSize: 12, fontWeight: 800 }}>Choose up to five shortcuts.</div>
           <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 2 }}>Standard and personal trackers can live here. Fasting keeps its own Today controls.</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginTop: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(68px, 1fr))", gap: 6, marginTop: 10 }}>
             {availableOptions.map(({ id, label, icon: Icon, color }) => {
               const selected = draftIds.includes(id);
-              return <button key={id} type="button" aria-pressed={selected} onClick={() => toggleDraft(id)} style={{ minWidth: 0, border: `${selected ? 2 : 1}px solid ${selected ? brand.teal : BORDER}`, background: selected ? brand.surface : "transparent", borderRadius: 9, padding: "8px 2px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: TEXT, fontSize: 10, fontWeight: 800 }}>
+              return <button key={id} type="button" aria-pressed={selected} onClick={() => toggleDraft(id)} style={{ minWidth: 0, border: `${selected ? 2 : 1}px solid ${selected ? brand.teal : BORDER}`, background: selected ? brand.surface : "transparent", borderRadius: 9, padding: "8px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: TEXT, fontSize: 10, fontWeight: 800 }}>
                 <span style={{ position: "relative", display: "grid", placeItems: "center" }}><Icon size={15} color={color} strokeWidth={2} />{selected && <span style={{ position: "absolute", top: -6, right: -8, width: 12, height: 12, borderRadius: 99, background: brand.teal, display: "grid", placeItems: "center" }}><Check size={8} color={brand.inkOn} strokeWidth={3} /></span>}</span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{label}</span>
               </button>;
@@ -223,10 +223,13 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
       )}
 
       {visibleQuickAdd.length > 0 ? (
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${visibleQuickAdd.length}, 1fr)`, gap: 7, marginTop: 10 }}>
-          {visibleQuickAdd.map((option) => { const Icon = option.icon; return <button key={option.id} onClick={() => activate(option)} style={{ background: "transparent", color: TEXT, border: `1px solid ${BORDER}`, borderTop: `3px solid ${option.color}`, borderRadius: 9, padding: "10px 3px 9px", boxShadow: "none", fontSize: 11, fontWeight: 800, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}><Icon style={{ width: 15, height: 15, color: option.color }} strokeWidth={2} /><span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span></button>; })}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
+          {visibleQuickAdd.map((option) => {
+            const Icon = option.icon;
+            return <button key={option.id} onClick={() => activate(option)} style={{ background: SURFACE_2, color: TEXT, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "7px 10px", boxShadow: "none", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6, minHeight: 32 }}><Icon style={{ width: 14, height: 14, color: option.color, flexShrink: 0 }} strokeWidth={1.9} /><span style={{ maxWidth: 118, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span></button>;
+          })}
         </div>
-      ) : !editing ? <button type="button" onClick={() => setEditing(true)} style={{ width: "100%", marginTop: 9, border: `1px dashed ${BORDER}`, background: "transparent", borderRadius: 9, padding: "10px 12px", color: TEXT_MUTED, fontSize: 11, fontWeight: 700 }}>Choose your Quick Add shortcuts</button> : null}
+      ) : !editing ? <button type="button" onClick={() => setEditing(true)} style={{ marginTop: 7, border: "none", background: "transparent", padding: "3px 0", color: TEXT_MUTED, fontSize: 11, fontWeight: 700 }}>Choose shortcuts</button> : null}
 
       {openStandard && (
         <div role="dialog" aria-modal="true" aria-label={`Quick add ${openStandard.label}`} onClick={() => !standardSaving && setOpenStandardId("")} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(30,35,34,.28)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 12 }}>
