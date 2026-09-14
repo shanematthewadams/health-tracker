@@ -14,13 +14,14 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   const [sentNote, setSentNote] = useState(null);
   const [receivedNotes, setReceivedNotes] = useState([]);
   const [draft, setDraft] = useState("");
-  const [editing, setEditing] = useState(false);
+  const [senderStatus, setSenderStatus] = useState("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [removeConfirm, setRemoveConfirm] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const trimmedDraft = draft.trim();
-  const canSave = trimmedDraft.length > 0 && trimmedDraft.length <= MAX_LENGTH && !busy;
+  const canSave = Boolean(senderProfileId) && trimmedDraft.length > 0 && trimmedDraft.length <= MAX_LENGTH && !busy;
 
   useEffect(() => {
     let cancelled = false;
@@ -28,8 +29,11 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     setRemoveConfirm(false);
 
     if (!householdId || !activeUser || !today) {
+      setSenderProfileId(null);
       setSentNote(null);
       setReceivedNotes([]);
+      setDraft("");
+      setSenderStatus(activeCanEdit ? "idle" : "error");
       return undefined;
     }
 
@@ -37,7 +41,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
       setSenderProfileId(null);
       setSentNote(null);
       setDraft("");
-      setEditing(false);
+      setSenderStatus("idle");
 
       (async () => {
         const { data: notes, error: notesError } = await supabase
@@ -50,11 +54,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
           .order("created_at", { ascending: true });
 
         if (cancelled) return;
-        if (notesError) {
-          setReceivedNotes([]);
-          return;
-        }
-        if (!notes?.length) {
+        if (notesError || !notes?.length) {
           setReceivedNotes([]);
           return;
         }
@@ -76,9 +76,18 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     }
 
     setReceivedNotes([]);
+    setSenderProfileId(null);
+    setSentNote(null);
+    setDraft("");
+    setSenderStatus("loading");
+
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled || !session?.user?.id) return;
+      if (cancelled) return;
+      if (!session?.user?.id) {
+        setSenderStatus("error");
+        return;
+      }
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -88,7 +97,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
 
       if (cancelled) return;
       if (profileError || !profile?.id) {
-        setError("Support isn’t available right now.");
+        setSenderStatus("error");
         return;
       }
 
@@ -104,17 +113,23 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
 
       if (cancelled) return;
       if (noteError) {
-        setError("Support isn’t available right now.");
+        setSenderStatus("error");
         return;
       }
 
-      setSentNote(existing || null);
-      setDraft(existing?.message || "");
-      setEditing(!existing);
+      if (existing?.id) {
+        setSentNote(existing);
+        setDraft(existing.message || "");
+        setSenderStatus("sent");
+      } else {
+        setSentNote(null);
+        setDraft("");
+        setSenderStatus("compose");
+      }
     })();
 
     return () => { cancelled = true; };
-  }, [activeUser, activeCanEdit, householdId, today]);
+  }, [activeUser, activeCanEdit, householdId, today, reloadKey]);
 
   const receivedIds = useMemo(() => receivedNotes.map((note) => note.id).join("|"), [receivedNotes]);
 
@@ -152,7 +167,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     } else {
       setSentNote(data);
       setDraft(data.message);
-      setEditing(false);
+      setSenderStatus("sent");
       setRemoveConfirm(false);
     }
     setBusy(false);
@@ -173,7 +188,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     } else {
       setSentNote(null);
       setDraft("");
-      setEditing(true);
+      setSenderStatus("compose");
       setRemoveConfirm(false);
     }
     setBusy(false);
@@ -229,6 +244,26 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     );
   }
 
+  if (senderStatus === "loading") return null;
+
+  if (senderStatus === "error") {
+    return (
+      <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <Heart size={15} color={brand.teal} strokeWidth={2} />
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Support</div>
+        </div>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: TEXT, lineHeight: 1.15, marginTop: 8 }}>
+          Be With {personName} today
+        </div>
+        <div role="alert" style={{ color: brand.warn, fontSize: 12, marginTop: 12 }}>Support isn’t available right now.</div>
+        <button type="button" onClick={() => setReloadKey((value) => value + 1)} style={{ border: "none", background: "transparent", color: brand.tealDark, padding: "10px 0 0", fontSize: 12, fontWeight: 800 }}>Try again</button>
+      </section>
+    );
+  }
+
+  const composing = senderStatus === "compose";
+
   return (
     <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -238,17 +273,17 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Support</div>
           </div>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: TEXT, lineHeight: 1.15, marginTop: 8 }}>
-            {sentNote && !editing ? `You’re With ${personName} today` : `Be With ${personName} today`}
+            {senderStatus === "sent" && sentNote ? `You’re With ${personName} today` : `Be With ${personName} today`}
           </div>
         </div>
-        {sentNote && !editing && (
-          <button type="button" onClick={() => setEditing(true)} aria-label="Edit support note" style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}>
+        {senderStatus === "sent" && sentNote && (
+          <button type="button" onClick={() => setSenderStatus("compose")} aria-label="Edit support note" style={{ border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}>
             <Pencil size={15} strokeWidth={1.8} />
           </button>
         )}
       </div>
 
-      {editing ? (
+      {composing ? (
         <div style={{ marginTop: 12 }}>
           <textarea
             autoFocus={Boolean(sentNote)}
@@ -266,7 +301,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
           {error && <div role="alert" style={{ color: brand.warn, fontSize: 11, marginTop: 8 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             {sentNote && (
-              <button type="button" disabled={busy} onClick={() => { setDraft(sentNote.message); setEditing(false); setError(""); }} style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", padding: "10px 14px", border: `1px solid ${BORDER}` }}>
+              <button type="button" disabled={busy} onClick={() => { setDraft(sentNote.message); setSenderStatus("sent"); setError(""); }} style={{ ...bigButton(SURFACE_2, TEXT), width: "auto", padding: "10px 14px", border: `1px solid ${BORDER}` }}>
                 Cancel
               </button>
             )}
@@ -275,9 +310,9 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
             </button>
           </div>
         </div>
-      ) : (
+      ) : sentNote ? (
         <div style={{ marginTop: 11 }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, lineHeight: 1.42, color: TEXT, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{sentNote?.message}</div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, lineHeight: 1.42, color: TEXT, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{sentNote.message}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 7 }}>Support sent. No reply needed.</div>
           {error && <div role="alert" style={{ color: brand.warn, fontSize: 11, marginTop: 8 }}>{error}</div>}
           {removeConfirm ? (
@@ -294,7 +329,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
             </button>
           )}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
