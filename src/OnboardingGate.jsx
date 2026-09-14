@@ -212,9 +212,12 @@ function OnboardingScreen({ onComplete }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginBottom: 20 }}>
           {WITHMARK_OPTIONS.map(({ id, name }) => <button key={id} type="button" aria-label={name} title={name} onClick={() => setProfileWithmark(id)} style={{ minHeight: 42, display: "grid", placeItems: "center", borderRadius: 10, background: profileWithmark === id ? profileColor : SURFACE, color: profileWithmark === id ? "#fff" : TEXT, border: "1px solid " + (profileWithmark === id ? profileColor : BORDER) }}><WithMark id={id} size={20} /></button>)}
         </div>
-        <div style={{ background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: profileColor, color: "#fff", display: "grid", placeItems: "center" }}><WithMark id={profileWithmark} size={23} /></div>
           <div><div style={{ fontWeight: 700 }}>{profileName || "You"}</div><div style={{ color: TEXT_MUTED, fontSize: 12 }}>{deviceTimeZone.replaceAll("_", " ")}</div></div>
+        </div>
+        <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, marginBottom: 16 }}>
+          Want a little help remembering? Gentle logging reminders are off unless you turn them on later in Profile. No pressure.
         </div>
         {error && <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 12 }}>{error}</div>}
         <button type="button" disabled={busy} onClick={finishPersonalization} style={{ ...primaryButton, opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Continue to Today"}</button>
