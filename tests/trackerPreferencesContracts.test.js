@@ -6,6 +6,7 @@ const standardMigration = readFileSync("supabase/migrations/20260913030615_add_p
 const customMigration = readFileSync("supabase/migrations/20260913030836_add_custom_trackers.sql", "utf8");
 const iconMigration = readFileSync("supabase/migrations/20260913133241_add_custom_metric_icons.sql", "utf8");
 const quickAddMigration = readFileSync("supabase/migrations/20260913142607_add_quick_add_preferences_and_rating.sql", "utf8");
+const fastingQuickAddMigration = readFileSync("supabase/migrations/20260914224300_allow_fasting_quick_add.sql", "utf8");
 const trackerPanel = readFileSync("src/components/MyTrackersPanel.jsx", "utf8");
 const quickAddSection = readFileSync("src/components/QuickAddSection.jsx", "utf8");
 const quickAddHook = readFileSync("src/useQuickAddPreferences.js", "utf8");
@@ -65,16 +66,16 @@ test("custom trackers use a bounded icon vocabulary", () => {
   assert.match(trackerPanel, /icon_key: customIcon/);
 });
 
-test("Quick Add stores at most five owner-controlled shortcuts and keeps fasting separate", () => {
+test("Quick Add stores at most five owner-controlled shortcuts including optional fasting", () => {
   assert.match(quickAddMigration, /position smallint not null check \(position between 1 and 5\)/i);
-  assert.match(quickAddMigration, /standard_metric_type in \('food','weight','activity','water','steps'\)/i);
-  assert.doesNotMatch(quickAddMigration, /standard_metric_type in \([^\)]*'fasting'/i);
+  assert.match(fastingQuickAddMigration, /'fasting'::text/i);
   assert.match(quickAddMigration, /custom_metric_id uuid/i);
   assert.match(quickAddMigration, /private\.owns_profile\(profile_id\)/i);
   assert.match(quickAddHook, /DEFAULT_QUICK_ADD_IDS = \["food", "weight", "activity", "water", "steps"\]/i);
   assert.match(quickAddHook, /slice\(0, 5\)/i);
   assert.match(quickAddSection, /Choose up to five shortcuts/i);
-  assert.match(quickAddSection, /Fasting keeps its own Today controls/i);
+  assert.match(quickAddSection, /id: "fasting", label: "Fasting"/i);
+  assert.match(quickAddSection, /Choose what you want one tap away on Today/i);
 });
 
 test("Today uses the personal Quick Add editor instead of a hard-coded shortcut list", () => {
