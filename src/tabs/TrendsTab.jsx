@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceLine } from "recharts";
 import { Footprints, Droplet, Dumbbell, Utensils, Scale } from "lucide-react";
 import { brand, metricColors } from "../brand.jsx";
+import FastingTrendsSection from "../components/FastingTrendsSection.jsx";
 
 function shortDate(dateStr) {
   const d = new Date(dateStr + "T12:00:00");
@@ -452,6 +453,8 @@ function IndividualTrends({ profileKey, profileNameFor, user, today, range, goal
           ) : null
         ) : <WeightDataTable user={user} today={today} range={range} styles={styles} />}
       </section>
+
+      <FastingTrendsSection profileId={profileKey} today={today} range={range} styles={styles} />
 
       <section style={{ ...cardStyle, marginBottom: 14 }}>
         <SectionHeading icon={Footprints} color={metricColors.steps} styles={styles}>Movement</SectionHeading>
