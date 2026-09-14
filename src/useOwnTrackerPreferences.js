@@ -6,6 +6,7 @@ export const STANDARD_TRACKER_IDS = ["food", "weight", "activity", "water", "ste
 const DEFAULT_ENABLED = Object.fromEntries(STANDARD_TRACKER_IDS.map((id) => [id, true]));
 
 export function useOwnTrackerPreferences(active = true) {
+  const [profileId, setProfileId] = useState(null);
   const [enabledByMetric, setEnabledByMetric] = useState(DEFAULT_ENABLED);
   const [loading, setLoading] = useState(Boolean(active));
 
@@ -14,6 +15,7 @@ export function useOwnTrackerPreferences(active = true) {
 
     async function load() {
       if (!active) {
+        setProfileId(null);
         setEnabledByMetric(DEFAULT_ENABLED);
         setLoading(false);
         return;
@@ -23,7 +25,10 @@ export function useOwnTrackerPreferences(active = true) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user?.id) {
-          if (!cancelled) setEnabledByMetric(DEFAULT_ENABLED);
+          if (!cancelled) {
+            setProfileId(null);
+            setEnabledByMetric(DEFAULT_ENABLED);
+          }
           return;
         }
 
@@ -34,9 +39,14 @@ export function useOwnTrackerPreferences(active = true) {
           .maybeSingle();
         if (profileError) throw profileError;
         if (!profile?.id) {
-          if (!cancelled) setEnabledByMetric(DEFAULT_ENABLED);
+          if (!cancelled) {
+            setProfileId(null);
+            setEnabledByMetric(DEFAULT_ENABLED);
+          }
           return;
         }
+
+        if (!cancelled) setProfileId(profile.id);
 
         const { data: rows, error: preferenceError } = await supabase
           .from("profile_metric_preferences")
@@ -51,7 +61,10 @@ export function useOwnTrackerPreferences(active = true) {
         if (!cancelled) setEnabledByMetric(next);
       } catch (error) {
         console.error("Could not load tracker preferences", error);
-        if (!cancelled) setEnabledByMetric(DEFAULT_ENABLED);
+        if (!cancelled) {
+          setProfileId(null);
+          setEnabledByMetric(DEFAULT_ENABLED);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,5 +84,5 @@ export function useOwnTrackerPreferences(active = true) {
     [trackerEnabled]
   );
 
-  return { enabledByMetric, trackerEnabled, enabledTrackerIds, loading };
+  return { profileId, enabledByMetric, trackerEnabled, enabledTrackerIds, loading };
 }
