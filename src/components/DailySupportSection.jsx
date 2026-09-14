@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { brand } from "../brand.jsx";
-import { WaveMark } from "../WithMarks.jsx";
+import { WithMark } from "../WithMarks.jsx";
 import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
 
 const MAX_LENGTH = 280;
+const DEFAULT_STYLE = { color: brand.teal, withmark: "heart" };
+
+function profileStyle(profile) {
+  return {
+    color: profile?.profile_color || brand.teal,
+    withmark: profile?.profile_withmark || "heart",
+  };
+}
 
 export default function DailySupportSection({ activeUser, activeCanEdit, personName, today, styles }) {
   const { BORDER, TEXT, TEXT_MUTED, SURFACE, SURFACE_2, cardStyle, inputStyle, bigButton } = styles;
   const householdId = readStoredActiveWithId();
   const [senderProfileId, setSenderProfileId] = useState(null);
   const [recipientProfileId, setRecipientProfileId] = useState(null);
+  const [senderStyle, setSenderStyle] = useState(DEFAULT_STYLE);
   const [sentNote, setSentNote] = useState(null);
   const [receivedNotes, setReceivedNotes] = useState([]);
   const [draft, setDraft] = useState("");
@@ -33,6 +42,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     setReceivedNotes([]);
     setSenderProfileId(null);
     setRecipientProfileId(null);
+    setSenderStyle(DEFAULT_STYLE);
 
     if (!householdId || !activeUser || !today) {
       setSenderStatus(activeCanEdit ? "idle" : "error");
@@ -51,7 +61,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
 
       const { data: ownProfile, error: ownProfileError } = await supabase
         .from("profiles")
-        .select("id,name,user_id")
+        .select("id,name,user_id,profile_color,profile_withmark")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
@@ -62,6 +72,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
       }
 
       setSenderProfileId(ownProfile.id);
+      setSenderStyle(profileStyle(ownProfile));
 
       let targetProfileId = ownProfile.id;
       if (!activeCanEdit) {
@@ -114,14 +125,17 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
         const senderIds = [...new Set(notes.map((note) => note.sender_profile_id).filter(Boolean))];
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id,name")
+          .select("id,name,profile_color,profile_withmark")
           .in("id", senderIds);
 
         if (cancelled || profilesError) return;
-        const names = new Map((profiles || []).map((profile) => [profile.id, profile.name]));
+        const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
         setReceivedNotes(notes
-          .map((note) => ({ ...note, senderName: names.get(note.sender_profile_id) }))
-          .filter((note) => note.senderName));
+          .map((note) => {
+            const sender = profileMap.get(note.sender_profile_id);
+            return sender ? { ...note, senderName: sender.name, ...profileStyle(sender) } : null;
+          })
+          .filter(Boolean));
         return;
       }
 
@@ -238,32 +252,35 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   if (activeCanEdit) {
     if (!receivedNotes.length) return null;
     return (
-      <section data-support-note-received={receivedIds} style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", borderTop: `3px solid ${brand.teal}`, background: SURFACE }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
-          <WaveMark size={15} color={brand.teal} />
-          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>With you today</div>
-        </div>
-        {receivedNotes.map((note, index) => (
-          <div key={note.id} style={{ position: "relative", paddingTop: index ? 13 : 0, marginTop: index ? 13 : 0, borderTop: index ? `1px solid ${BORDER}` : "none" }}>
+      <div data-support-note-received={receivedIds} style={{ marginBottom: 22 }}>
+        {receivedNotes.map((note) => (
+          <section
+            key={note.id}
+            style={{ ...cardStyle, marginBottom: 12, padding: "1.15rem", borderTop: `3px solid ${note.color}`, background: SURFACE, position: "relative" }}
+          >
             <button
               type="button"
               aria-label={`Dismiss ${note.senderName}'s support note`}
               disabled={busy}
               onClick={() => dismissNote(note.id)}
-              style={{ position: "absolute", right: -4, top: index ? 8 : -4, border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}
+              style={{ position: "absolute", right: 12, top: 12, border: "none", background: "transparent", color: TEXT_MUTED, padding: 5, display: "grid", placeItems: "center" }}
             >
               <X size={15} strokeWidth={1.8} />
             </button>
-            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, color: TEXT, lineHeight: 1.15, paddingRight: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10, paddingRight: 28 }}>
+              <WithMark id={note.withmark} size={16} color={note.color} />
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>With you today</div>
+            </div>
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, color: note.color, lineHeight: 1.15, paddingRight: 28 }}>
               {note.senderName} is With You
             </div>
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, lineHeight: 1.42, color: TEXT, marginTop: 8, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
               {note.message}
             </div>
-          </div>
+          </section>
         ))}
         {error && <div role="alert" style={{ color: brand.warn, fontSize: 11, marginTop: 10 }}>{error}</div>}
-      </section>
+      </div>
     );
   }
 
@@ -273,14 +290,14 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     return (
       <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <Heart size={15} color={brand.teal} strokeWidth={2} />
+          <WithMark id={senderStyle.withmark} size={16} color={senderStyle.color} />
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Support</div>
         </div>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: TEXT, lineHeight: 1.15, marginTop: 8 }}>
           Be With {personName} today
         </div>
         <div role="alert" style={{ color: brand.warn, fontSize: 12, marginTop: 12 }}>Support isn’t available right now.</div>
-        <button type="button" onClick={() => setReloadKey((value) => value + 1)} style={{ border: "none", background: "transparent", color: brand.tealDark, padding: "10px 0 0", fontSize: 12, fontWeight: 800 }}>Try again</button>
+        <button type="button" onClick={() => setReloadKey((value) => value + 1)} style={{ border: "none", background: "transparent", color: senderStyle.color, padding: "10px 0 0", fontSize: 12, fontWeight: 800 }}>Try again</button>
       </section>
     );
   }
@@ -288,11 +305,11 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   const composing = senderStatus === "compose";
 
   return (
-    <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", background: SURFACE }}>
+    <section style={{ ...cardStyle, marginBottom: 22, padding: "1.15rem", borderTop: `3px solid ${senderStyle.color}`, background: SURFACE }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <Heart size={15} color={brand.teal} strokeWidth={2} />
+            <WithMark id={senderStyle.withmark} size={16} color={senderStyle.color} />
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".11em", fontWeight: 800, color: TEXT_MUTED }}>Support</div>
           </div>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 22, fontWeight: 600, color: TEXT, lineHeight: 1.15, marginTop: 8 }}>
@@ -328,7 +345,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
                 Cancel
               </button>
             )}
-            <button type="button" disabled={!canSave} onClick={saveNote} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", padding: "10px 16px", opacity: canSave ? 1 : 0.55 }}>
+            <button type="button" disabled={!canSave} onClick={saveNote} style={{ ...bigButton(senderStyle.color, brand.inkOn), width: "auto", padding: "10px 16px", opacity: canSave ? 1 : 0.55 }}>
               {busy ? "Saving…" : sentNote ? "Save note" : "Send support"}
             </button>
           </div>
