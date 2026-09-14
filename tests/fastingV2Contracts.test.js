@@ -38,13 +38,14 @@ test("fasting history honors the personal fasting tracker toggle", () => {
   assert.match(history, /!trackerEnabled\("fasting"\)/i);
 });
 
-test("dismissing the fasting prompt keeps a persistent start action under Quick Add", () => {
-  assert.match(fastingToday, /if \(!activeFast && promptDismissed\)/i);
-  assert.match(fastingToday, /document\.getElementById\("today-quick-add"\)/i);
-  assert.match(fastingToday, /createPortal\(/i);
-  assert.match(fastingToday, /Start a fast/i);
-  assert.match(fastingToday, /onClick=\{\(\) => openEditor\(\)\}/i);
-  assert.match(fastingToday, /activeFast \? \([\s\S]*CurrentFastCard/i);
+test("inactive fasting access is optional on Today and always available from Log", () => {
+  assert.doesNotMatch(fastingToday, /promptDismissed/i);
+  assert.doesNotMatch(fastingToday, /createPortal\(/i);
+  assert.match(fastingToday, /with-start-fast-requested/i);
+  assert.match(fastingToday, /showStartAction/i);
+  assert.match(logTab, /showStartAction/i);
+  assert.match(logTab, /trackerEnabled\("fasting"\)/i);
+  assert.match(fastingToday, /if \(activeFast\)[\s\S]*CurrentFastCard/i);
 });
 
 test("fasting trends summarize only completed intentional fasts", () => {
