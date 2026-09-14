@@ -31,9 +31,10 @@ test("fast goals are optional and persist on the active fasting row", () => {
   assert.match(today, /fast\.goal_minutes = event\.detail\.goalMinutes/i);
 });
 
-test("fasting Today section keeps the gentle start prompt and backdated start editor", () => {
-  assert.match(section, /Fasting today\?/i);
-  assert.match(section, /Not today/i);
+test("fasting Today stays quiet while preserving the backdated start editor", () => {
+  assert.doesNotMatch(section, /Fasting today\?/i);
+  assert.doesNotMatch(section, /Not today/i);
+  assert.match(section, /with-start-fast-requested/i);
   assert.match(section, /Backdating is completely fine/i);
   assert.match(section, /type="date" max=\{today\}/i);
 });
