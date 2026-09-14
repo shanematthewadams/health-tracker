@@ -11,6 +11,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   const { BORDER, TEXT, TEXT_MUTED, SURFACE, SURFACE_2, cardStyle, inputStyle, bigButton } = styles;
   const householdId = readStoredActiveWithId();
   const [senderProfileId, setSenderProfileId] = useState(null);
+  const [recipientProfileId, setRecipientProfileId] = useState(null);
   const [sentNote, setSentNote] = useState(null);
   const [receivedNotes, setReceivedNotes] = useState([]);
   const [draft, setDraft] = useState("");
@@ -21,34 +22,85 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   const [reloadKey, setReloadKey] = useState(0);
 
   const trimmedDraft = draft.trim();
-  const canSave = Boolean(senderProfileId) && trimmedDraft.length > 0 && trimmedDraft.length <= MAX_LENGTH && !busy;
+  const canSave = Boolean(senderProfileId && recipientProfileId) && trimmedDraft.length > 0 && trimmedDraft.length <= MAX_LENGTH && !busy;
 
   useEffect(() => {
     let cancelled = false;
     setError("");
     setRemoveConfirm(false);
+    setSentNote(null);
+    setDraft("");
+    setReceivedNotes([]);
+    setSenderProfileId(null);
+    setRecipientProfileId(null);
 
     if (!householdId || !activeUser || !today) {
-      setSenderProfileId(null);
-      setSentNote(null);
-      setReceivedNotes([]);
-      setDraft("");
       setSenderStatus(activeCanEdit ? "idle" : "error");
       return undefined;
     }
 
-    if (activeCanEdit) {
-      setSenderProfileId(null);
-      setSentNote(null);
-      setDraft("");
-      setSenderStatus("idle");
+    setSenderStatus(activeCanEdit ? "idle" : "loading");
 
-      (async () => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!session?.user?.id) {
+        if (!activeCanEdit) setSenderStatus("error");
+        return;
+      }
+
+      const { data: ownProfile, error: ownProfileError } = await supabase
+        .from("profiles")
+        .select("id,name,user_id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (ownProfileError || !ownProfile?.id) {
+        if (!activeCanEdit) setSenderStatus("error");
+        return;
+      }
+
+      setSenderProfileId(ownProfile.id);
+
+      let targetProfileId = ownProfile.id;
+      if (!activeCanEdit) {
+        const { data: memberships, error: membershipsError } = await supabase
+          .from("household_members")
+          .select("user_id")
+          .eq("household_id", householdId);
+
+        if (cancelled) return;
+        if (membershipsError || !memberships?.length) {
+          setSenderStatus("error");
+          return;
+        }
+
+        const memberUserIds = memberships.map((membership) => membership.user_id).filter(Boolean);
+        const { data: matchingProfiles, error: matchingProfilesError } = await supabase
+          .from("profiles")
+          .select("id,name,user_id")
+          .in("user_id", memberUserIds)
+          .eq("name", personName || activeUser)
+          .limit(2);
+
+        if (cancelled) return;
+        if (matchingProfilesError || matchingProfiles?.length !== 1) {
+          setSenderStatus("error");
+          return;
+        }
+
+        targetProfileId = matchingProfiles[0].id;
+      }
+
+      setRecipientProfileId(targetProfileId);
+
+      if (activeCanEdit) {
         const { data: notes, error: notesError } = await supabase
           .from("support_notes")
           .select("id,sender_profile_id,message,created_at")
           .eq("household_id", householdId)
-          .eq("recipient_profile_id", activeUser)
+          .eq("recipient_profile_id", targetProfileId)
           .eq("support_date", today)
           .is("dismissed_at", null)
           .order("created_at", { ascending: true });
@@ -70,44 +122,15 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
         setReceivedNotes(notes
           .map((note) => ({ ...note, senderName: names.get(note.sender_profile_id) }))
           .filter((note) => note.senderName));
-      })();
-
-      return () => { cancelled = true; };
-    }
-
-    setReceivedNotes([]);
-    setSenderProfileId(null);
-    setSentNote(null);
-    setDraft("");
-    setSenderStatus("loading");
-
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (!session?.user?.id) {
-        setSenderStatus("error");
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (profileError || !profile?.id) {
-        setSenderStatus("error");
-        return;
-      }
-
-      setSenderProfileId(profile.id);
       const { data: existing, error: noteError } = await supabase
         .from("support_notes")
         .select("id,message,created_at")
         .eq("household_id", householdId)
-        .eq("sender_profile_id", profile.id)
-        .eq("recipient_profile_id", activeUser)
+        .eq("sender_profile_id", ownProfile.id)
+        .eq("recipient_profile_id", targetProfileId)
         .eq("support_date", today)
         .maybeSingle();
 
@@ -129,12 +152,12 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
     })();
 
     return () => { cancelled = true; };
-  }, [activeUser, activeCanEdit, householdId, today, reloadKey]);
+  }, [activeUser, activeCanEdit, personName, householdId, today, reloadKey]);
 
   const receivedIds = useMemo(() => receivedNotes.map((note) => note.id).join("|"), [receivedNotes]);
 
   async function saveNote() {
-    if (!canSave || !householdId || !senderProfileId) return;
+    if (!canSave || !householdId || !senderProfileId || !recipientProfileId) return;
     setBusy(true);
     setError("");
 
@@ -154,7 +177,7 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
         .insert({
           household_id: householdId,
           sender_profile_id: senderProfileId,
-          recipient_profile_id: activeUser,
+          recipient_profile_id: recipientProfileId,
           support_date: today,
           message: trimmedDraft,
         })
@@ -195,14 +218,14 @@ export default function DailySupportSection({ activeUser, activeCanEdit, personN
   }
 
   async function dismissNote(noteId) {
-    if (!activeCanEdit || busy) return;
+    if (!activeCanEdit || !recipientProfileId || busy) return;
     setBusy(true);
     setError("");
     const { error: dismissError } = await supabase
       .from("support_notes")
       .update({ dismissed_at: new Date().toISOString() })
       .eq("id", noteId)
-      .eq("recipient_profile_id", activeUser);
+      .eq("recipient_profile_id", recipientProfileId);
 
     if (dismissError) {
       setError("We couldn’t dismiss that note. Try again.");
