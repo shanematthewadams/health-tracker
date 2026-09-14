@@ -6,6 +6,8 @@ const migration = readFileSync("supabase/migrations/20260913233500_add_fasting_v
 const history = readFileSync("src/components/FastingHistorySection.jsx", "utf8");
 const logTab = readFileSync("src/tabs/LogTab.jsx", "utf8");
 const fastingToday = readFileSync("src/components/FastingTodaySection.jsx", "utf8");
+const fastingTrends = readFileSync("src/components/FastingTrendsSection.jsx", "utf8");
+const trendsTab = readFileSync("src/tabs/TrendsTab.jsx", "utf8");
 
 test("fasting V2 stores optional goals and derived completion summaries", () => {
   assert.match(migration, /goal_minutes integer/i);
@@ -41,4 +43,19 @@ test("dismissing the fasting prompt keeps a persistent start action", () => {
   assert.match(fastingToday, /Start a fast/i);
   assert.match(fastingToday, /onClick=\{\(\) => openEditor\(\)\}/i);
   assert.match(fastingToday, /activeFast \? \([\s\S]*CurrentFastCard/i);
+});
+
+test("fasting trends use only completed fasts and never turn blank days into zero", () => {
+  assert.match(fastingTrends, /\.not\("ended_at", "is", null\)/i);
+  assert.match(fastingTrends, /duration_minutes/i);
+  assert.match(fastingTrends, /Typical duration/i);
+  assert.match(fastingTrends, /median of completed fasts/i);
+  assert.match(fastingTrends, /Days without a fast are left blank rather than counted as zero/i);
+  assert.match(fastingTrends, /goal_minutes/i);
+  assert.match(fastingTrends, /goal_reached/i);
+});
+
+test("individual Trends includes the fasting section", () => {
+  assert.match(trendsTab, /import FastingTrendsSection/i);
+  assert.match(trendsTab, /<FastingTrendsSection profileId=\{profileKey\} today=\{today\} range=\{range\}/i);
 });
