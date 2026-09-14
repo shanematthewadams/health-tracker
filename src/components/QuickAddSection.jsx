@@ -11,6 +11,7 @@ const STANDARD_OPTIONS = [
   { id: "activity", label: "Activity", icon: Activity, color: metricColors.activity },
   { id: "water", label: "Water", icon: Droplet, color: metricColors.water },
   { id: "steps", label: "Steps", icon: Footprints, color: metricColors.steps },
+  { id: "fasting", label: "Fasting", icon: Timer, color: brand.teal },
 ];
 
 const ICONS = { sparkles: Sparkles, heart: Heart, brain: Brain, book_open: BookOpen, leaf: Leaf, moon: Moon, sun: Sun, smile: Smile, flame: Flame, coffee: Coffee, dumbbell: Dumbbell, footprints: Footprints, droplet: Droplet, timer: Timer, star: Star };
@@ -111,6 +112,10 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
       setOpenCustomId(option.metric.id);
       return;
     }
+    if (option.id === "fasting") {
+      window.dispatchEvent(new CustomEvent("with-start-fast-requested"));
+      return;
+    }
     if (option.id === "food") {
       openLog("food", selectedDate);
       return;
@@ -205,7 +210,7 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
       {editing && (
         <div style={{ marginTop: 8, marginBottom: 10, background: SURFACE_2, borderRadius: 10, padding: 11 }}>
           <div style={{ color: TEXT, fontSize: 12, fontWeight: 800 }}>Choose up to five shortcuts.</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 2 }}>Standard and personal trackers can live here. Fasting keeps its own Today controls.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 2 }}>Choose what you want one tap away on Today.</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(68px, 1fr))", gap: 6, marginTop: 10 }}>
             {availableOptions.map(({ id, label, icon: Icon, color }) => {
               const selected = draftIds.includes(id);
@@ -231,7 +236,7 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
         </div>
       ) : !editing ? <button type="button" onClick={() => setEditing(true)} style={{ marginTop: 7, border: "none", background: "transparent", padding: "3px 0", color: TEXT_MUTED, fontSize: 11, fontWeight: 700 }}>Choose shortcuts</button> : null}
 
-      {openStandard && (
+      {openStandard && openStandard.id !== "fasting" && (
         <div role="dialog" aria-modal="true" aria-label={`Quick add ${openStandard.label}`} onClick={() => !standardSaving && setOpenStandardId("")} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(30,35,34,.28)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 12 }}>
           <div onClick={(event) => event.stopPropagation()} style={{ width: "min(100%, 520px)", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 18, padding: "14px 14px 16px", boxShadow: "0 18px 50px rgba(0,0,0,.16)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
