@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { brand } from "../brand.jsx";
 import { supabase } from "../supabase.js";
+import { readStoredActiveWithId } from "../withMemberships.js";
 
 function numberLabel(value, maxDigits = 2) {
   const number = Number(value);
@@ -25,13 +26,15 @@ function metricHint(metric) {
 }
 
 export default function CustomTrackerGoalsSection({
-  profileId,
+  profileId: suppliedProfileId,
+  profileName = "",
   activeCanEdit,
   focusMetricId = "",
   onFocusHandled,
   styles,
 }) {
-  const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton } = styles;
+  const { SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton } = styles;
+  const [resolvedProfileId, setResolvedProfileId] = useState(suppliedProfileId || "");
   const [metrics, setMetrics] = useState([]);
   const [goals, setGoals] = useState({});
   const [editingMetricId, setEditingMetricId] = useState("");
@@ -42,8 +45,75 @@ export default function CustomTrackerGoalsSection({
   const [error, setError] = useState("");
   const handledFocusRef = useRef("");
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolveProfile() {
+      if (suppliedProfileId) {
+        setResolvedProfileId(suppliedProfileId);
+        return;
+      }
+
+      setResolvedProfileId("");
+      try {
+        if (activeCanEdit) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user?.id) return;
+          const { data: ownProfile, error: ownError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          if (ownError) throw ownError;
+          if (!cancelled) setResolvedProfileId(ownProfile?.id || "");
+          return;
+        }
+
+        const activeWithId = readStoredActiveWithId();
+        if (!activeWithId || !profileName) return;
+
+        const { data: members, error: memberError } = await supabase
+          .from("household_members")
+          .select("user_id")
+          .eq("household_id", activeWithId);
+        if (memberError) throw memberError;
+        const memberIds = [...new Set((members || []).map((member) => member.user_id).filter(Boolean))];
+
+        let match = null;
+        if (memberIds.length) {
+          const { data: memberProfiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("id,name,user_id")
+            .in("user_id", memberIds);
+          if (profileError) throw profileError;
+          match = (memberProfiles || []).find((profile) => profile.name === profileName) || null;
+        }
+
+        if (!match) {
+          const { data: legacyProfile, error: legacyError } = await supabase
+            .from("profiles")
+            .select("id,name,user_id")
+            .eq("household_id", activeWithId)
+            .eq("name", profileName)
+            .is("user_id", null)
+            .maybeSingle();
+          if (legacyError) throw legacyError;
+          match = legacyProfile || null;
+        }
+
+        if (!cancelled) setResolvedProfileId(match?.id || "");
+      } catch (resolveError) {
+        console.error("Could not resolve profile for custom goals", resolveError);
+        if (!cancelled) setResolvedProfileId("");
+      }
+    }
+
+    resolveProfile();
+    return () => { cancelled = true; };
+  }, [suppliedProfileId, profileName, activeCanEdit]);
+
   const load = useCallback(async () => {
-    if (!profileId) {
+    if (!resolvedProfileId) {
       setMetrics([]);
       setGoals({});
       setLoading(false);
@@ -55,7 +125,7 @@ export default function CustomTrackerGoalsSection({
     const { data: metricRows, error: metricError } = await supabase
       .from("custom_metrics")
       .select("id,profile_id,name,value_type,unit,enabled,sort_order,created_at")
-      .eq("profile_id", profileId)
+      .eq("profile_id", resolvedProfileId)
       .eq("enabled", true)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
@@ -81,7 +151,7 @@ export default function CustomTrackerGoalsSection({
     const { data: goalRows, error: goalError } = await supabase
       .from("custom_metric_goals")
       .select("metric_id,profile_id,target_value,period,updated_at")
-      .eq("profile_id", profileId)
+      .eq("profile_id", resolvedProfileId)
       .in("metric_id", goalCapable.map((metric) => metric.id));
 
     if (goalError) {
@@ -92,7 +162,7 @@ export default function CustomTrackerGoalsSection({
       setGoals(Object.fromEntries((goalRows || []).map((goal) => [goal.metric_id, goal])));
     }
     setLoading(false);
-  }, [profileId]);
+  }, [resolvedProfileId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -123,7 +193,7 @@ export default function CustomTrackerGoalsSection({
   }, [focusMetricId, loading, metrics, activeCanEdit, onFocusHandled]);
 
   async function saveGoal(metric) {
-    if (!activeCanEdit || busy) return;
+    if (!activeCanEdit || busy || !resolvedProfileId) return;
     const target = Number(targetInput);
     if (!Number.isFinite(target) || target <= 0) {
       setError("Use a goal greater than zero.");
@@ -139,7 +209,7 @@ export default function CustomTrackerGoalsSection({
     setError("");
     const { error: saveError } = await supabase.from("custom_metric_goals").upsert({
       metric_id: metric.id,
-      profile_id: profileId,
+      profile_id: resolvedProfileId,
       target_value: target,
       period,
       updated_at: new Date().toISOString(),
@@ -152,7 +222,7 @@ export default function CustomTrackerGoalsSection({
       return;
     }
 
-    setGoals((previous) => ({ ...previous, [metric.id]: { metric_id: metric.id, profile_id: profileId, target_value: target, period } }));
+    setGoals((previous) => ({ ...previous, [metric.id]: { metric_id: metric.id, profile_id: resolvedProfileId, target_value: target, period } }));
     setEditingMetricId("");
     setTargetInput("");
     setBusy(false);
