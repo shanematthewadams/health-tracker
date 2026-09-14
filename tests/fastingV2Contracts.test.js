@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const migration = readFileSync("supabase/migrations/20260913233500_add_fasting_v2_fields.sql", "utf8");
 const history = readFileSync("src/components/FastingHistorySection.jsx", "utf8");
 const logTab = readFileSync("src/tabs/LogTab.jsx", "utf8");
+const fastingToday = readFileSync("src/components/FastingTodaySection.jsx", "utf8");
 
 test("fasting V2 stores optional goals and derived completion summaries", () => {
   assert.match(migration, /goal_minutes integer/i);
@@ -33,4 +34,11 @@ test("completed fasting history can be edited and recalculated", () => {
 test("fasting history honors the personal fasting tracker toggle", () => {
   assert.match(history, /useOwnTrackerPreferences\(activeCanEdit\)/i);
   assert.match(history, /!trackerEnabled\("fasting"\)/i);
+});
+
+test("dismissing the fasting prompt keeps a persistent start action", () => {
+  assert.match(fastingToday, /!promptDismissed \? \(/i);
+  assert.match(fastingToday, /Start a fast/i);
+  assert.match(fastingToday, /onClick=\{\(\) => openEditor\(\)\}/i);
+  assert.match(fastingToday, /activeFast \? \([\s\S]*CurrentFastCard/i);
 });
