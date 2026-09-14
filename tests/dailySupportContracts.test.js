@@ -70,13 +70,17 @@ test("support resolves the viewed person to a profile inside the active With", (
   assert.doesNotMatch(support, /\.eq\("recipient_profile_id", activeUser\)/i);
 });
 
-test("received support inherits the sender's profile color and With mark", () => {
-  assert.match(support, /select\("id,name,profile_color,profile_withmark"\)/i);
-  assert.match(support, /color: profile\?\.profile_color \|\| brand\.teal/i);
+test("support styling uses the same profile color system as the rest of Today", () => {
+  assert.match(todayTab, /profileColorForProfile=\{props\.profileColor\}/i);
+  assert.match(todayTab, /profileTextForProfile=\{props\.profileText\}/i);
+  assert.match(support, /profileColorForProfile\(senderProfileId\)/i);
+  assert.match(support, /profileTextForProfile\(senderProfileId\)/i);
+  assert.match(support, /profileColorForProfile\(note\.sender_profile_id\)/i);
   assert.match(support, /withmark: profile\?\.profile_withmark \|\| "heart"/i);
-  assert.match(support, /<WithMark id=\{note\.withmark\} size=\{16\} color=\{note\.color\}/i);
-  assert.match(support, /borderTop: `3px solid \$\{note\.color\}`/i);
-  assert.match(support, /borderTop: `3px solid \$\{senderStyle\.color\}`/i);
+  assert.match(support, /<WithMark id=\{note\.withmark\} size=\{16\} color=\{noteColor\}/i);
+  assert.match(support, /borderTop: `3px solid \$\{noteColor\}`/i);
+  assert.match(support, /borderTop: `3px solid \$\{senderColor\}`/i);
+  assert.match(support, /bigButton\(senderColor, senderTextColor\)/i);
 });
 
 test("received support uses the With language and can be dismissed", () => {
