@@ -56,6 +56,16 @@ function visibilityLabel(visibility, selectedIds, withs) {
   return "Shared with all my Withs";
 }
 
+function customGoalLabel(metric, goal) {
+  if (!metric || !goal) return "";
+  const target = Number(goal.target_value);
+  const value = Number.isInteger(target) ? target.toLocaleString() : target.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (metric.value_type === "yes_no") return `${value} day${target === 1 ? "" : "s"}/week`;
+  if (metric.value_type === "duration") return `${value} min/${goal.period}`;
+  if (metric.value_type === "quantity") return `${value}${metric.unit ? ` ${metric.unit}` : ""}/${goal.period}`;
+  return `${value}/${goal.period}`;
+}
+
 function Toggle({ checked, disabled, onChange, label }) {
   return (
     <button
@@ -85,7 +95,7 @@ function Toggle({ checked, disabled, onChange, label }) {
   );
 }
 
-export default function MyTrackersPanel({ session, styles }) {
+export default function MyTrackersPanel({ session, onOpenGoals, styles }) {
   const { SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton } = styles;
   const [profileId, setProfileId] = useState(null);
   const [withs, setWiths] = useState([]);
@@ -93,6 +103,7 @@ export default function MyTrackersPanel({ session, styles }) {
   const [standardWiths, setStandardWiths] = useState({});
   const [customMetrics, setCustomMetrics] = useState([]);
   const [customWiths, setCustomWiths] = useState({});
+  const [customGoals, setCustomGoals] = useState({});
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState("");
   const [error, setError] = useState("");
@@ -134,13 +145,14 @@ export default function MyTrackersPanel({ session, styles }) {
       }
       setProfileId(profile.id);
 
-      const [prefResult, membershipResult, standardWithResult, customResult] = await Promise.all([
+      const [prefResult, membershipResult, standardWithResult, customResult, customGoalResult] = await Promise.all([
         supabase.from("profile_metric_preferences").select("profile_id, metric_type, enabled, visibility").eq("profile_id", profile.id),
         supabase.from("household_members").select("household_id").eq("user_id", session.user.id),
         supabase.from("profile_metric_withs").select("metric_type, household_id").eq("profile_id", profile.id),
         supabase.from("custom_metrics").select("id, profile_id, name, value_type, unit, icon_key, rating_low_label, rating_high_label, enabled, visibility, sort_order, created_at").eq("profile_id", profile.id).order("sort_order").order("created_at"),
+        supabase.from("custom_metric_goals").select("metric_id,target_value,period").eq("profile_id", profile.id),
       ]);
-      for (const result of [prefResult, membershipResult, standardWithResult, customResult]) if (result.error) throw result.error;
+      for (const result of [prefResult, membershipResult, standardWithResult, customResult, customGoalResult]) if (result.error) throw result.error;
 
       const nextPrefs = {};
       STANDARD_TRACKERS.forEach((tracker) => { nextPrefs[tracker.id] = { ...DEFAULT_PREF }; });
@@ -168,6 +180,7 @@ export default function MyTrackersPanel({ session, styles }) {
 
       const metrics = customResult.data || [];
       setCustomMetrics(metrics);
+      setCustomGoals(Object.fromEntries((customGoalResult.data || []).map((goal) => [goal.metric_id, goal])));
       if (metrics.length) {
         const { data: mappingRows, error: mappingError } = await supabase.from("custom_metric_withs").select("metric_id, household_id").in("metric_id", metrics.map((item) => item.id));
         if (mappingError) throw mappingError;
@@ -179,6 +192,7 @@ export default function MyTrackersPanel({ session, styles }) {
         setCustomWiths(nextCustomWiths);
       } else {
         setCustomWiths({});
+        setCustomGoals({});
       }
     } catch (loadError) {
       console.error("Could not load tracker preferences", loadError);
@@ -189,6 +203,12 @@ export default function MyTrackersPanel({ session, styles }) {
   }
 
   useEffect(() => { load(); }, [session?.user?.id]);
+
+  useEffect(() => {
+    const refresh = () => load();
+    window.addEventListener("with-custom-goal-saved", refresh);
+    return () => window.removeEventListener("with-custom-goal-saved", refresh);
+  }, [session?.user?.id]);
 
   async function saveStandard(metricType, patch) {
     if (!profileId) return;
@@ -365,6 +385,13 @@ export default function MyTrackersPanel({ session, styles }) {
     }
   }
 
+  function openCustomGoal(metric) {
+    if (!metric?.id || !profileId || metric.enabled === false || metric.value_type === "rating") return;
+    sessionStorage.setItem("with-custom-goal-focus", metric.id);
+    sessionStorage.setItem("with-custom-goal-profile", profileId);
+    onOpenGoals?.();
+  }
+
   async function deleteCustomMetric(metric) {
     if (!metric?.id) return;
     setBusyKey(`delete:${metric.id}`);
@@ -386,6 +413,11 @@ export default function MyTrackersPanel({ session, styles }) {
       if (deleteError) throw deleteError;
       setCustomMetrics((previous) => previous.filter((item) => item.id !== metric.id));
       setCustomWiths((previous) => {
+        const next = { ...previous };
+        delete next[metric.id];
+        return next;
+      });
+      setCustomGoals((previous) => {
         const next = { ...previous };
         delete next[metric.id];
         return next;
@@ -517,6 +549,9 @@ export default function MyTrackersPanel({ session, styles }) {
                 ? `Tracked in ${metric.unit}`
                 : type?.label;
           const CustomIcon = CUSTOM_ICON_MAP[metric.icon_key] || Sparkles;
+          const customGoal = customGoals[metric.id];
+          const goalCapable = metric.value_type !== "rating";
+          const enabled = metric.enabled !== false;
           return (
             <TrackerRow
               key={metric.id}
@@ -525,22 +560,33 @@ export default function MyTrackersPanel({ session, styles }) {
               label={metric.name}
               description={type?.example || "Your custom tracker"}
               customMeta={meta}
-              enabled={metric.enabled !== false}
+              enabled={enabled}
               visibility={metric.visibility || "all_withs"}
               selectedIds={customWiths[metric.id] || new Set()}
               itemKey={`custom:${metric.id}`}
-              onEnabled={(enabled) => saveCustom(metric.id, { enabled })}
+              onEnabled={(nextEnabled) => saveCustom(metric.id, { enabled: nextEnabled })}
               onVisibility={(visibility) => saveCustom(metric.id, { visibility })}
               onToggleWith={(householdId, checked) => toggleCustomWith(metric.id, householdId, checked)}
               actions={(
-                <button
-                  type="button"
-                  disabled={busyKey === `delete:${metric.id}`}
-                  onClick={() => deleteCustomMetric(metric)}
-                  style={{ border: "none", background: "transparent", color: WARN, display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 0", fontSize: 10, fontWeight: 700 }}
-                >
-                  <Trash2 size={12} strokeWidth={1.9} /> {busyKey === `delete:${metric.id}` ? "Removing…" : "Delete tracker"}
-                </button>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "7px 14px" }}>
+                  {enabled && goalCapable && (
+                    <button
+                      type="button"
+                      onClick={() => openCustomGoal(metric)}
+                      style={{ border: "none", background: "transparent", color: brand.tealDark, padding: "2px 0", fontSize: 10, fontWeight: 800 }}
+                    >
+                      {customGoal ? `Goal: ${customGoalLabel(metric, customGoal)} · Edit goal` : "Set a goal"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busyKey === `delete:${metric.id}`}
+                    onClick={() => deleteCustomMetric(metric)}
+                    style={{ border: "none", background: "transparent", color: WARN, display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 0", fontSize: 10, fontWeight: 700 }}
+                  >
+                    <Trash2 size={12} strokeWidth={1.9} /> {busyKey === `delete:${metric.id}` ? "Removing…" : "Delete tracker"}
+                  </button>
+                </div>
               )}
             />
           );
