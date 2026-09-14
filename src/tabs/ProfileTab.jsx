@@ -305,6 +305,7 @@ export default function ProfileTab({
 
       <MyTrackersPanel
         session={session}
+        onOpenGoals={openGoalsEdit}
         styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
       />
 
