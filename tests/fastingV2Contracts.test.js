@@ -38,8 +38,10 @@ test("fasting history honors the personal fasting tracker toggle", () => {
   assert.match(history, /!trackerEnabled\("fasting"\)/i);
 });
 
-test("dismissing the fasting prompt keeps a persistent start action", () => {
-  assert.match(fastingToday, /!promptDismissed \? \(/i);
+test("dismissing the fasting prompt keeps a persistent start action under Quick Add", () => {
+  assert.match(fastingToday, /if \(!activeFast && promptDismissed\)/i);
+  assert.match(fastingToday, /document\.getElementById\("today-quick-add"\)/i);
+  assert.match(fastingToday, /createPortal\(/i);
   assert.match(fastingToday, /Start a fast/i);
   assert.match(fastingToday, /onClick=\{\(\) => openEditor\(\)\}/i);
   assert.match(fastingToday, /activeFast \? \([\s\S]*CurrentFastCard/i);
