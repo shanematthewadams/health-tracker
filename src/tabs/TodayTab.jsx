@@ -4,6 +4,7 @@ import TodayTabBase from "./TodayTabBase.jsx";
 import CustomTodayLoggedSection from "../components/CustomTodayLoggedSection.jsx";
 import DailySupportSection from "../components/DailySupportSection.jsx";
 import SharedActiveFastCard from "../components/SharedActiveFastCard.jsx";
+import YesterdayLoggingReminder from "../components/YesterdayLoggingReminder.jsx";
 
 function shiftDate(dateStr, delta) {
   const d = new Date(dateStr + "T12:00:00Z");
@@ -161,6 +162,17 @@ export default function TodayTab(props) {
       {relationshipTarget && selectedDate === props.today
         ? createPortal(
             <>
+              {props.activeCanEdit && (
+                <YesterdayLoggingReminder
+                  activeUser={props.activeUser}
+                  activeCanEdit={props.activeCanEdit}
+                  data={props.data}
+                  today={props.today}
+                  openLog={props.openLog}
+                  openProfile={props.openProfile}
+                  styles={props.styles}
+                />
+              )}
               <DailySupportSection
                 activeUser={props.activeUser}
                 activeCanEdit={props.activeCanEdit}
