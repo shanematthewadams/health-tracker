@@ -4,6 +4,7 @@ import { Share2, Check, LogOut, Users } from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
 import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
 import MyTrackersPanel from "../components/MyTrackersPanel.jsx";
+import LoggingRemindersPanel from "../components/LoggingRemindersPanel.jsx";
 import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
 
@@ -306,6 +307,11 @@ export default function ProfileTab({
       <MyTrackersPanel
         session={session}
         onOpenGoals={openGoalsEdit}
+        styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
+      />
+
+      <LoggingRemindersPanel
+        session={session}
         styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
       />
 
