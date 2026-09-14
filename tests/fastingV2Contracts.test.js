@@ -71,6 +71,16 @@ test("fasting trends switch between duration and calendar without adding streak 
   assert.doesNotMatch(fastingTrends, /streak/i);
 });
 
+test("fasting calendar exposes duration by hover or tap without crowding the day cell", () => {
+  assert.match(fastingTrends, /selectedCalendarDate/i);
+  assert.match(fastingTrends, /selectedCalendarFast/i);
+  assert.match(fastingTrends, /title=\{detailLabel\}/i);
+  assert.match(fastingTrends, /aria-pressed=\{hasFast \? isSelected : undefined\}/i);
+  assert.match(fastingTrends, /setSelectedCalendarDate\(\(current\) => current === date \? null : date\)/i);
+  assert.match(fastingTrends, /Tap a marked day to see its duration; on desktop, hover works too/i);
+  assert.match(fastingTrends, /selectedCalendarFast\.minutes/i);
+});
+
 test("individual Trends includes the fasting section", () => {
   assert.match(trendsTab, /import FastingTrendsSection/i);
   assert.match(trendsTab, /<FastingTrendsSection profileId=\{profileKey\} today=\{today\} range=\{range\}/i);
