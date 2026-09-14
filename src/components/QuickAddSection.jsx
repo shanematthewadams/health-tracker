@@ -27,6 +27,7 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
   const [draftIds, setDraftIds] = useState([]);
   const [limitNote, setLimitNote] = useState("");
   const [profileId, setProfileId] = useState(null);
+  const [hasActiveFast, setHasActiveFast] = useState(false);
   const [openCustomId, setOpenCustomId] = useState("");
   const [openStandardId, setOpenStandardId] = useState("");
   const [standardValue, setStandardValue] = useState("");
@@ -56,6 +57,30 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
   }, []);
 
   useEffect(() => {
+    if (!profileId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("fasting_entries")
+        .select("id")
+        .eq("profile_id", profileId)
+        .is("ended_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled) setHasActiveFast(Boolean(data?.id));
+    })();
+    return () => { cancelled = true; };
+  }, [profileId]);
+
+  useEffect(() => {
+    function handleFastState(event) {
+      setHasActiveFast(Boolean(event?.detail?.active));
+    }
+    window.addEventListener("with-fast-state-changed", handleFastState);
+    return () => window.removeEventListener("with-fast-state-changed", handleFastState);
+  }, []);
+
+  useEffect(() => {
     setOpenCustomId("");
     setOpenStandardId("");
     setStandardError("");
@@ -70,8 +95,11 @@ export default function QuickAddSection({ quickAddIds, trackerEnabled, saveQuick
   const availableOptions = useMemo(() => [...STANDARD_OPTIONS.filter((option) => trackerEnabled(option.id)), ...customOptions], [trackerEnabled, customOptions]);
   const visibleQuickAdd = useMemo(() => {
     const optionMap = Object.fromEntries(availableOptions.map((option) => [option.id, option]));
-    return (quickAddIds || []).map((id) => optionMap[id]).filter(Boolean).slice(0, 5);
-  }, [quickAddIds, availableOptions]);
+    return (quickAddIds || [])
+      .map((id) => optionMap[id])
+      .filter((option) => option && !(option.id === "fasting" && (!isToday || hasActiveFast)))
+      .slice(0, 5);
+  }, [quickAddIds, availableOptions, isToday, hasActiveFast]);
 
   useEffect(() => {
     if (!editing) return;
