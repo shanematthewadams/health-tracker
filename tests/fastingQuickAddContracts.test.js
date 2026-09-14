@@ -15,6 +15,13 @@ test("inactive fasting is optional on Today", () => {
   assert.doesNotMatch(fastingToday, /Not today/);
 });
 
+test("fasting Quick Add yields to live fast state", () => {
+  assert.match(quickAdd, /hasActiveFast/);
+  assert.match(quickAdd, /option\.id === "fasting" && \(!isToday \|\| hasActiveFast\)/);
+  assert.match(quickAdd, /with-fast-state-changed/);
+  assert.match(fastingToday, /with-fast-state-changed/);
+});
+
 test("Log always provides fasting start access when the tracker is available", () => {
   assert.match(logTab, /trackerEnabled\("fasting"\)/);
   assert.match(logTab, /showStartAction/);
