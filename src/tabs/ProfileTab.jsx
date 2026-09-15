@@ -556,7 +556,7 @@ export default function ProfileTab({
 
       {modal === "trackers" && (
         <ModalShell title="Trackers">
-          <MyTrackersPanel session={session} onOpenGoals={() => { closeModal(); openGoalsEdit(); }} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
+          <MyTrackersPanel session={session} onOpenGoals={openGoalsEdit} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
