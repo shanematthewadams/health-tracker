@@ -5,7 +5,7 @@ import CustomTodayLoggedSection from "../components/CustomTodayLoggedSection.jsx
 import DailySupportSection from "../components/DailySupportSection.jsx";
 import SupportPreferenceGate from "../components/SupportPreferenceGate.jsx";
 import SharedActiveFastCard from "../components/SharedActiveFastCard.jsx";
-import WeeklyReflectionCard from "../components/WeeklyReflectionCard.jsx";
+import OwnWeeklyReflectionCard from "../components/OwnWeeklyReflectionCard.jsx";
 import YesterdayLoggingReminder from "../components/YesterdayLoggingReminder.jsx";
 
 function shiftDate(dateStr, delta) {
@@ -165,8 +165,7 @@ export default function TodayTab(props) {
         ? createPortal(
             <>
               {props.activeCanEdit && (
-                <WeeklyReflectionCard
-                  profileId={props.activeUser}
+                <OwnWeeklyReflectionCard
                   today={props.today}
                   timeZone={props.timeZone}
                   accentColor={props.profileColor?.(props.activeUser)}
