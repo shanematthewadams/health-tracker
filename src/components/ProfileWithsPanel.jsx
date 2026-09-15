@@ -3,12 +3,13 @@ import { ChevronRight, Plus } from "lucide-react";
 import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import DeleteWithControl from "./DeleteWithControl.jsx";
-import { clearStoredActiveWithId, readStoredActiveWithId, storeActiveWithId } from "../withMemberships.js";
+import { clearStoredActiveWithId, clearStoredDefaultWithId, readStoredActiveWithId, readStoredDefaultWithId, storeActiveWithId, storeDefaultWithId } from "../withMemberships.js";
 
 export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
   const [withs, setWiths] = useState([]);
   const [activeWithId, setActiveWithId] = useState(() => readStoredActiveWithId());
+  const [defaultWithId, setDefaultWithId] = useState(() => readStoredDefaultWithId());
   const [currentUserId, setCurrentUserId] = useState(null);
   const [members, setMembers] = useState([]);
   const [managingPeople, setManagingPeople] = useState(false);
@@ -59,6 +60,11 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
       const stored = readStoredActiveWithId();
       const validStored = nextWiths.some((withItem) => withItem.id === stored) ? stored : nextWiths[0]?.id || null;
       setActiveWithId(validStored);
+
+      const storedDefault = readStoredDefaultWithId();
+      const validDefault = nextWiths.some((withItem) => withItem.id === storedDefault) ? storedDefault : null;
+      if (storedDefault && !validDefault) clearStoredDefaultWithId();
+      setDefaultWithId(validDefault);
 
       if (!validStored) return;
       const { data: rosterRows, error: rosterError } = await supabase
@@ -113,6 +119,12 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
     if (!withId || withId === activeWithId) return;
     storeActiveWithId(withId);
     window.location.reload();
+  }
+
+  function setDefaultWith(withId) {
+    if (!withId) return;
+    storeDefaultWithId(withId);
+    setDefaultWithId(withId);
   }
 
   function startAnotherWith() {
@@ -181,12 +193,29 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
       return;
     }
 
+    if (defaultWithId === activeWithId) clearStoredDefaultWithId();
     clearStoredActiveWithId();
     window.location.reload();
   }
 
   return (
     <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+      {hasOtherWiths && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Default With</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>The With that opens when you sign in.</div>
+          <select
+            value={defaultWithId || ""}
+            onChange={(event) => setDefaultWith(event.target.value)}
+            aria-label="Default With"
+            style={{ width: "100%", minHeight: 42, border: `1px solid ${BORDER}`, borderRadius: 10, background: SURFACE_2, color: TEXT, padding: "9px 11px", font: "inherit", fontSize: 13 }}
+          >
+            <option value="" disabled>Choose a default With</option>
+            {withs.map((withItem) => <option key={withItem.id} value={withItem.id}>{withItem.name}</option>)}
+          </select>
+        </div>
+      )}
+
       {canManagePeople && (
         <div style={{ marginBottom: hasOtherWiths || canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
           <button
