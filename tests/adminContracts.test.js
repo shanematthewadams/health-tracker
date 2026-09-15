@@ -2,13 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const admin = readFileSync("src/AdminApp.jsx", "utf8");
+const adminShell = readFileSync("src/AdminApp.jsx", "utf8");
+const admin = readFileSync("src/AdminAppLegacy.jsx", "utf8");
 const main = readFileSync("src/main.jsx", "utf8");
 const migration = readFileSync("supabase/migrations/20260915125500_add_minimal_superadmin.sql", "utf8");
 
 test("admin route is isolated from normal onboarding flow", () => {
   assert.match(main, /const isAdmin = pathname === "\/admin"/);
   assert.match(main, /isAdmin \? \([\s\S]*<AdminApp/);
+  assert.match(adminShell, /<LegacyAdminApp \/>/);
 });
 
 test("admin authorization is server backed and account directory is gated", () => {
