@@ -5,6 +5,7 @@ import { WithMark } from "../WithMarks.jsx";
 import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
 import MyTrackersPanel from "../components/MyTrackersPanel.jsx";
 import LoggingRemindersPanel from "../components/LoggingRemindersPanel.jsx";
+import DataExportPanel from "../components/DataExportPanel.jsx";
 import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
 
@@ -343,6 +344,8 @@ export default function ProfileTab({
           </>
         )}
       </section>
+
+      <DataExportPanel styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, bigButton }} />
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 18 }}>
         <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Account</div>
