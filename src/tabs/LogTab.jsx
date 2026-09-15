@@ -14,21 +14,30 @@ export default function LogTab(props) {
   }[props.logTab] || props.today;
   const { trackerEnabled } = useOwnTrackerPreferences(props.activeCanEdit);
   const activeFast = props.activeFasts?.[props.activeUser] || null;
-  const fastingVisible = trackerEnabled("fasting") || Boolean(activeFast);
+  const fastingEnabled = trackerEnabled("fasting");
+
+  const baseProps = {
+    ...props,
+    // Fasting now has one intentional Log entry below. Suppress the older
+    // Food-tab fasting prompt/editor so the same action does not appear twice.
+    activeFasts: {},
+    fastPromptDismissedToday: true,
+    fastEditorOpen: false,
+  };
 
   return (
     <>
-      <LogTabBase {...props} />
+      <LogTabBase {...baseProps} />
       <CustomTrackersLogSection
         activeCanEdit={props.activeCanEdit}
         today={props.today}
         initialDate={initialDate}
         styles={props.styles}
       />
-      {props.activeCanEdit && (
+      {props.activeCanEdit && fastingEnabled && !activeFast && (
         <FastingTodaySection
-          activeFast={activeFast}
-          visible={fastingVisible}
+          activeFast={null}
+          visible
           editorOpen={props.fastEditorOpen}
           fastBusy={props.fastBusy}
           startDate={props.fastStartDate}
