@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Droplet, Heart, Scale, Sparkles, Timer, Utensils, X } from "lucide-react";
+import { Activity, Droplet, Heart, Quote, Scale, Sparkles, Timer, Utensils, X } from "lucide-react";
 import { brand } from "../brand.jsx";
 import { supabase } from "../supabase.js";
 
@@ -98,6 +98,39 @@ function formatList(items) {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function reflectionTheme({ supportCount, loggedDayCount, fullWeekCount }) {
+  if (supportCount > 0) return "connection";
+  if (fullWeekCount >= 2 || loggedDayCount === 7) return "consistency";
+  if (loggedDayCount <= 3) return "beginnings";
+  return "attention";
+}
+
+function chooseReflectionQuote(quotes, { profileId, weekStart, theme }) {
+  const activeQuotes = (quotes || []).filter((quote) => quote.active !== false);
+  const featured = activeQuotes.find((quote) => quote.featured_week === weekStart);
+  if (featured) return featured;
+
+  const rotation = activeQuotes.filter((quote) => !quote.featured_week);
+  const themed = rotation.filter((quote) => {
+    const themes = quote.themes || [];
+    return themes.length === 0 || themes.includes(theme) || themes.includes("ordinary_days");
+  });
+  const pool = themed.length ? themed : rotation.length ? rotation : activeQuotes;
+  if (!pool.length) return null;
+
+  const ordered = [...pool].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  return ordered[stableHash(`${profileId}:${weekStart}:${theme}`) % ordered.length];
+}
+
 function buildCustomDetail(metric, entries) {
   if (!entries.length) return null;
   const days = uniqueDays(entries).size;
@@ -181,7 +214,17 @@ export default function WeeklyReflectionCard({
         const fastingWindowStart = `${shiftDate(week.start, -1)}T00:00:00Z`;
         const fastingWindowEnd = `${shiftDate(week.end, 2)}T00:00:00Z`;
 
-        const [weightResult, stepsResult, waterResult, activityResult, foodResult, fastingResult, supportResult, customMetricsResult] = await Promise.all([
+        const [
+          weightResult,
+          stepsResult,
+          waterResult,
+          activityResult,
+          foodResult,
+          fastingResult,
+          supportResult,
+          customMetricsResult,
+          quoteResult,
+        ] = await Promise.all([
           supabase.from("weight_entries").select("entry_date,weight").eq("profile_id", profileId).gte("entry_date", week.start).lte("entry_date", week.end).order("entry_date", { ascending: true }),
           supabase.from("step_entries").select("entry_date,step_count").eq("profile_id", profileId).gte("entry_date", week.start).lte("entry_date", week.end).order("entry_date", { ascending: true }),
           supabase.from("water_entries").select("entry_date,ounces").eq("profile_id", profileId).gte("entry_date", week.start).lte("entry_date", week.end).order("entry_date", { ascending: true }),
@@ -190,9 +233,10 @@ export default function WeeklyReflectionCard({
           supabase.from("fasting_entries").select("started_at,ended_at,duration_minutes").eq("profile_id", profileId).gte("started_at", fastingWindowStart).lt("started_at", fastingWindowEnd).order("started_at", { ascending: true }),
           supabase.from("support_notes").select("id,support_date").eq("recipient_profile_id", profileId).gte("support_date", week.start).lte("support_date", week.end),
           supabase.from("custom_metrics").select("id,name,value_type,unit,sort_order,created_at").eq("profile_id", profileId).eq("enabled", true).order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
+          supabase.from("reflection_quotes").select("id,quote,attribution,quote_kind,themes,active,featured_week,created_at").eq("active", true).order("created_at", { ascending: true }),
         ]);
 
-        const results = [weightResult, stepsResult, waterResult, activityResult, foodResult, fastingResult, supportResult, customMetricsResult];
+        const results = [weightResult, stepsResult, waterResult, activityResult, foodResult, fastingResult, supportResult, customMetricsResult, quoteResult];
         const failed = results.find((result) => result.error);
         if (failed?.error) throw failed.error;
 
@@ -335,12 +379,25 @@ export default function WeeklyReflectionCard({
           });
         }
 
+        const theme = reflectionTheme({
+          supportCount: supportNotes.length,
+          loggedDayCount: loggedDates.size,
+          fullWeekCount: fullWeekLabels.length,
+        });
+        const closingQuote = chooseReflectionQuote(quoteResult.data || [], {
+          profileId,
+          weekStart: week.start,
+          theme,
+        });
+
         setReflection({
           weekStart: week.start,
           weekEnd: week.end,
           lead,
           details: details.slice(0, 4),
           supportCount: supportNotes.length,
+          theme,
+          closingQuote,
         });
       } catch (error) {
         console.error("Could not load weekly reflection", error);
@@ -452,9 +509,33 @@ export default function WeeklyReflectionCard({
         </div>
       )}
 
-      <div style={{ padding: "10px 1.15rem 12px", color: TEXT_MUTED, fontSize: 10, lineHeight: 1.45 }}>
+      <div style={{ padding: "10px 1.15rem 12px", color: TEXT_MUTED, fontSize: 10, lineHeight: 1.45, borderTop: `1px solid ${BORDER}` }}>
         A week is a snapshot, not a grade. Missing logs stay missing, and With doesn’t fill in the blanks for you.
       </div>
+
+      {reflection.closingQuote && (
+        <div
+          data-weekly-reflection-quote={reflection.closingQuote.id}
+          style={{
+            borderTop: `1px solid ${BORDER}`,
+            background: SURFACE_2,
+            padding: "16px 1.15rem 18px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: TEXT_MUTED, fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em" }}>
+            <Quote size={13} color={accentColor} strokeWidth={1.8} />
+            A thought to carry with you
+          </div>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", color: TEXT, fontSize: 19, lineHeight: 1.38, fontStyle: "italic", marginTop: 8 }}>
+            “{reflection.closingQuote.quote}”
+          </div>
+          {reflection.closingQuote.attribution && (
+            <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 700, marginTop: 7 }}>
+              — {reflection.closingQuote.attribution}
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
