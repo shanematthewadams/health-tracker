@@ -5,7 +5,7 @@ import { supabase } from "../supabase.js";
 import { useCustomTrackerLogging } from "../useCustomTrackerLogging.js";
 import CustomTrackerLogger from "./CustomTrackerLogger.jsx";
 
-export default function CustomTrackersLogSection({ activeCanEdit, today, initialDate, styles }) {
+export default function CustomTrackersLogSection({ activeCanEdit, today, initialDate, styles, standalone = false, showEmptyState = false }) {
   const { BORDER, TEXT, TEXT_MUTED, SURFACE_2, cardStyle, fieldLabel, inputStyle } = styles;
   const [profileId, setProfileId] = useState(null);
   const [entryDate, setEntryDate] = useState(initialDate || today);
@@ -33,10 +33,10 @@ export default function CustomTrackersLogSection({ activeCanEdit, today, initial
 
   const { metrics, entries, loading, savingId, error, saveValue, deleteValue } = useCustomTrackerLogging(profileId, activeCanEdit, entryDate);
 
-  if (!activeCanEdit || (!loading && metrics.length === 0)) return null;
+  if (!activeCanEdit || (!loading && metrics.length === 0 && !showEmptyState)) return null;
 
   return (
-    <section style={{ ...cardStyle, marginTop: 14 }}>
+    <section style={{ ...cardStyle, marginTop: standalone ? 4 : 14 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, color: TEXT, fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600 }}>
@@ -52,6 +52,11 @@ export default function CustomTrackersLogSection({ activeCanEdit, today, initial
 
       {loading ? (
         <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "8px 0" }}>Loading your trackers…</div>
+      ) : metrics.length === 0 ? (
+        <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14 }}>
+          <div style={{ color: TEXT, fontSize: 13, fontWeight: 800 }}>No personal trackers yet.</div>
+          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, marginTop: 4 }}>Create one from Profile → My Trackers whenever there’s something personal you want With to help you notice.</div>
+        </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {metrics.map((metric) => (
