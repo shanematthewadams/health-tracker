@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import EditorialLine from "./components/EditorialLine.jsx";
 import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
 const SURFACE = brand.surface;
@@ -238,9 +239,12 @@ function OnboardingScreen({ onComplete }) {
             : "With is a private place to track things like food, movement, water, weight and everyday intentions alongside people you trust."}
         </div>
         {!existingProfile && (
-          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
-            Everyone has their own goals. You’re simply doing life together.
-          </div>
+          <EditorialLine
+            placement="onboarding"
+            fallback="Everyone has their own goals. You’re simply doing life together."
+            style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}
+            attributionStyle={{ fontSize: 11 }}
+          />
         )}
         <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 12 }}>Start a new With</button>
         <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, textAlign: "center" }}>

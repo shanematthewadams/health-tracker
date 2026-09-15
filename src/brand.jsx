@@ -1,4 +1,5 @@
 import withLogo from "./assets/brand/with-logo.svg";
+import EditorialLine from "./components/EditorialLine.jsx";
 
 export const brand = {
   teal: "#1F5E57",
@@ -102,9 +103,23 @@ export function BrandLoading({ children = "Getting your With ready…" }) {
         fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 280, textAlign: "center" }}>
+      <div style={{ width: "100%", maxWidth: 300, textAlign: "center" }}>
         <BrandLogo style={{ width: 132, margin: "0 auto 14px", backgroundColor: brand.inkOn }} />
         <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>{children}</div>
+        <EditorialLine
+          placement="preparing_with"
+          style={{
+            marginTop: 14,
+            paddingTop: 13,
+            borderTop: "1px solid rgba(255,255,255,.16)",
+            color: "rgba(255,255,255,.88)",
+            fontFamily: "'Newsreader', Georgia, serif",
+            fontSize: 15,
+            fontStyle: "italic",
+            lineHeight: 1.4,
+          }}
+          attributionStyle={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal" }}
+        />
       </div>
     </div>
   );

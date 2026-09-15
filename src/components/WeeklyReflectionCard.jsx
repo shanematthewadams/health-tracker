@@ -233,7 +233,7 @@ export default function WeeklyReflectionCard({
           supabase.from("fasting_entries").select("started_at,ended_at,duration_minutes").eq("profile_id", profileId).gte("started_at", fastingWindowStart).lt("started_at", fastingWindowEnd).order("started_at", { ascending: true }),
           supabase.from("support_notes").select("id,support_date").eq("recipient_profile_id", profileId).gte("support_date", week.start).lte("support_date", week.end),
           supabase.from("custom_metrics").select("id,name,value_type,unit,sort_order,created_at").eq("profile_id", profileId).eq("enabled", true).order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
-          supabase.from("reflection_quotes").select("id,quote,attribution,quote_kind,themes,active,featured_week,created_at").eq("active", true).order("created_at", { ascending: true }),
+          supabase.from("reflection_quotes").select("id,quote,attribution,quote_kind,themes,placements,active,featured_week,created_at").eq("active", true).contains("placements", ["weekly_reflection"]).order("created_at", { ascending: true }),
         ]);
 
         const results = [weightResult, stepsResult, waterResult, activityResult, foodResult, fastingResult, supportResult, customMetricsResult, quoteResult];

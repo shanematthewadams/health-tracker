@@ -22,18 +22,10 @@ export default function AdminApp() {
   return (
     <div style={{ minHeight: "100vh", background: brand.bg, color: brand.text }}>
       <div style={{ maxWidth: 1040, margin: "0 auto", padding: "12px 16px 0" }}>
-        <nav
-          aria-label="Admin sections"
-          style={{
-            display: "flex",
-            gap: 6,
-            paddingBottom: 2,
-            overflowX: "auto",
-          }}
-        >
+        <nav aria-label="Admin sections" style={{ display: "flex", gap: 6, paddingBottom: 2, overflowX: "auto" }}>
           {[
             ["system", "System"],
-            ["quotes", "Reflection Quotes"],
+            ["quotes", "Editorial Library"],
           ].map(([id, label]) => (
             <button
               key={id}
