@@ -3,6 +3,9 @@ import withLogo from "./assets/brand/with-logo.svg";
 export const brand = {
   teal: "#1F5E57",
   tealDark: "#174E49",
+  logoPrimary: "#354E3E",
+  logoDark: "#232321",
+  logoLight: "#F9F7F5",
   sage: "#B7C8BF",
   clay: "#E08A6A",
   sun: "#F2C96D",
@@ -34,8 +37,8 @@ function logoMark(compact, style) {
       style={{
         display: "inline-block",
         width: compact ? 76 : 138,
-        aspectRatio: "1170 / 519",
-        backgroundColor: brand.teal,
+        aspectRatio: "3590 / 1620",
+        backgroundColor: brand.logoPrimary,
         WebkitMaskImage: `url(${withLogo})`,
         maskImage: `url(${withLogo})`,
         WebkitMaskRepeat: "no-repeat",
