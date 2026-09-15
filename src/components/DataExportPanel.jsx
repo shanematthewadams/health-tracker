@@ -58,7 +58,7 @@ export default function DataExportPanel({ styles }) {
 
   return (
     <section data-testid="personal-data-export" style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
-      <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Your data</div>
+      <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Your health data</div>
       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.2 }}>Take your data with you</div>
       <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginTop: 6 }}>Your health data is yours. Download a copy anytime.</div>
 
