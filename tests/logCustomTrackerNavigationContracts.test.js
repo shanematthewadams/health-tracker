@@ -11,13 +11,25 @@ test("Log gives My Trackers a first-class mode instead of burying it after stand
   assert.match(logTab, />My Trackers<\/button>/);
   assert.match(logTab, /logMode === "custom"[\s\S]*<CustomTrackersLogSection/);
   assert.match(logTab, /logMode === "custom"[\s\S]*standalone/);
-  assert.match(logTab, /showEmptyState/);
 });
 
-test("custom Log mode has its own date-aware empty state", () => {
+test("My Trackers switch only appears when enabled custom trackers exist", () => {
+  assert.match(logTab, /const \[hasCustomTrackers, setHasCustomTrackers\] = useState\(false\)/);
+  assert.match(logTab, /from\("custom_metrics"\)/);
+  assert.match(logTab, /\.eq\("enabled", true\)/);
+  assert.match(logTab, /props\.activeCanEdit && hasCustomTrackers/);
+  assert.match(logTab, /!hasCustomTrackers && logMode === "custom"/);
+});
+
+test("Log mode switch stays intentionally compact", () => {
+  assert.match(logTab, /minHeight: 32/);
+  assert.match(logTab, /padding: "5px 10px"/);
+  assert.match(logTab, /fontSize: 11/);
+  assert.match(logTab, /width: "fit-content"/);
+});
+
+test("custom Log mode keeps its own date-aware logger", () => {
   assert.match(customSection, /standalone = false/);
-  assert.match(customSection, /showEmptyState = false/);
-  assert.match(customSection, /No personal trackers yet\./);
-  assert.match(customSection, /Profile → My Trackers/);
   assert.match(customSection, /entryDate/);
+  assert.match(customSection, /CustomTrackerLogger/);
 });
