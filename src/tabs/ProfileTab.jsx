@@ -71,6 +71,7 @@ export default function ProfileTab({
   const [editingWaterShortcuts, setEditingWaterShortcuts] = useState(false);
   const [waterShortcutDraft, setWaterShortcutDraft] = useState(() => (waterShortcuts || [8, 16, 24]).map(String));
   const [hasMultipleWiths, setHasMultipleWiths] = useState(false);
+  const [openPreference, setOpenPreference] = useState("");
 
   const timeZoneOptions = useMemo(() => {
     const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
@@ -99,6 +100,29 @@ export default function ProfileTab({
   ].includes(accountMessage)
     ? accountMessage
     : "";
+
+  const sectionLabel = {
+    fontSize: 11,
+    color: TEXT_MUTED,
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: ".06em",
+    marginBottom: 7,
+  };
+
+  const preferenceButton = {
+    width: "100%",
+    border: `1px solid ${BORDER}`,
+    borderRadius: 13,
+    background: SURFACE_2,
+    color: TEXT,
+    padding: "13px 14px",
+    textAlign: "left",
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    alignItems: "center",
+    gap: 12,
+  };
 
   async function shareWith() {
     const url = window.location.origin;
@@ -164,8 +188,12 @@ export default function ProfileTab({
 
   const goal = data[activeUser];
   const goalSentence = goal?.goalWeight
-    ? `You’re working toward ${goal.goalWeight} lb${goal.goalDate ? ` by ${fmtGoalDate(goal.goalDate)}` : ""}.`
+    ? `Working toward ${goal.goalWeight} lb${goal.goalDate ? ` by ${fmtGoalDate(goal.goalDate)}` : ""}.`
     : "You haven’t set a health goal yet.";
+
+  function togglePreference(key) {
+    setOpenPreference((current) => current === key ? "" : key);
+  }
 
   return (
     <>
@@ -174,7 +202,8 @@ export default function ProfileTab({
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>You, your people, and the things you’re working toward.</div>
       </div>
 
-      <section style={{ padding: "0 0.1rem 1.25rem", borderBottom: `1px solid ${BORDER}`, marginBottom: 20 }}>
+      <section style={{ padding: "0 0.1rem 1.25rem", borderBottom: `1px solid ${BORDER}`, marginBottom: 18 }}>
+        <div style={{ ...sectionLabel, marginBottom: 9 }}>You</div>
         {!editingProfile ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -219,10 +248,20 @@ export default function ProfileTab({
             </div>
           </div>
         )}
+
+        {!editingProfile && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: TEXT }}>Your goal</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 3 }}>{goalSentence}</div>
+            </div>
+            <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: 0, flexShrink: 0 }}>{goal?.goalWeight ? "Manage" : "Set goal"}</button>
+          </div>
+        )}
       </section>
 
       <section style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>{hasMultipleWiths ? "Your Current With" : "Your With"}</div>
+        <div style={sectionLabel}>{hasMultipleWiths ? "Your Current With" : "Your With"}</div>
 
         {!renamingWith ? (
           <>
@@ -300,55 +339,89 @@ export default function ProfileTab({
       </section>
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Goals</div>
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.25 }}>{goalSentence}</div>
-        <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "8px 0 0" }}>{goal?.goalWeight ? "Manage goals" : "Set a goal"}</button>
-      </section>
+        <div style={sectionLabel}>How you use With</div>
+        <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Keep the everyday settings here. Open only what you want to change.</div>
 
-      <MyTrackersPanel
-        session={session}
-        onOpenGoals={openGoalsEdit}
-        styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
-      />
+        <div style={{ display: "grid", gap: 8 }}>
+          <button type="button" onClick={() => togglePreference("trackers")} aria-expanded={openPreference === "trackers"} style={preferenceButton}>
+            <span>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 800 }}>Trackers</span>
+              <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginTop: 2 }}>Choose what you track and who can see it.</span>
+            </span>
+            <span style={{ color: brand.tealDark, fontSize: 11, fontWeight: 800 }}>{openPreference === "trackers" ? "Close" : "Manage"}</span>
+          </button>
 
-      <LoggingRemindersPanel
-        session={session}
-        styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
-      />
+          {openPreference === "trackers" && (
+            <div style={{ margin: "-2px 0 4px" }}>
+              <MyTrackersPanel
+                session={session}
+                onOpenGoals={openGoalsEdit}
+                styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
+              />
+            </div>
+          )}
 
-      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Water</div>
-        {!editingWaterShortcuts ? (
-          <>
-            <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45 }}>Your quick-add buttons are <strong style={{ color: TEXT }}>{waterShortcuts.join(" oz, ")} oz</strong>.</div>
-            <button onClick={() => { clearAccountError(); setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change water shortcuts</button>
-          </>
-        ) : (
-          <>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 10 }}>Set the three amounts you use most often.</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-              {waterShortcutDraft.map((value, index) => (
-                <div key={index}>
-                  <div style={fieldLabel}>Shortcut {index + 1}</div>
-                  <div style={{ position: "relative" }}>
-                    <input type="number" min="1" max="999" step="0.1" inputMode="decimal" value={value} onChange={(e) => setWaterShortcutDraft((prev) => prev.map((item, i) => i === index ? e.target.value : item))} style={{ ...inputStyle, paddingRight: 34 }} />
-                    <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, fontSize: 12, pointerEvents: "none" }}>oz</span>
+          <button type="button" onClick={() => togglePreference("reminders")} aria-expanded={openPreference === "reminders"} style={preferenceButton}>
+            <span>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 800 }}>Reminders</span>
+              <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginTop: 2 }}>Choose when With gives you a gentle nudge.</span>
+            </span>
+            <span style={{ color: brand.tealDark, fontSize: 11, fontWeight: 800 }}>{openPreference === "reminders" ? "Close" : "Manage"}</span>
+          </button>
+
+          {openPreference === "reminders" && (
+            <div style={{ margin: "-2px 0 4px" }}>
+              <LoggingRemindersPanel
+                session={session}
+                styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }}
+              />
+            </div>
+          )}
+
+          <button type="button" onClick={() => togglePreference("quick-add")} aria-expanded={openPreference === "quick-add"} style={preferenceButton}>
+            <span>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 800 }}>Quick add</span>
+              <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, lineHeight: 1.4, marginTop: 2 }}>Water shortcuts: {waterShortcuts.join(" oz, ")} oz</span>
+            </span>
+            <span style={{ color: brand.tealDark, fontSize: 11, fontWeight: 800 }}>{openPreference === "quick-add" ? "Close" : "Manage"}</span>
+          </button>
+
+          {openPreference === "quick-add" && (
+            <div style={{ padding: "11px 4px 4px" }}>
+              {!editingWaterShortcuts ? (
+                <>
+                  <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45 }}>Your water quick-add buttons are <strong style={{ color: TEXT }}>{waterShortcuts.join(" oz, ")} oz</strong>.</div>
+                  <button onClick={() => { clearAccountError(); setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "7px 0 0" }}>Change water shortcuts</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 10 }}>Set the three amounts you use most often.</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+                    {waterShortcutDraft.map((value, index) => (
+                      <div key={index}>
+                        <div style={fieldLabel}>Shortcut {index + 1}</div>
+                        <div style={{ position: "relative" }}>
+                          <input type="number" min="1" max="999" step="0.1" inputMode="decimal" value={value} onChange={(e) => setWaterShortcutDraft((prev) => prev.map((item, i) => i === index ? e.target.value : item))} style={{ ...inputStyle, paddingRight: 34 }} />
+                          <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, fontSize: 12, pointerEvents: "none" }}>oz</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(false); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
+                    <button onClick={async () => { const ok = await saveWaterShortcuts(waterShortcutDraft); if (ok !== false) setEditingWaterShortcuts(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save shortcuts</button>
+                  </div>
+                </>
+              )}
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(false); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-              <button onClick={async () => { const ok = await saveWaterShortcuts(waterShortcutDraft); if (ok !== false) setEditingWaterShortcuts(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save shortcuts</button>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </section>
 
       <DataExportPanel styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, bigButton }} />
 
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 18 }}>
-        <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Account</div>
+        <div style={{ ...sectionLabel, marginBottom: 10 }}>Account</div>
 
         {!editingEmail ? (
           <div style={{ marginBottom: 14 }}>
@@ -362,6 +435,24 @@ export default function ProfileTab({
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setEditingEmail(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
               <button onClick={async () => { const ok = await saveEmail(); if (ok !== false) setEditingEmail(false); }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Update email</button>
+            </div>
+          </div>
+        )}
+
+        {!changingPassword ? (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Your account is protected by a password.</div>
+            <button onClick={() => { clearAccountError(); setChangingPassword(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change password</button>
+          </div>
+        ) : (
+          <div style={{ marginBottom: 14 }}>
+            <div style={fieldLabel}>New password</div>
+            <input type="password" minLength={6} value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+            <div style={fieldLabel}>Confirm new password</div>
+            <input type="password" minLength={6} value={confirmPasswordInput} onChange={(e) => setConfirmPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setChangingPassword(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
+              <button onClick={async () => { const ok = await savePassword(); if (ok !== false) setChangingPassword(false); }} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save password</button>
             </div>
           </div>
         )}
@@ -386,24 +477,6 @@ export default function ProfileTab({
           )}
         </div>
 
-        {!changingPassword ? (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ color: TEXT_MUTED, fontSize: 13 }}>Your account is protected by a password.</div>
-            <button onClick={() => { clearAccountError(); setChangingPassword(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change password</button>
-          </div>
-        ) : (
-          <div style={{ marginBottom: 14 }}>
-            <div style={fieldLabel}>New password</div>
-            <input type="password" minLength={6} value={newPasswordInput} onChange={(e) => setNewPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-            <div style={fieldLabel}>Confirm new password</div>
-            <input type="password" minLength={6} value={confirmPasswordInput} onChange={(e) => setConfirmPasswordInput(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setChangingPassword(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-              <button onClick={async () => { const ok = await savePassword(); if (ok !== false) setChangingPassword(false); }} disabled={accountBusy || !newPasswordInput} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save password</button>
-            </div>
-          </div>
-        )}
-
         {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 8 }}>{accountError}</div>}
         {accountOnlyMessage && <div style={{ color: successColor, fontSize: 13, marginTop: 8 }}>{accountOnlyMessage}</div>}
       </section>
@@ -419,7 +492,7 @@ export default function ProfileTab({
           <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, fontSize: 11, textDecoration: "none" }}>Privacy policy</a>
           <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
             {shareStatus === "Link copied" ? <Check style={{ width: 12, height: 12 }} /> : <Share2 style={{ width: 12, height: 12 }} />}
-            {shareStatus || "Share the app"}
+            {shareStatus || "Share With"}
           </button>
         </div>
         <details>
