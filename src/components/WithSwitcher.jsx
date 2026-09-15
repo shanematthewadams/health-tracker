@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Plus, Users } from "lucide-react";
+import { Check, ChevronDown, Plus, Star, Users } from "lucide-react";
 import { brand } from "../brand.jsx";
+import { readStoredDefaultWithId, storeDefaultWithId } from "../withMemberships.js";
 
 export default function WithSwitcher({ withs = [], activeWithId, onSelect, onStartWith, onJoinWith }) {
   const [open, setOpen] = useState(false);
+  const [defaultWithId, setDefaultWithId] = useState(() => readStoredDefaultWithId());
   const rootRef = useRef(null);
   const activeWith = withs.find((withItem) => withItem.id === activeWithId) || withs[0] || null;
 
@@ -75,7 +77,7 @@ export default function WithSwitcher({ withs = [], activeWithId, onSelect, onSta
             top: "calc(100% + 7px)",
             right: 0,
             zIndex: 40,
-            width: 250,
+            width: 276,
             maxWidth: "calc(100vw - 30px)",
             overflow: "hidden",
             background: brand.surface,
@@ -90,39 +92,80 @@ export default function WithSwitcher({ withs = [], activeWithId, onSelect, onSta
 
           {withs.map((withItem) => {
             const selected = withItem.id === activeWith.id;
+            const isDefault = withItem.id === defaultWithId;
             return (
-              <button
+              <div
                 key={withItem.id}
-                type="button"
-                role="menuitemradio"
-                aria-checked={selected}
-                onClick={() => {
-                  onSelect?.(withItem.id);
-                  setOpen(false);
-                }}
                 style={{
-                  width: "100%",
                   display: "grid",
-                  gridTemplateColumns: "20px minmax(0, 1fr)",
-                  alignItems: "center",
-                  gap: 7,
-                  border: "none",
+                  gridTemplateColumns: "minmax(0, 1fr) auto",
+                  alignItems: "stretch",
+                  gap: 4,
                   background: selected ? brand.surfaceSoft : "transparent",
-                  color: brand.text,
                   borderRadius: 9,
-                  padding: "9px 8px",
-                  textAlign: "left",
-                  fontFamily: "'DM Sans', -apple-system, sans-serif",
                 }}
               >
-                <span style={{ display: "grid", placeItems: "center" }}>{selected ? <Check size={15} color={brand.tealDark} strokeWidth={2.4} /> : null}</span>
-                <span style={{ minWidth: 0 }}>
-                  <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, fontWeight: selected ? 800 : 650 }}>{withItem.name}</span>
-                  {withItem.role === "owner" && <span style={{ display: "block", color: brand.textMuted, fontSize: 9, marginTop: 1 }}>You started this With</span>}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  onClick={() => {
+                    onSelect?.(withItem.id);
+                    setOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "20px minmax(0, 1fr)",
+                    alignItems: "center",
+                    gap: 7,
+                    border: "none",
+                    background: "transparent",
+                    color: brand.text,
+                    borderRadius: 9,
+                    padding: "9px 8px",
+                    textAlign: "left",
+                    fontFamily: "'DM Sans', -apple-system, sans-serif",
+                  }}
+                >
+                  <span style={{ display: "grid", placeItems: "center" }}>{selected ? <Check size={15} color={brand.tealDark} strokeWidth={2.4} /> : null}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, fontWeight: selected ? 800 : 650 }}>{withItem.name}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, color: brand.textMuted, fontSize: 9, marginTop: 1 }}>
+                      {withItem.role === "owner" ? "You started this With" : "Member"}
+                      {isDefault && <span style={{ color: brand.tealDark, fontWeight: 800 }}>· Default</span>}
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={isDefault ? `${withItem.name} is your default With` : `Make ${withItem.name} your default With`}
+                  title={isDefault ? "Default With" : "Make default"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    storeDefaultWithId(withItem.id);
+                    setDefaultWithId(withItem.id);
+                  }}
+                  style={{
+                    width: 38,
+                    border: "none",
+                    background: "transparent",
+                    color: isDefault ? brand.tealDark : brand.textMuted,
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: 9,
+                    padding: 0,
+                  }}
+                >
+                  <Star size={15} strokeWidth={isDefault ? 2.4 : 1.8} fill={isDefault ? "currentColor" : "none"} />
+                </button>
+              </div>
             );
           })}
+
+          <div style={{ padding: "7px 9px 3px", color: brand.textMuted, fontSize: 9, lineHeight: 1.4 }}>
+            Your default With is the one that opens after you sign in.
+          </div>
 
           {(onStartWith || onJoinWith) && <div style={{ height: 1, background: brand.border, margin: "5px 4px" }} />}
 
