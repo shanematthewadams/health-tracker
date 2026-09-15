@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LogTabBase from "./LogTabBase.jsx";
 import CustomTrackersLogSection from "../components/CustomTrackersLogSection.jsx";
 import FastingHistorySection from "../components/FastingHistorySection.jsx";
 import FastingTodaySection from "../components/FastingTodaySection.jsx";
 import { brand } from "../brand.jsx";
+import { supabase } from "../supabase.js";
 import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
 
 export default function LogTab(props) {
   const [logMode, setLogMode] = useState("basics");
+  const [hasCustomTrackers, setHasCustomTrackers] = useState(false);
   const initialDate = {
     food: props.foodDate,
     weight: props.weightDate,
@@ -18,7 +20,47 @@ export default function LogTab(props) {
   const { trackerEnabled } = useOwnTrackerPreferences(props.activeCanEdit);
   const activeFast = props.activeFasts?.[props.activeUser] || null;
   const fastingEnabled = trackerEnabled("fasting");
-  const { BORDER, TEXT, TEXT_MUTED, SURFACE, SURFACE_2 } = props.styles;
+  const { BORDER, TEXT, TEXT_MUTED, SURFACE } = props.styles;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkCustomTrackers() {
+      if (!props.activeCanEdit) {
+        if (!cancelled) setHasCustomTrackers(false);
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id || cancelled) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (!profile?.id || cancelled) {
+        if (!cancelled) setHasCustomTrackers(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("custom_metrics")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("enabled", true)
+        .limit(1);
+
+      if (!cancelled) setHasCustomTrackers(Boolean(data?.length));
+    }
+
+    checkCustomTrackers();
+    return () => { cancelled = true; };
+  }, [props.activeCanEdit]);
+
+  useEffect(() => {
+    if (!hasCustomTrackers && logMode === "custom") setLogMode("basics");
+  }, [hasCustomTrackers, logMode]);
 
   const baseProps = {
     ...props,
@@ -30,15 +72,15 @@ export default function LogTab(props) {
   };
 
   const modeButton = (active) => ({
-    flex: 1,
     border: `1px solid ${active ? brand.teal : BORDER}`,
     background: active ? brand.surfaceSoft : SURFACE,
     color: active ? TEXT : TEXT_MUTED,
     borderRadius: 999,
-    minHeight: 38,
-    padding: "8px 12px",
-    fontSize: 12,
+    minHeight: 32,
+    padding: "5px 10px",
+    fontSize: 11,
     fontWeight: 800,
+    whiteSpace: "nowrap",
   });
 
   return (
@@ -50,21 +92,20 @@ export default function LogTab(props) {
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>Add something to your day.</div>
       </div>
 
-      {props.activeCanEdit && (
-        <div role="tablist" aria-label="Log sections" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "0 0 10px", marginBottom: 2 }}>
+      {props.activeCanEdit && hasCustomTrackers && (
+        <div role="tablist" aria-label="Log sections" style={{ display: "flex", alignItems: "center", gap: 4, width: "fit-content", padding: "0 0 9px", marginBottom: 2 }}>
           <button type="button" role="tab" aria-selected={logMode === "basics"} onClick={() => setLogMode("basics")} style={modeButton(logMode === "basics")}>Basics</button>
           <button type="button" role="tab" aria-selected={logMode === "custom"} onClick={() => setLogMode("custom")} style={modeButton(logMode === "custom")}>My Trackers</button>
         </div>
       )}
 
-      {logMode === "custom" && props.activeCanEdit ? (
+      {logMode === "custom" && props.activeCanEdit && hasCustomTrackers ? (
         <CustomTrackersLogSection
           activeCanEdit={props.activeCanEdit}
           today={props.today}
           initialDate={initialDate}
           styles={props.styles}
           standalone
-          showEmptyState
         />
       ) : (
         <>
