@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Activity, Droplet, Footprints, Scale, Sparkles, Utensils } from "lucide-react";
 import { brand, metricColors } from "../brand.jsx";
 import { supabase } from "../supabase.js";
+import SupportPreferencePanel from "./SupportPreferencePanel.jsx";
 
 const STANDARD_TRACKERS = [
   { id: "food", label: "Nutrition", icon: Utensils, color: metricColors.food },
@@ -197,63 +198,66 @@ export default function LoggingRemindersPanel({ session, styles }) {
   if (loading || !profileId) return null;
 
   return (
-    <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Logging reminders</div>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.2, color: TEXT }}>A little help remembering, if you want it.</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
-            With can gently point out things you chose to track that have no entry from yesterday. Reminders are off unless you turn them on.
+    <>
+      <SupportPreferencePanel session={session} styles={styles} />
+      <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 7 }}>Logging reminders</div>
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.2, color: TEXT }}>A little help remembering, if you want it.</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
+              With can gently point out things you chose to track that have no entry from yesterday. Reminders are off unless you turn them on.
+            </div>
           </div>
+          <Toggle
+            checked={masterEnabled}
+            disabled={busyKey === "master"}
+            onChange={setMaster}
+            label={`${masterEnabled ? "Turn off" : "Turn on"} logging reminders`}
+          />
         </div>
-        <Toggle
-          checked={masterEnabled}
-          disabled={busyKey === "master"}
-          onChange={setMaster}
-          label={`${masterEnabled ? "Turn off" : "Turn on"} logging reminders`}
-        />
-      </div>
 
-      {error && <div role="alert" style={{ color: WARN, fontSize: 11, marginTop: 10 }}>{error}</div>}
+        {error && <div role="alert" style={{ color: WARN, fontSize: 11, marginTop: 10 }}>{error}</div>}
 
-      {masterEnabled && (
-        <div style={{ background: SURFACE_2, borderRadius: 12, padding: "10px 12px", marginTop: 12 }}>
-          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>
-            Choose what belongs in the reminder. We start with Nutrition, Water, and Steps when they’re available, and you can change that anytime.
+        {masterEnabled && (
+          <div style={{ background: SURFACE_2, borderRadius: 12, padding: "10px 12px", marginTop: 12 }}>
+            <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>
+              Choose what belongs in the reminder. We start with Nutrition, Water, and Steps when they’re available, and you can change that anytime.
+            </div>
+
+            {enabledStandard.map((tracker) => {
+              const Icon = tracker.icon;
+              const checked = standardPrefs[tracker.id]?.logging_reminder_enabled === true;
+              return (
+                <div key={tracker.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderTop: `1px solid ${BORDER}` }}>
+                  <Icon size={15} color={tracker.color} strokeWidth={1.9} />
+                  <span style={{ flex: 1, color: TEXT, fontSize: 12, fontWeight: 700 }}>{tracker.label}</span>
+                  <Toggle checked={checked} disabled={busyKey === `standard:${tracker.id}`} onChange={(next) => toggleStandard(tracker.id, next)} label={`${checked ? "Remove" : "Add"} ${tracker.label} ${checked ? "from" : "to"} logging reminders`} />
+                </div>
+              );
+            })}
+
+            {enabledCustom.map((metric) => {
+              const checked = metric.logging_reminder_enabled === true;
+              return (
+                <div key={metric.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderTop: `1px solid ${BORDER}` }}>
+                  <Sparkles size={15} color={brand.teal} strokeWidth={1.9} />
+                  <span style={{ flex: 1, color: TEXT, fontSize: 12, fontWeight: 700 }}>{metric.name}</span>
+                  <Toggle checked={checked} disabled={busyKey === `custom:${metric.id}`} onChange={(next) => toggleCustom(metric.id, next)} label={`${checked ? "Remove" : "Add"} ${metric.name} ${checked ? "from" : "to"} logging reminders`} />
+                </div>
+              );
+            })}
+
+            {!enabledStandard.length && !enabledCustom.length && (
+              <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "4px 0" }}>Turn on a tracker first, then you can include it here.</div>
+            )}
+
+            <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.45, marginTop: 8 }}>
+              A blank day is only missing information. With never treats it as a missed target. Fasting stays out of these reminders because not fasting is not missing data.
+            </div>
           </div>
-
-          {enabledStandard.map((tracker) => {
-            const Icon = tracker.icon;
-            const checked = standardPrefs[tracker.id]?.logging_reminder_enabled === true;
-            return (
-              <div key={tracker.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderTop: `1px solid ${BORDER}` }}>
-                <Icon size={15} color={tracker.color} strokeWidth={1.9} />
-                <span style={{ flex: 1, color: TEXT, fontSize: 12, fontWeight: 700 }}>{tracker.label}</span>
-                <Toggle checked={checked} disabled={busyKey === `standard:${tracker.id}`} onChange={(next) => toggleStandard(tracker.id, next)} label={`${checked ? "Remove" : "Add"} ${tracker.label} ${checked ? "from" : "to"} logging reminders`} />
-              </div>
-            );
-          })}
-
-          {enabledCustom.map((metric) => {
-            const checked = metric.logging_reminder_enabled === true;
-            return (
-              <div key={metric.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderTop: `1px solid ${BORDER}` }}>
-                <Sparkles size={15} color={brand.teal} strokeWidth={1.9} />
-                <span style={{ flex: 1, color: TEXT, fontSize: 12, fontWeight: 700 }}>{metric.name}</span>
-                <Toggle checked={checked} disabled={busyKey === `custom:${metric.id}`} onChange={(next) => toggleCustom(metric.id, next)} label={`${checked ? "Remove" : "Add"} ${metric.name} ${checked ? "from" : "to"} logging reminders`} />
-              </div>
-            );
-          })}
-
-          {!enabledStandard.length && !enabledCustom.length && (
-            <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "4px 0" }}>Turn on a tracker first, then you can include it here.</div>
-          )}
-
-          <div style={{ color: TEXT_MUTED, fontSize: 10, lineHeight: 1.45, marginTop: 8 }}>
-            A blank day is only missing information. With never treats it as a missed target. Fasting stays out of these reminders because not fasting is not missing data.
-          </div>
-        </div>
-      )}
-    </section>
+        )}
+      </section>
+    </>
   );
 }
