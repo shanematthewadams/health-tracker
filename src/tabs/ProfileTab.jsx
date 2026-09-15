@@ -10,8 +10,7 @@ import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
 
 const PROFILE_SECTIONS = [
-  { id: "you", label: "You" },
-  { id: "withs", label: "Withs" },
+  { id: "overview", label: "You & Your Withs" },
   { id: "preferences", label: "Preferences" },
   { id: "account", label: "Account" },
 ];
@@ -65,7 +64,7 @@ export default function ProfileTab({
   successColor,
   styles,
 }) {
-  const [section, setSection] = useState("you");
+  const [section, setSection] = useState("overview");
   const [modal, setModal] = useState("");
   const [shareStatus, setShareStatus] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
@@ -304,7 +303,7 @@ export default function ProfileTab({
         })}
       </div>
 
-      {section === "you" && (
+      {section === "overview" && (
         <section>
           <div style={sectionLabel}>You</div>
           <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, boxShadow: "0 3px 12px rgba(28,36,48,.03)" }}>
@@ -360,8 +359,8 @@ export default function ProfileTab({
         </section>
       )}
 
-      {section === "withs" && (
-        <section>
+      {section === "overview" && (
+        <section style={{ marginTop: 24 }}>
           <div style={sectionLabel}>{hasMultipleWiths ? "Current With" : "Your With"}</div>
           <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, boxShadow: "0 3px 12px rgba(28,36,48,.03)" }}>
             {!renamingWith ? (
