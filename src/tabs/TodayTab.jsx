@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import TodayTabBase from "./TodayTabBase.jsx";
 import CustomTodayLoggedSection from "../components/CustomTodayLoggedSection.jsx";
 import DailySupportSection from "../components/DailySupportSection.jsx";
+import SupportPreferenceGate from "../components/SupportPreferenceGate.jsx";
 import SharedActiveFastCard from "../components/SharedActiveFastCard.jsx";
 import YesterdayLoggingReminder from "../components/YesterdayLoggingReminder.jsx";
 
@@ -173,15 +174,21 @@ export default function TodayTab(props) {
                   styles={props.styles}
                 />
               )}
-              <DailySupportSection
+              <SupportPreferenceGate
                 activeUser={props.activeUser}
                 activeCanEdit={props.activeCanEdit}
                 personName={activeName}
-                today={props.today}
-                profileColorForProfile={props.profileColor}
-                profileTextForProfile={props.profileText}
-                styles={props.styles}
-              />
+              >
+                <DailySupportSection
+                  activeUser={props.activeUser}
+                  activeCanEdit={props.activeCanEdit}
+                  personName={activeName}
+                  today={props.today}
+                  profileColorForProfile={props.profileColor}
+                  profileTextForProfile={props.profileText}
+                  styles={props.styles}
+                />
+              </SupportPreferenceGate>
               {activeFast && !props.activeCanEdit ? (
                 <SharedActiveFastCard
                   activeFast={activeFast}
