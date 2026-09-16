@@ -11,11 +11,22 @@ const savedFoods = [{
   fiber: 0,
 }];
 
-test("persists a one-serving correction to a household saved food", () => {
+const globalFoods = [{
+  id: "global-yogurt",
+  source_type: "user",
+  calories: 179,
+  protein: 14.8,
+  carbs: 8,
+  fat: 9,
+  fiber: 0,
+}];
+
+test("offers a one-serving correction for a household saved food", () => {
   const correction = savedFoodCorrectionPayload({
     selectedSavedFoodId: "household:greek-yogurt",
     quantity: "1",
     savedFoods,
+    globalFoods,
     calories: "170",
     protein: "15",
     carbs: "8",
@@ -24,6 +35,7 @@ test("persists a one-serving correction to a household saved food", () => {
   });
 
   assert.deepEqual(correction, {
+    source: "household",
     id: "greek-yogurt",
     values: { calories: 170, protein: 15, carbs: 8, fat: 9, fiber: 0 },
   });
@@ -34,6 +46,7 @@ test("does not rewrite a saved food when only quantity changes", () => {
     selectedSavedFoodId: "household:greek-yogurt",
     quantity: "2",
     savedFoods,
+    globalFoods,
     calories: "358",
     protein: "29.6",
     carbs: "16",
@@ -49,6 +62,7 @@ test("does not treat unchanged visible one-decimal values as corrections", () =>
     selectedSavedFoodId: "household:greek-yogurt",
     quantity: "1",
     savedFoods: [{ ...savedFoods[0], protein: 14.84 }],
+    globalFoods,
     calories: "179",
     protein: "14.8",
     carbs: "8",
@@ -59,11 +73,12 @@ test("does not treat unchanged visible one-decimal values as corrections", () =>
   assert.equal(correction, null);
 });
 
-test("never rewrites a global or USDA food from a personal log override", () => {
+test("allows a changed shared global food to be checked by the ownership RPC", () => {
   const correction = savedFoodCorrectionPayload({
-    selectedSavedFoodId: "global:greek-yogurt",
+    selectedSavedFoodId: "global:global-yogurt",
     quantity: "1",
     savedFoods,
+    globalFoods,
     calories: "170",
     protein: "15",
     carbs: "8",
@@ -71,14 +86,19 @@ test("never rewrites a global or USDA food from a personal log override", () => 
     fiber: "0",
   });
 
-  assert.equal(correction, null);
+  assert.deepEqual(correction, {
+    source: "global",
+    id: "global-yogurt",
+    values: { calories: 170, protein: 15, carbs: 8, fat: 9, fiber: 0 },
+  });
 });
 
-test("ignores a missing saved-food record", () => {
+test("ignores a missing food record", () => {
   const correction = savedFoodCorrectionPayload({
     selectedSavedFoodId: "household:not-here",
     quantity: "1",
     savedFoods,
+    globalFoods,
     calories: "170",
     protein: "15",
     carbs: "8",

@@ -68,6 +68,7 @@ export default function LogTab(props) {
       selectedSavedFoodId: props.selectedSavedFoodId,
       quantity: props.foodQuantity,
       savedFoods: props.savedFoods,
+      globalFoods: props.globalFoods,
       calories: props.foodCals,
       protein: props.foodProtein,
       carbs: props.foodCarbs,
@@ -76,16 +77,24 @@ export default function LogTab(props) {
     });
 
     if (correction) {
-      const { error } = await supabase
-        .from("saved_foods")
-        .update(correction.values)
-        .eq("id", correction.id);
+      const { error } = await supabase.rpc("with_update_owned_food_nutrition", {
+        food_source_input: correction.source,
+        food_id_input: correction.id,
+        calories_input: correction.values.calories,
+        protein_input: correction.values.protein,
+        carbs_input: correction.values.carbs,
+        fat_input: correction.values.fat,
+        fiber_input: correction.values.fiber,
+      });
 
       if (error) {
-        console.error("Could not update corrected saved food", error);
-        window.alert("We couldn’t update that saved food, so nothing was logged. Try again.");
+        console.error("Could not persist corrected food nutrition", error);
+        window.alert("We couldn’t save that food correction, so nothing was logged. Try again.");
         return;
       }
+      // A false result means this shared food belongs to someone else (or is
+      // an external canonical food). The correction is still valid for this
+      // person's log; it simply must not rewrite the shared base food.
     }
 
     await props.addFood?.();

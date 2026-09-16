@@ -13,6 +13,7 @@ export function savedFoodCorrectionPayload({
   selectedSavedFoodId,
   quantity,
   savedFoods = [],
+  globalFoods = [],
   calories,
   protein,
   carbs,
@@ -20,12 +21,13 @@ export function savedFoodCorrectionPayload({
   fiber,
 }) {
   const [source, id] = String(selectedSavedFoodId || "").split(":");
-  if (source !== "household" || !id) return null;
+  if (!id || !["household", "global"].includes(source)) return null;
 
   const parsedQuantity = Number(quantity);
   if (!Number.isFinite(parsedQuantity) || Math.abs(parsedQuantity - 1) > 1e-9) return null;
 
-  const savedFood = savedFoods.find((food) => String(food.id) === id);
+  const foods = source === "global" ? globalFoods : savedFoods;
+  const savedFood = foods.find((food) => String(food.id) === id);
   if (!savedFood) return null;
 
   const values = {
@@ -38,10 +40,11 @@ export function savedFoodCorrectionPayload({
 
   // The picker itself displays saved nutrition to one decimal place. Compare
   // against that same visible precision so invisible database precision never
-  // looks like a user correction.
+  // looks like a user correction. Ownership is intentionally enforced by the
+  // database; the client never needs another person's creator identifier.
   const changed = NUTRITION_KEYS.some(
     (key) => Math.abs(values[key] - round1(savedFood[key])) > 0.0001
   );
 
-  return changed ? { id, values } : null;
+  return changed ? { source, id, values } : null;
 }
