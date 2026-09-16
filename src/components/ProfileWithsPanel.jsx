@@ -200,22 +200,6 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
 
   return (
     <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
-      {hasOtherWiths && (
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Default With</div>
-          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>The With that opens when you sign in.</div>
-          <select
-            value={defaultWithId || ""}
-            onChange={(event) => setDefaultWith(event.target.value)}
-            aria-label="Default With"
-            style={{ width: "100%", minHeight: 42, border: `1px solid ${BORDER}`, borderRadius: 10, background: SURFACE_2, color: TEXT, padding: "9px 11px", font: "inherit", fontSize: 13 }}
-          >
-            <option value="" disabled>Choose a default With</option>
-            {withs.map((withItem) => <option key={withItem.id} value={withItem.id}>{withItem.name}</option>)}
-          </select>
-        </div>
-      )}
-
       {canManagePeople && (
         <div style={{ marginBottom: hasOtherWiths || canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
           <button
@@ -374,6 +358,20 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
           >
             <Plus size={12} strokeWidth={2} /> Add another With
           </button>
+
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+            <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Default With</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>The With that opens when you sign in.</div>
+            <select
+              value={defaultWithId || ""}
+              onChange={(event) => setDefaultWith(event.target.value)}
+              aria-label="Default With"
+              style={{ width: "100%", minHeight: 42, border: `1px solid ${BORDER}`, borderRadius: 10, background: SURFACE_2, color: TEXT, padding: "9px 11px", font: "inherit", fontSize: 13 }}
+            >
+              <option value="" disabled>Choose a default With</option>
+              {withs.map((withItem) => <option key={withItem.id} value={withItem.id}>{withItem.name}</option>)}
+            </select>
+          </div>
         </>
       )}
     </div>
