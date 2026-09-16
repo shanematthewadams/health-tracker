@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { savedFoodCorrectionPayload } from "../src/savedFoodCorrections.js";
+import { savedFoodChangeCandidate, savedFoodCorrectionPayload } from "../src/savedFoodCorrections.js";
 
 const savedFoods = [{
   id: "greek-yogurt",
@@ -21,60 +21,65 @@ const globalFoods = [{
   fiber: 0,
 }];
 
-test("offers a one-serving correction for a household saved food", () => {
-  const correction = savedFoodCorrectionPayload({
-    selectedSavedFoodId: "household:greek-yogurt",
-    quantity: "1",
-    savedFoods,
-    globalFoods,
-    calories: "170",
-    protein: "15",
-    carbs: "8",
-    fat: "9",
-    fiber: "0",
-  });
+const changedHouseholdFood = {
+  selectedSavedFoodId: "household:greek-yogurt",
+  quantity: "1",
+  savedFoods,
+  globalFoods,
+  calories: "170",
+  protein: "15",
+  carbs: "8",
+  fat: "9",
+  fiber: "0",
+};
 
-  assert.deepEqual(correction, {
+test("detects a changed one-serving saved food without deciding to persist it", () => {
+  assert.deepEqual(savedFoodChangeCandidate(changedHouseholdFood), {
     source: "household",
     id: "greek-yogurt",
     values: { calories: 170, protein: 15, carbs: 8, fat: 9, fiber: 0 },
   });
 });
 
-test("does not rewrite a saved food when only quantity changes", () => {
+test("changed macros stay log-only by default", () => {
+  assert.equal(savedFoodCorrectionPayload(changedHouseholdFood), null);
+});
+
+test("persists changed macros only after explicit saved-food opt-in", () => {
+  assert.deepEqual(savedFoodCorrectionPayload({ ...changedHouseholdFood, updateSavedFood: true }), {
+    source: "household",
+    id: "greek-yogurt",
+    values: { calories: 170, protein: 15, carbs: 8, fat: 9, fiber: 0 },
+  });
+});
+
+test("quantity changes never become saved-food corrections", () => {
   const correction = savedFoodCorrectionPayload({
-    selectedSavedFoodId: "household:greek-yogurt",
+    ...changedHouseholdFood,
+    updateSavedFood: true,
     quantity: "2",
-    savedFoods,
-    globalFoods,
     calories: "358",
     protein: "29.6",
     carbs: "16",
     fat: "18",
-    fiber: "0",
   });
 
   assert.equal(correction, null);
 });
 
-test("does not treat unchanged visible one-decimal values as corrections", () => {
-  const correction = savedFoodCorrectionPayload({
-    selectedSavedFoodId: "household:greek-yogurt",
-    quantity: "1",
+test("unchanged visible one-decimal values do not create an update option", () => {
+  const candidate = savedFoodChangeCandidate({
+    ...changedHouseholdFood,
     savedFoods: [{ ...savedFoods[0], protein: 14.84 }],
-    globalFoods,
     calories: "179",
     protein: "14.8",
-    carbs: "8",
-    fat: "9",
-    fiber: "0",
   });
 
-  assert.equal(correction, null);
+  assert.equal(candidate, null);
 });
 
-test("allows a changed shared global food to be checked by the ownership RPC", () => {
-  const correction = savedFoodCorrectionPayload({
+test("user-authored global foods use the same explicit opt-in rule", () => {
+  const input = {
     selectedSavedFoodId: "global:global-yogurt",
     quantity: "1",
     savedFoods,
@@ -84,27 +89,20 @@ test("allows a changed shared global food to be checked by the ownership RPC", (
     carbs: "8",
     fat: "9",
     fiber: "0",
-  });
+  };
 
-  assert.deepEqual(correction, {
+  assert.ok(savedFoodChangeCandidate(input));
+  assert.equal(savedFoodCorrectionPayload(input), null);
+  assert.deepEqual(savedFoodCorrectionPayload({ ...input, updateSavedFood: true }), {
     source: "global",
     id: "global-yogurt",
     values: { calories: 170, protein: 15, carbs: 8, fat: 9, fiber: 0 },
   });
 });
 
-test("ignores a missing food record", () => {
-  const correction = savedFoodCorrectionPayload({
+test("missing food records cannot be updated", () => {
+  assert.equal(savedFoodChangeCandidate({
+    ...changedHouseholdFood,
     selectedSavedFoodId: "household:not-here",
-    quantity: "1",
-    savedFoods,
-    globalFoods,
-    calories: "170",
-    protein: "15",
-    carbs: "8",
-    fat: "9",
-    fiber: "0",
-  });
-
-  assert.equal(correction, null);
+  }), null);
 });
