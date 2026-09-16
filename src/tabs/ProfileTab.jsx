@@ -99,6 +99,20 @@ export default function ProfileTab({
   const [waterShortcutDraft, setWaterShortcutDraft] = useState(() => (waterShortcuts || [8, 16, 24]).map(String));
   const [hasMultipleWiths, setHasMultipleWiths] = useState(false);
 
+  useEffect(() => {
+    let shouldOpenReminders = false;
+    try {
+      shouldOpenReminders = sessionStorage.getItem("with-open-reminders") === "1";
+      if (shouldOpenReminders) sessionStorage.removeItem("with-open-reminders");
+    } catch {
+      shouldOpenReminders = false;
+    }
+    if (shouldOpenReminders) {
+      setSection("preferences");
+      setModal("reminders");
+    }
+  }, []);
+
   const timeZoneOptions = useMemo(() => {
     const supported = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
     const fallback = ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Phoenix", "Pacific/Honolulu", "America/Anchorage", "UTC"];
