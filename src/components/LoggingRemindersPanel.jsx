@@ -3,6 +3,7 @@ import { Activity, Droplet, Footprints, Scale, Sparkles, Utensils } from "lucide
 import { brand, metricColors } from "../brand.jsx";
 import { supabase } from "../supabase.js";
 import SupportPreferencePanel from "./SupportPreferencePanel.jsx";
+import { DailyReflectionPreferencePanel } from "./DailyReflection.jsx";
 
 const STANDARD_TRACKERS = [
   { id: "food", label: "Nutrition", icon: Utensils, color: metricColors.food },
@@ -200,6 +201,7 @@ export default function LoggingRemindersPanel({ session, styles }) {
   return (
     <>
       <SupportPreferencePanel session={session} styles={styles} />
+      <DailyReflectionPreferencePanel session={session} styles={styles} />
       <section style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
           <div style={{ minWidth: 0 }}>
