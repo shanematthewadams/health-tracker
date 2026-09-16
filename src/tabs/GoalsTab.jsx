@@ -132,11 +132,6 @@ export default function GoalsTab({
       <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Goals</div>
         <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 4 }}>What matters to you, and what you’re working toward.</div>
-        {activeCanEdit && (
-          <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 6 }}>
-            Want a little help remembering? Gentle logging reminders are available in Profile and stay off unless you turn them on. No pressure.
-          </div>
-        )}
       </div>
 
       {showWalkthroughIntro && hasAnything && (
@@ -237,11 +232,8 @@ export default function GoalsTab({
           <section style={{ padding: "0.2rem 1.15rem 0.55rem", marginBottom: "0.35rem" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ width: 30, height: 30, borderRadius: 9, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}><SlidersHorizontal size={16} color={brand.tealDark} strokeWidth={1.9} /></span>
-                  <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, lineHeight: 1.08 }}>What I’m tracking along the way</div>
-                </div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 6, lineHeight: 1.45 }}>Daily targets are optional. A blank target is simply something you’re not aiming for right now.</div>
+                <div style={{ ...sectionLabel, marginBottom: 6 }}>{iconLabel(SlidersHorizontal, "What I’m tracking")}</div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45 }}>Daily targets are optional. A blank target is simply something you’re not aiming for right now.</div>
               </div>
               {activeCanEdit && editButton(() => setEditingGoals(true))}
             </div>
