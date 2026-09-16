@@ -9,7 +9,7 @@ function round1(value) {
   return Math.round(numberValue(value) * 10) / 10;
 }
 
-export function savedFoodCorrectionPayload({
+export function savedFoodChangeCandidate({
   selectedSavedFoodId,
   quantity,
   savedFoods = [],
@@ -38,13 +38,16 @@ export function savedFoodCorrectionPayload({
     fiber: numberValue(fiber),
   };
 
-  // The picker itself displays saved nutrition to one decimal place. Compare
-  // against that same visible precision so invisible database precision never
-  // looks like a user correction. Ownership is intentionally enforced by the
-  // database; the client never needs another person's creator identifier.
+  // Compare against the same one-decimal precision the picker shows so hidden
+  // database precision never creates a fake "you changed this" state.
   const changed = NUTRITION_KEYS.some(
     (key) => Math.abs(values[key] - round1(savedFood[key])) > 0.0001
   );
 
   return changed ? { source, id, values } : null;
+}
+
+export function savedFoodCorrectionPayload({ updateSavedFood = false, ...input }) {
+  if (!updateSavedFood) return null;
+  return savedFoodChangeCandidate(input);
 }
