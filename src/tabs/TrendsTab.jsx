@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceLine } from "recharts";
-import { Footprints, Droplet, Dumbbell, Utensils, Scale } from "lucide-react";
+import { Footprints, Droplet, Dumbbell, Utensils, Scale, Bell, ChevronRight } from "lucide-react";
 import { brand, metricColors } from "../brand.jsx";
 import FastingTrendsSection from "../components/FastingTrendsSection.jsx";
 import CustomTrendsSection from "../components/CustomTrendsSection.jsx";
@@ -652,6 +652,17 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
   const selectedTrackerEnabled = trackerEnabledFor(selectedProfileKey);
   const selectedIsOwn = selectedProfileKey === ownedProfileId;
 
+  function openReminderSettings() {
+    try {
+      sessionStorage.setItem("with-open-reminders", "1");
+    } catch {
+      // Profile navigation still works; Reminders can be opened manually.
+    }
+    const profileButton = Array.from(document.querySelectorAll("button"))
+      .find((button) => button.textContent?.trim() === "Profile");
+    profileButton?.click();
+  }
+
   return (
     <>
       <div style={{ padding: "0.2rem 0.1rem 1.05rem" }}>
@@ -695,6 +706,36 @@ export default function TrendsTab({ activeUser, data, today, goalInfo, profileCo
       )}
 
       <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, padding: "12px 2px 6px" }}>Averages use only the days you logged. Blank days are unknown, never zero. Intentional fasting days count as zero food intake. Trends are here to help you notice patterns, not grade them.</div>
+
+      <button
+        type="button"
+        onClick={openReminderSettings}
+        style={{
+          width: "100%",
+          display: "grid",
+          gridTemplateColumns: "34px minmax(0, 1fr) auto",
+          alignItems: "center",
+          gap: 11,
+          marginTop: 10,
+          padding: "13px 2px 4px",
+          border: "none",
+          borderTop: `1px solid ${brand.border}`,
+          background: "transparent",
+          color: brand.text,
+          textAlign: "left",
+        }}
+      >
+        <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: 10, background: brand.surfaceSoft, border: `1px solid ${brand.border}`, display: "grid", placeItems: "center" }}>
+          <Bell size={16} color={brand.tealDark} strokeWidth={1.9} />
+        </span>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 12, fontWeight: 800 }}>Want a gentle reminder?</span>
+          <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 2 }}>Reminders are optional and stay off until you turn them on.</span>
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 2, color: brand.tealDark, fontSize: 11, fontWeight: 800, whiteSpace: "nowrap" }}>
+          Manage <ChevronRight size={14} strokeWidth={1.9} />
+        </span>
+      </button>
     </>
   );
 }
