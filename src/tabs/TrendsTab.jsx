@@ -330,12 +330,13 @@ function DailyObservation({ user, today, profileKey, profileColorFor, trackerEna
 }
 
 function SectionHeading({ icon: Icon, color, children, styles }) {
+  const { SURFACE_2, TEXT_MUTED } = styles;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-      <span aria-hidden="true" style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "0 0 18px" }}>
-        <Icon style={{ width: 15, height: 15, color, display: "block" }} strokeWidth={2} />
+    <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+      <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 8, background: SURFACE_2, display: "grid", placeItems: "center", flex: "0 0 26px" }}>
+        <Icon size={14} color={color} strokeWidth={1.9} />
       </span>
-      <div style={{ ...styles.headingStyle, fontSize: 18, lineHeight: "18px", marginBottom: 0 }}>{children}</div>
+      <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 11, lineHeight: 1.2, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em" }}>{children}</div>
     </div>
   );
 }
