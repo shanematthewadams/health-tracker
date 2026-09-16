@@ -9,15 +9,17 @@ const todayTab = readFileSync("src/tabs/TodayTab.jsx", "utf8");
 const profileTab = readFileSync("src/tabs/ProfileTab.jsx", "utf8");
 const onboarding = readFileSync("src/OnboardingGate.jsx", "utf8");
 const goals = readFileSync("src/tabs/GoalsTab.jsx", "utf8");
+const trends = readFileSync("src/tabs/TrendsTab.jsx", "utf8");
 
 test("logging reminders are opt-in and default off", () => {
   assert.match(migration, /logging_reminders_enabled boolean not null default false/i);
   assert.match(migration, /logging_reminder_enabled boolean not null default false/i);
   assert.match(remindersPanel, /useState\(false\)/i);
   assert.match(onboarding, /reminders are off unless you turn them on later in Profile/i);
-  assert.match(goals, /stay off unless you turn them on/i);
+  assert.match(trends, /stay off until you turn them on/i);
   assert.doesNotMatch(onboarding, /logging_reminders_enabled\s*:\s*true/i);
   assert.doesNotMatch(goals, /logging_reminders_enabled\s*:\s*true/i);
+  assert.doesNotMatch(trends, /logging_reminders_enabled\s*:\s*true/i);
 });
 
 test("Profile owns reminder settings near My Trackers", () => {
@@ -57,9 +59,11 @@ test("dismissal is only for the current day's reminder and review opens yesterda
   assert.match(yesterdayCard, /openLog\?\.\(firstStandard\?\.id \|\| "food", yesterday\)/i);
 });
 
-test("onboarding and Goals mention reminders without turning them into enrollment screens", () => {
+test("onboarding and Trends mention reminders without turning them into enrollment screens", () => {
   assert.match(onboarding, /No pressure\./i);
-  assert.match(goals, /No pressure\./i);
+  assert.match(trends, /Want a gentle reminder\?/i);
+  assert.match(trends, /with-open-reminders/i);
   assert.doesNotMatch(onboarding, /<LoggingRemindersPanel/i);
-  assert.doesNotMatch(goals, /<LoggingRemindersPanel/i);
+  assert.doesNotMatch(trends, /<LoggingRemindersPanel/i);
+  assert.doesNotMatch(goals, /Gentle logging reminders/i);
 });
