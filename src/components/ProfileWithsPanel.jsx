@@ -5,7 +5,7 @@ import { brand } from "../brand.jsx";
 import DeleteWithControl from "./DeleteWithControl.jsx";
 import { clearStoredActiveWithId, clearStoredDefaultWithId, readStoredActiveWithId, readStoredDefaultWithId, storeActiveWithId, storeDefaultWithId } from "../withMemberships.js";
 
-export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
+export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode = "all" }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED } = styles;
   const [withs, setWiths] = useState([]);
   const [activeWithId, setActiveWithId] = useState(() => readStoredActiveWithId());
@@ -112,8 +112,12 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   const canLeaveWith = activeWith?.role === "member";
   const ownerNeedsTransfer = activeWith?.role === "owner";
   const hasOtherWiths = withs.length > 1 && otherWiths.length > 0;
+  const showManagement = mode !== "relationships";
+  const showRelationships = mode !== "management";
+  const hasManagement = canManagePeople || canLeaveWith || ownerNeedsTransfer;
 
-  if (!hasOtherWiths && !canManagePeople && !canLeaveWith && !ownerNeedsTransfer) return null;
+  if ((mode === "management" && !hasManagement) || (mode === "relationships" && !hasOtherWiths)) return null;
+  if (mode === "all" && !hasOtherWiths && !hasManagement) return null;
 
   function switchWith(withId) {
     if (!withId || withId === activeWithId) return;
@@ -199,9 +203,9 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
   }
 
   return (
-    <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
-      {canManagePeople && (
-        <div style={{ marginBottom: hasOtherWiths || canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
+    <div style={mode === "management" ? { marginTop: 16, paddingTop: 14, borderTop: `1px solid ${BORDER}` } : { marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+      {showManagement && canManagePeople && (
+        <div style={{ marginBottom: canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
           <button
             type="button"
             onClick={() => {
@@ -263,8 +267,8 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
         </div>
       )}
 
-      {(canLeaveWith || ownerNeedsTransfer) && (
-        <div style={{ marginBottom: hasOtherWiths ? 18 : 0 }}>
+      {showManagement && (canLeaveWith || ownerNeedsTransfer) && (
+        <div>
           {!confirmLeave ? (
             <>
               <button
@@ -298,7 +302,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
         </div>
       )}
 
-      {ownerNeedsTransfer && (
+      {showManagement && ownerNeedsTransfer && (
         <DeleteWithControl
           withId={activeWithId}
           withName={activeWith?.name || "this With"}
@@ -308,7 +312,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange }) {
         />
       )}
 
-      {hasOtherWiths && (
+      {showRelationships && hasOtherWiths && (
         <>
           <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>You’re also With</div>
           <div style={{ display: "grid", gap: 7 }}>
