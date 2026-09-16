@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { brand } from "../brand.jsx";
+import { brand, metricColors } from "../brand.jsx";
+import { Target, Scale, Footprints, Droplet, Utensils, Pencil, SlidersHorizontal } from "lucide-react";
 import { AsteriskMark, StarMark } from "../WithMarks.jsx";
 import CustomTrackerGoalsSection from "../components/CustomTrackerGoalsSection.jsx";
 import NutritionTargetCalculator from "../components/NutritionTargetCalculator.jsx";
@@ -83,14 +84,29 @@ export default function GoalsTab({
     letterSpacing: ".08em",
   };
 
+  const iconLabel = (Icon, label, color = brand.tealDark) => (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+      <span style={{ width: 26, height: 26, borderRadius: 8, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}>
+        <Icon size={14} color={color} strokeWidth={1.9} />
+      </span>
+      <span>{label}</span>
+    </span>
+  );
+
+  const editButton = (onClick) => (
+    <button onClick={onClick} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 800, fontSize: 12, padding: 0, display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+      <Pencil size={13} strokeWidth={1.9} /> Edit
+    </button>
+  );
+
   const targetRows = [
-    user.targets.steps ? ["Steps", user.targets.steps.toLocaleString()] : null,
-    user.targets.water ? ["Water", `${user.targets.water} oz`] : null,
-    user.targets.calories ? ["Calories", user.targets.calories.toLocaleString()] : null,
-    user.targets.protein ? ["Protein", `${user.targets.protein}g`] : null,
-    user.targets.carbs ? ["Carbs", `${user.targets.carbs}g`] : null,
-    user.targets.fat ? ["Fat", `${user.targets.fat}g`] : null,
-    (user.targets.fiberMin || user.targets.fiberMax) ? ["Fiber", `${user.targets.fiberMin || "—"}–${user.targets.fiberMax || "—"}g`] : null,
+    user.targets.steps ? ["Steps", user.targets.steps.toLocaleString(), Footprints, metricColors.steps] : null,
+    user.targets.water ? ["Water", `${user.targets.water} oz`, Droplet, metricColors.water] : null,
+    user.targets.calories ? ["Calories", user.targets.calories.toLocaleString(), Utensils, metricColors.food] : null,
+    user.targets.protein ? ["Protein", `${user.targets.protein}g`, Utensils, metricColors.food] : null,
+    user.targets.carbs ? ["Carbs", `${user.targets.carbs}g`, Utensils, metricColors.food] : null,
+    user.targets.fat ? ["Fat", `${user.targets.fat}g`, Utensils, metricColors.food] : null,
+    (user.targets.fiberMin || user.targets.fiberMax) ? ["Fiber", `${user.targets.fiberMin || "—"}–${user.targets.fiberMax || "—"}g`, Utensils, metricColors.food] : null,
   ].filter(Boolean);
 
   const actualDelta = gi ? gi.latestActual - gi.start : 0;
@@ -125,7 +141,10 @@ export default function GoalsTab({
 
       {showWalkthroughIntro && hasAnything && (
         <section style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER, padding: "1rem 1.05rem", marginBottom: 14 }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>Choose what you’re working toward.</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Target size={17} color={brand.tealDark} strokeWidth={1.9} />
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 21, fontWeight: 600, lineHeight: 1.1 }}>Choose what you’re working toward.</div>
+          </div>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
             Goals are optional. Set the ones that are useful to you, skip the rest, and change them whenever you need to.
           </div>
@@ -135,14 +154,14 @@ export default function GoalsTab({
 
       {!hasAnything && !standardEditingGoals ? (
         <div style={{ ...cardStyle, background: SURFACE_2, borderColor: BORDER }}>
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Your goals</div>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>{iconLabel(Target, "Your goals")}</div>
           <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 7 }}>Choose what you’re working toward.</div>
           <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 16 }}>
             Goals are optional. Put something here in your own words, add a number you want to track, or skip goals entirely. You can change any of it whenever you need to.
           </div>
           {activeCanEdit && (
-            <button onClick={() => { setShowWalkthroughIntro(false); setEditingGoals(true); }} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18 }}>
-              Add a goal
+            <button onClick={() => { setShowWalkthroughIntro(false); setEditingGoals(true); }} style={{ ...bigButton(brand.teal, brand.inkOn), width: "auto", paddingInline: 18, display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <Target size={15} strokeWidth={1.9} /> Add a goal
             </button>
           )}
         </div>
@@ -151,8 +170,8 @@ export default function GoalsTab({
           {hasStatement && (
             <section style={{ ...cardStyle, padding: "1.2rem 1.15rem", borderTop: "3px solid " + brand.teal }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 9 }}>
-                <div style={sectionLabel}>What I’m working toward</div>
-                {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 800, fontSize: 12, padding: 0 }}>Edit</button>}
+                <div style={sectionLabel}>{iconLabel(Target, "What I’m working toward")}</div>
+                {activeCanEdit && editButton(() => setEditingGoals(true))}
               </div>
               <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, fontStyle: "italic", lineHeight: 1.25, color: TEXT }}>
                 {user.goalStatement}
@@ -163,8 +182,8 @@ export default function GoalsTab({
           {hasWeightGoal && (
             <section style={{ ...cardStyle, padding: "1.2rem 1.15rem 1.15rem" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
-                <div style={sectionLabel}>Weight goal</div>
-                {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 800, fontSize: 12, padding: 0 }}>Edit</button>}
+                <div style={sectionLabel}>{iconLabel(Scale, "Weight goal", metricColors.weight)}</div>
+                {activeCanEdit && editButton(() => setEditingGoals(true))}
               </div>
 
               {gi && gi.goal != null ? (
@@ -218,16 +237,20 @@ export default function GoalsTab({
           <section style={{ padding: "0.2rem 1.15rem 0.55rem", marginBottom: "0.35rem" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <div>
-                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, lineHeight: 1.08 }}>What I’m tracking along the way</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 4, lineHeight: 1.45 }}>Daily targets are optional. A blank target is simply something you’re not aiming for right now.</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 9, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}><SlidersHorizontal size={16} color={brand.tealDark} strokeWidth={1.9} /></span>
+                  <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, lineHeight: 1.08 }}>What I’m tracking along the way</div>
+                </div>
+                <div style={{ color: TEXT_MUTED, fontSize: 12, marginTop: 6, lineHeight: 1.45 }}>Daily targets are optional. A blank target is simply something you’re not aiming for right now.</div>
               </div>
-              {activeCanEdit && <button onClick={() => setEditingGoals(true)} style={{ background: "none", border: "none", color: brand.tealDark, fontWeight: 800, fontSize: 12, padding: "4px 0 0", flexShrink: 0 }}>Edit</button>}
+              {activeCanEdit && editButton(() => setEditingGoals(true))}
             </div>
 
             {targetRows.length ? (
               <div style={{ marginTop: 8 }}>
-                {targetRows.map(([label, value], index) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: index === targetRows.length - 1 ? "none" : `1px solid ${BORDER}` }}>
+                {targetRows.map(([label, value, Icon, color], index) => (
+                  <div key={label} style={{ display: "grid", gridTemplateColumns: "28px minmax(0, 1fr) auto", alignItems: "center", gap: 9, padding: "10px 0", borderBottom: index === targetRows.length - 1 ? "none" : `1px solid ${BORDER}` }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 8, background: SURFACE_2, display: "grid", placeItems: "center" }}><Icon size={14} color={color} strokeWidth={1.9} /></span>
                     <span style={{ color: TEXT_MUTED, fontSize: 13 }}>{label}</span>
                     <strong style={{ color: TEXT, fontSize: 14 }}>{value}</strong>
                   </div>
@@ -254,12 +277,15 @@ export default function GoalsTab({
         </>
       ) : (
         <div style={cardStyle}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Choose what matters to you</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <Target size={18} color={brand.tealDark} strokeWidth={1.9} />
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600 }}>Choose what matters to you</div>
+          </div>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
             Everything here is optional. Leave anything blank that isn’t useful to you.
           </div>
 
-          <div style={{ ...sectionLabel, marginBottom: 8 }}>In your own words</div>
+          <div style={{ ...sectionLabel, marginBottom: 8 }}>{iconLabel(Target, "In your own words")}</div>
           <div style={fieldLabel}>What are you working toward?</div>
           <textarea
             maxLength={160}
@@ -270,7 +296,7 @@ export default function GoalsTab({
             style={{ ...inputStyle, minHeight: 88, resize: "vertical", marginBottom: 18, lineHeight: 1.45 }}
           />
 
-          <div style={{ ...sectionLabel, marginBottom: 10 }}>Weight</div>
+          <div style={{ ...sectionLabel, marginBottom: 10 }}>{iconLabel(Scale, "Weight", metricColors.weight)}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
             <div><div style={fieldLabel}>Goal weight (lb)</div><input type="number" step="0.1" inputMode="decimal" placeholder="Optional" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} style={inputStyle} /></div>
             <div>
@@ -294,7 +320,7 @@ export default function GoalsTab({
             styles={styles}
           />
 
-          <div style={{ ...sectionLabel, marginBottom: 5 }}>Daily targets</div>
+          <div style={{ ...sectionLabel, marginBottom: 5 }}>{iconLabel(SlidersHorizontal, "Daily targets")}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Set only the numbers you actually want to aim for.</div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -302,7 +328,7 @@ export default function GoalsTab({
             <div><div style={fieldLabel}>Water (oz)</div><input type="number" step="0.1" inputMode="decimal" placeholder="Optional" value={tWater} onChange={(e) => setTWater(e.target.value)} style={inputStyle} /></div>
           </div>
 
-          <div style={{ ...sectionLabel, margin: "16px 0 5px" }}>Nutrition</div>
+          <div style={{ ...sectionLabel, margin: "16px 0 5px" }}>{iconLabel(Utensils, "Nutrition", metricColors.food)}</div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginBottom: 12 }}>Nutrition targets are optional too.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
             <div><div style={fieldLabel}>Calories</div><input type="number" placeholder="Optional" value={tCal} onChange={(e) => setTCal(e.target.value)} style={inputStyle} /></div>
