@@ -1,4 +1,5 @@
 const ACTIVE_WITH_STORAGE_KEY = "with-active-with-id";
+const DEFAULT_WITH_STORAGE_KEY = "with-default-with-id";
 
 export function normalizeWithMemberships(memberships = [], households = []) {
   const householdById = Object.fromEntries((households || []).map((household) => [household.id, household]));
@@ -24,9 +25,24 @@ export function chooseActiveWithId(withs = [], preferredId = null) {
   return withs[0].id;
 }
 
+export function readStoredDefaultWithId() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(DEFAULT_WITH_STORAGE_KEY) || null;
+}
+
+export function storeDefaultWithId(withId) {
+  if (typeof window === "undefined") return;
+  if (withId) window.localStorage.setItem(DEFAULT_WITH_STORAGE_KEY, withId);
+  else window.localStorage.removeItem(DEFAULT_WITH_STORAGE_KEY);
+}
+
+export function clearStoredDefaultWithId() {
+  storeDefaultWithId(null);
+}
+
 export function readStoredActiveWithId() {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACTIVE_WITH_STORAGE_KEY) || null;
+  return window.localStorage.getItem(ACTIVE_WITH_STORAGE_KEY) || readStoredDefaultWithId();
 }
 
 export function storeActiveWithId(withId) {

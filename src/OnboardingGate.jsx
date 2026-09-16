@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { UsersRound, Plus, UserCheck, Clock3, CircleAlert } from "lucide-react";
 import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import EditorialLine from "./components/EditorialLine.jsx";
 import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
 const SURFACE = brand.surface;
@@ -212,9 +214,15 @@ function OnboardingScreen({ onComplete }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginBottom: 20 }}>
           {WITHMARK_OPTIONS.map(({ id, name }) => <button key={id} type="button" aria-label={name} title={name} onClick={() => setProfileWithmark(id)} style={{ minHeight: 42, display: "grid", placeItems: "center", borderRadius: 10, background: profileWithmark === id ? profileColor : SURFACE, color: profileWithmark === id ? "#fff" : TEXT, border: "1px solid " + (profileWithmark === id ? profileColor : BORDER) }}><WithMark id={id} size={20} /></button>)}
         </div>
-        <div style={{ background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: profileColor, color: "#fff", display: "grid", placeItems: "center" }}><WithMark id={profileWithmark} size={23} /></div>
-          <div><div style={{ fontWeight: 700 }}>{profileName || "You"}</div><div style={{ color: TEXT_MUTED, fontSize: 12 }}>{deviceTimeZone.replaceAll("_", " ")}</div></div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>{profileName || "You"}</div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><Clock3 size={12} strokeWidth={1.9} /> {deviceTimeZone.replaceAll("_", " ")}</div>
+          </div>
+        </div>
+        <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.5, marginBottom: 16 }}>
+          Want a little help remembering? Gentle logging reminders are off unless you turn them on later in Profile. No pressure.
         </div>
         {error && <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 12 }}>{error}</div>}
         <button type="button" disabled={busy} onClick={finishPersonalization} style={{ ...primaryButton, opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Continue to Today"}</button>
@@ -235,11 +243,14 @@ function OnboardingScreen({ onComplete }) {
             : "With is a private place to track things like food, movement, water, weight and everyday intentions alongside people you trust."}
         </div>
         {!existingProfile && (
-          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
-            Everyone has their own goals. You’re simply doing life together.
-          </div>
+          <EditorialLine
+            placement="onboarding"
+            fallback="Everyone has their own goals. You’re simply doing life together."
+            style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}
+            attributionStyle={{ fontSize: 11 }}
+          />
         )}
-        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 12 }}>Start a new With</button>
+        <button type="button" onClick={() => setMode("create")} style={{ ...primaryButton, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><UsersRound size={17} strokeWidth={1.9} /> Start a new With</button>
         <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, textAlign: "center" }}>
           Have an invitation? Open the invitation link from your email. Invitations are private and tied to the email address they were sent to.
         </div>
@@ -250,7 +261,10 @@ function OnboardingScreen({ onComplete }) {
   return (
     <ScreenShell>
       <BrandIntro eyebrow={existingProfile ? "Your profile stays yours. This just gives it a new place to belong." : "Start with yourself. Add your people when you’re ready."} />
-      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05, marginBottom: 8 }}>Who are you with?</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
+        <span style={{ width: 34, height: 34, borderRadius: 10, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}><UsersRound size={17} color={brand.tealDark} strokeWidth={1.9} /></span>
+        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.05 }}>Who are you with?</div>
+      </div>
       <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>
         A With is your private space with the people you choose. Give it a name{existingProfile ? ". Your existing profile and health history come with you." : ", then tell us what to call you."}
       </div>
@@ -269,10 +283,13 @@ function OnboardingScreen({ onComplete }) {
         />
 
         {existingProfile ? (
-          <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 13, marginBottom: 16 }}>
-            <div style={{ ...fieldLabel, marginBottom: 4 }}>Your profile</div>
-            <div style={{ color: TEXT, fontSize: 14, fontWeight: 700 }}>{existingProfile.name || "Your existing profile"}</div>
-            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>Your goals and health history stay exactly as they are.</div>
+          <div style={{ background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 13, marginBottom: 16, display: "grid", gridTemplateColumns: "32px minmax(0, 1fr)", gap: 10, alignItems: "start" }}>
+            <span style={{ width: 32, height: 32, borderRadius: 9, background: SURFACE, display: "grid", placeItems: "center" }}><UserCheck size={16} color={brand.tealDark} strokeWidth={1.9} /></span>
+            <div>
+              <div style={{ ...fieldLabel, marginBottom: 4 }}>Your profile</div>
+              <div style={{ color: TEXT, fontSize: 14, fontWeight: 700 }}>{existingProfile.name || "Your existing profile"}</div>
+              <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>Your goals and health history stay exactly as they are.</div>
+            </div>
           </div>
         ) : (
           <>
@@ -298,8 +315,8 @@ function OnboardingScreen({ onComplete }) {
           </div>
         )}
 
-        <button type="submit" disabled={busy} style={{ ...primaryButton, opacity: busy ? 0.65 : 1, marginBottom: 8 }}>
-          {busy ? "Setting things up…" : "Create my With"}
+        <button type="submit" disabled={busy} style={{ ...primaryButton, opacity: busy ? 0.65 : 1, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          {!busy && <Plus size={17} strokeWidth={2} />}{busy ? "Setting things up…" : "Create my With"}
         </button>
         <button type="button" onClick={() => { setMode(null); setError(""); }} disabled={busy} style={{ background: "none", border: "none", color: TEXT_MUTED, width: "100%", padding: 9, fontSize: 13 }}>
           Back
@@ -407,7 +424,10 @@ export default function OnboardingGate({ children }) {
     return (
       <ScreenShell>
         <BrandIntro eyebrow="We’re in this together." />
-        <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600, marginBottom: 10 }}>We couldn’t load your With.</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: SURFACE_2, display: "grid", placeItems: "center", flexShrink: 0 }}><CircleAlert size={17} color={WARN} strokeWidth={1.9} /></span>
+          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 25, fontWeight: 600 }}>We couldn’t load your With.</div>
+        </div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>Nothing has been changed. Try signing out and back in.</div>
         <div role="alert" style={{ color: WARN, fontSize: 13, marginBottom: 14 }}>{checkError}</div>
         <button type="button" onClick={() => supabase.auth.signOut()} style={secondaryButton}>Sign out</button>

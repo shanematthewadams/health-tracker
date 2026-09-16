@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import { clearStoredActiveWithId } from "../withMemberships.js";
@@ -43,18 +44,39 @@ export default function DeleteWithControl({ withId, withName, isOwner, styles, h
   }
 
   return (
-    <div style={{ marginBottom: hasOtherWiths ? 18 : 0 }}>
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BORDER}`, marginBottom: hasOtherWiths ? 0 : 0 }}>
       {!confirming ? (
         <button
           type="button"
           onClick={() => { setConfirming(true); setTypedName(""); setError(""); }}
-          style={{ background: "none", border: "none", color: brand.warn, padding: 0, fontSize: 11, fontWeight: 700 }}
+          style={{
+            width: "100%",
+            background: "none",
+            border: "none",
+            color: brand.warn,
+            padding: "8px 0",
+            fontSize: 12,
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            textAlign: "left",
+          }}
         >
-          Delete this With
+          <span style={{ width: 30, height: 30, borderRadius: 9, background: "rgba(202,64,55,.08)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <Trash2 size={15} strokeWidth={2} />
+          </span>
+          <span>
+            <span style={{ display: "block" }}>Delete this With</span>
+            <span style={{ display: "block", color: TEXT_MUTED, fontSize: 10, fontWeight: 600, marginTop: 2 }}>Permanently removes this With for everyone</span>
+          </span>
         </button>
       ) : (
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, padding: 11 }}>
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Delete {withName}?</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Trash2 size={16} color={brand.warn} strokeWidth={2} />
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Delete {withName}?</div>
+          </div>
           <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>
             This removes the With for everyone in it. Everyone keeps their account, profile, goals, and health history. This can’t be undone.
           </div>
