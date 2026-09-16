@@ -319,7 +319,7 @@ export function DailyReflectionCard({ today, timeZone, styles }) {
     setSaving(false);
   }
 
-  if (!profileId || existing === undefined || !enabled) return null;
+  if (!profileId || existing === undefined || !showPrompt) return null;
 
   return (
     <>

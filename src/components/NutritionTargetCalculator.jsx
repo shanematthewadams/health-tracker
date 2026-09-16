@@ -126,7 +126,14 @@ export default function NutritionTargetCalculator({
   }
 
   const goalWeightNumber = Number(goalWeight);
+  const currentWeightNumber = Number(currentWeightInput);
   const hasGoalWeight = Number.isFinite(goalWeightNumber) && goalWeightNumber > 0;
+  const needsGoalDate = hasGoalWeight
+    && Number.isFinite(currentWeightNumber)
+    && currentWeightNumber > 0
+    && Math.abs(currentWeightNumber - goalWeightNumber) >= 0.05
+    && !goalDate;
+  const canCalculate = hasGoalWeight && !needsGoalDate;
 
   if (!open) {
     return (
@@ -220,10 +227,10 @@ export default function NutritionTargetCalculator({
       </div>
 
       {!hasGoalWeight && <div style={{ color: WARN, fontSize: 11, lineHeight: 1.45, marginBottom: 10 }}>Add a goal weight above before calculating nutrition targets.</div>}
-      {hasGoalWeight && Number(currentWeightInput) !== goalWeightNumber && !goalDate && <div style={{ color: WARN, fontSize: 11, lineHeight: 1.45, marginBottom: 10 }}>Add a goal date above so With can calculate the pace required.</div>}
+      {needsGoalDate && <div style={{ color: WARN, fontSize: 11, lineHeight: 1.45, marginBottom: 10 }}>Add a goal date above so With can calculate the pace required.</div>}
       {error && <div role="alert" style={{ color: WARN, fontSize: 11.5, lineHeight: 1.45, marginBottom: 10 }}>{error}</div>}
 
-      <button type="button" onClick={calculate} disabled={!hasGoalWeight} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: hasGoalWeight ? 1 : .55, marginBottom: result ? 12 : 0 }}>Calculate my starting point</button>
+      <button type="button" onClick={calculate} disabled={!canCalculate} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: canCalculate ? 1 : .55, marginBottom: result ? 12 : 0 }}>Calculate my starting point</button>
 
       {result && (
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 13 }}>

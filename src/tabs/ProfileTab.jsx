@@ -613,10 +613,6 @@ export default function ProfileTab({
             <DataExportPanel styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, bigButton }} />
           </div>
 
-          <button onClick={signOut} style={{ width: "100%", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 11, color: TEXT, padding: "11px 13px", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-            <LogOut style={{ width: 15, height: 15 }} strokeWidth={1.9} /> Sign out
-          </button>
-
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px 14px", margin: "18px 0 16px" }}>
             <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, fontSize: 11, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}><ShieldCheck size={13} strokeWidth={1.9} /> Privacy policy</a>
             <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 5 }}>
@@ -640,6 +636,12 @@ export default function ProfileTab({
           </details>
         </section>
       )}
+
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+        <button onClick={signOut} style={{ width: "100%", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 11, color: TEXT, padding: "11px 13px", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+          <LogOut style={{ width: 15, height: 15 }} strokeWidth={1.9} /> Sign out
+        </button>
+      </div>
 
       {modal === "invite" && (
         <ModalShell title="Invite someone" icon={UserPlus}>

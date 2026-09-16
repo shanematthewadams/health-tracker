@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './global.css';
 import Tracker from './Tracker.jsx';
 import OnboardingGate from './OnboardingGate.jsx';
 import InvitationGate from './InvitationGate.jsx';
