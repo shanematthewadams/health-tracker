@@ -4,7 +4,7 @@ import EditorialLine from "./components/EditorialLine.jsx";
 export const brand = {
   teal: "#1F5E57",
   tealDark: "#174E49",
-  logoPrimary: "#354E3E",
+  logoPrimary: "#1F5E57",
   logoDark: "#232321",
   logoLight: "#F9F7F5",
   sage: "#B7C8BF",
