@@ -20,15 +20,19 @@ test("daily reflection appears only for the signed-in person's Today experience 
   assert.doesNotMatch(reflectionSource, /rating_low_label|rating_high_label/);
 });
 
-test("daily reflection supports only yesterday catch-up and exposes history from Today and Preferences", async () => {
+test("daily reflection supports only yesterday catch-up and has its own Preferences entry", async () => {
   const reflectionSource = await readSource("src/components/DailyReflection.jsx");
+  const profileSource = await readSource("src/tabs/ProfileTab.jsx");
   const remindersSource = await readSource("src/components/LoggingRemindersPanel.jsx");
 
   assert.match(reflectionSource, /shiftDate\(today, -1\)/);
   assert.match(reflectionSource, /Add yesterday’s reflection/);
   assert.match(reflectionSource, /Past reflections/);
   assert.match(reflectionSource, /View past reflections/);
-  assert.match(remindersSource, /DailyReflectionPreferencePanel/);
+  assert.match(profileSource, /title="Daily Reflection"/);
+  assert.match(profileSource, /modal === "daily-reflection"/);
+  assert.match(profileSource, /DailyReflectionPreferencePanel/);
+  assert.doesNotMatch(remindersSource, /DailyReflectionPreferencePanel/);
   assert.match(reflectionSource, /daily_reflection_enabled/);
   assert.match(reflectionSource, /with-daily-reflection-settings-changed/);
 });
