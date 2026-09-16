@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CircleAlert, MailWarning, UserPlus, ShieldCheck, LogOut } from "lucide-react";
 import { supabase } from "./supabase";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
 import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
@@ -61,6 +62,14 @@ function Shell({ children }) {
         {children}
       </div>
     </div>
+  );
+}
+
+function StateIcon({ icon: Icon, tone = brand.tealDark }) {
+  return (
+    <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: 11, background: SURFACE_2, display: "grid", placeItems: "center", marginBottom: 11 }}>
+      <Icon size={19} color={tone} strokeWidth={1.9} />
+    </span>
   );
 }
 
@@ -228,6 +237,7 @@ export default function InvitationGate({ children }) {
   if (inviteError && !inviteInfo) {
     return (
       <Shell>
+        <StateIcon icon={CircleAlert} tone={WARN} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>We couldn’t use this invitation.</div>
         <div role="alert" style={{ color: WARN, fontSize: 14, lineHeight: 1.5, marginBottom: 18 }}>{inviteError}</div>
         <button type="button" onClick={abandonInvite} style={secondaryButton}>Continue to With</button>
@@ -242,9 +252,10 @@ export default function InvitationGate({ children }) {
   if (wrongAccount) {
     return (
       <Shell>
+        <StateIcon icon={MailWarning} tone={WARN} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>This invitation is for another email.</div>
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 18 }}>It was sent to <strong style={{ color: TEXT }}>{inviteInfo.email}</strong>, but you’re signed in as <strong style={{ color: TEXT }}>{session.user.email}</strong>.</div>
-        <button type="button" onClick={() => supabase.auth.signOut()} style={secondaryButton}>Sign out and use the invited account</button>
+        <button type="button" onClick={() => supabase.auth.signOut()} style={{ ...secondaryButton, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><LogOut size={16} strokeWidth={1.9} /> Sign out and use the invited account</button>
         <button type="button" onClick={abandonInvite} style={textButton}>Not now. Continue to With.</button>
       </Shell>
     );
@@ -252,13 +263,21 @@ export default function InvitationGate({ children }) {
 
   return (
     <Shell>
-      <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 18 }}>{inviteInfo?.inviterName ? `${inviteInfo.inviterName} invited you.` : "You’ve been invited."}</div>
+      <StateIcon icon={UserPlus} />
+      <div style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 10 }}>{inviteInfo?.inviterName ? `${inviteInfo.inviterName} invited you.` : "You’ve been invited."}</div>
       <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 30, fontWeight: 600, lineHeight: 1.08, marginBottom: 10 }}>Join {inviteInfo?.householdName || "this With"}.</div>
-      <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 20 }}>
+      <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: existingProfile ? 12 : 20 }}>
         {existingProfile
           ? "Your profile and health history stay exactly as they are. You only log once. This simply adds another group of people you’re doing life With."
           : "Your health stays yours. Create your profile once, then you’ll be part of this With."}
       </div>
+
+      {existingProfile && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 11px", background: SURFACE_2, border: `1px solid ${BORDER}`, borderRadius: 10, color: TEXT_MUTED, fontSize: 12, lineHeight: 1.4, marginBottom: 18 }}>
+          <ShieldCheck size={16} color={brand.tealDark} strokeWidth={1.9} style={{ flexShrink: 0 }} />
+          <span>Your personal goals and health history stay yours.</span>
+        </div>
+      )}
 
       {!existingProfile && (
         <>
@@ -276,7 +295,7 @@ export default function InvitationGate({ children }) {
       )}
 
       {inviteError && <div role="alert" style={{ color: WARN, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>{inviteError}</div>}
-      <button type="button" disabled={busy || (!existingProfile && !profileName.trim())} onClick={acceptInvite} style={{ ...primaryButton, opacity: busy || (!existingProfile && !profileName.trim()) ? .6 : 1 }}>{busy ? "Joining…" : `Join ${inviteInfo?.householdName || "this With"}`}</button>
+      <button type="button" disabled={busy || (!existingProfile && !profileName.trim())} onClick={acceptInvite} style={{ ...primaryButton, opacity: busy || (!existingProfile && !profileName.trim()) ? .6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>{!busy && <UserPlus size={16} strokeWidth={1.9} />}{busy ? "Joining…" : `Join ${inviteInfo?.householdName || "this With"}`}</button>
       <button type="button" disabled={busy} onClick={abandonInvite} style={textButton}>Not now. Continue to With.</button>
     </Shell>
   );
