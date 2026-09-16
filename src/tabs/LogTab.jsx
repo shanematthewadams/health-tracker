@@ -5,6 +5,7 @@ import FastingHistorySection from "../components/FastingHistorySection.jsx";
 import FastingTodaySection from "../components/FastingTodaySection.jsx";
 import { brand } from "../brand.jsx";
 import { supabase } from "../supabase.js";
+import { savedFoodCorrectionPayload } from "../savedFoodCorrections.js";
 import { useOwnTrackerPreferences } from "../useOwnTrackerPreferences.js";
 
 export default function LogTab(props) {
@@ -62,6 +63,34 @@ export default function LogTab(props) {
     if (!hasCustomTrackers && logMode === "custom") setLogMode("basics");
   }, [hasCustomTrackers, logMode]);
 
+  async function addFoodWithSavedCorrection() {
+    const correction = savedFoodCorrectionPayload({
+      selectedSavedFoodId: props.selectedSavedFoodId,
+      quantity: props.foodQuantity,
+      savedFoods: props.savedFoods,
+      calories: props.foodCals,
+      protein: props.foodProtein,
+      carbs: props.foodCarbs,
+      fat: props.foodFat,
+      fiber: props.foodFiber,
+    });
+
+    if (correction) {
+      const { error } = await supabase
+        .from("saved_foods")
+        .update(correction.values)
+        .eq("id", correction.id);
+
+      if (error) {
+        console.error("Could not update corrected saved food", error);
+        window.alert("We couldn’t update that saved food, so nothing was logged. Try again.");
+        return;
+      }
+    }
+
+    await props.addFood?.();
+  }
+
   const baseProps = {
     ...props,
     // Fasting now has one intentional Log entry below. Suppress the older
@@ -69,6 +98,7 @@ export default function LogTab(props) {
     activeFasts: {},
     fastPromptDismissedToday: true,
     fastEditorOpen: false,
+    addFood: addFoodWithSavedCorrection,
   };
 
   const modeButton = (active) => ({
