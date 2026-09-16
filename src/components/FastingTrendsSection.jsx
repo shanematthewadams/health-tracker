@@ -75,7 +75,7 @@ function alphaHex(hex, alpha) {
 }
 
 export default function FastingTrendsSection({ profileId, today, range, styles }) {
-  const { BORDER, TEXT, TEXT_MUTED, cardStyle } = styles;
+  const { BORDER, TEXT, TEXT_MUTED, SURFACE_2, cardStyle } = styles;
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -177,11 +177,11 @@ export default function FastingTrendsSection({ profileId, today, range, styles }
   return (
     <section style={{ ...cardStyle, marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <span aria-hidden="true" style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "0 0 18px" }}>
-            <Timer style={{ width: 15, height: 15, color: metricColors.steps, display: "block" }} strokeWidth={2} />
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+          <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 8, background: SURFACE_2, display: "grid", placeItems: "center", flex: "0 0 26px" }}>
+            <Timer size={14} color={metricColors.steps} strokeWidth={1.9} />
           </span>
-          <div style={{ ...styles.headingStyle, fontSize: 18, lineHeight: "18px", marginBottom: 0 }}>Fasting</div>
+          <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 11, lineHeight: 1.2, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em" }}>Fasting</div>
         </div>
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
           <button type="button" onClick={() => setView("duration")} style={toggleStyle(view === "duration")}>Duration</button>
