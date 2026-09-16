@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Crown, LogOut, Plus, ShieldCheck, UserMinus, Users } from "lucide-react";
 import { supabase } from "../supabase";
 import { brand } from "../brand.jsx";
 import DeleteWithControl from "./DeleteWithControl.jsx";
@@ -57,6 +57,7 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
       if (cancelled) return;
       setWiths(nextWiths);
       onMultipleWithsChange?.(nextWiths.length > 1);
+
       const stored = readStoredActiveWithId();
       const validStored = nextWiths.some((withItem) => withItem.id === stored) ? stored : nextWiths[0]?.id || null;
       setActiveWithId(validStored);
@@ -96,18 +97,9 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
     return () => { cancelled = true; };
   }, [onMultipleWithsChange]);
 
-  const otherWiths = useMemo(
-    () => withs.filter((withItem) => withItem.id !== activeWithId),
-    [withs, activeWithId]
-  );
-  const activeWith = useMemo(
-    () => withs.find((withItem) => withItem.id === activeWithId) || null,
-    [withs, activeWithId]
-  );
-  const removableMembers = useMemo(
-    () => members.filter((member) => member.userId !== currentUserId && member.role !== "owner"),
-    [members, currentUserId]
-  );
+  const otherWiths = useMemo(() => withs.filter((withItem) => withItem.id !== activeWithId), [withs, activeWithId]);
+  const activeWith = useMemo(() => withs.find((withItem) => withItem.id === activeWithId) || null, [withs, activeWithId]);
+  const removableMembers = useMemo(() => members.filter((member) => member.userId !== currentUserId && member.role !== "owner"), [members, currentUserId]);
   const canManagePeople = activeWith?.role === "owner" && removableMembers.length > 0;
   const canLeaveWith = activeWith?.role === "member";
   const ownerNeedsTransfer = activeWith?.role === "owner";
@@ -202,10 +194,34 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
     window.location.reload();
   }
 
+  const actionRow = {
+    width: "100%",
+    border: "none",
+    background: "transparent",
+    padding: "9px 0",
+    display: "grid",
+    gridTemplateColumns: "30px minmax(0, 1fr) auto",
+    alignItems: "center",
+    gap: 9,
+    textAlign: "left",
+    color: TEXT,
+  };
+
+  const iconBox = (tone = "neutral") => ({
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+    background: tone === "warn" ? "rgba(202,64,55,.08)" : tone === "teal" ? "rgba(31,107,98,.08)" : SURFACE_2,
+    color: tone === "warn" ? brand.warn : tone === "teal" ? brand.tealDark : TEXT_MUTED,
+  });
+
   const managementContent = showManagement && hasManagement ? (
-    <div style={{ marginTop: -16, padding: "30px 16px 16px", background: brand.surface, border: `1px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 16px 16px", position: "relative", zIndex: 1 }}>
+    <div style={{ marginTop: -16, padding: "28px 16px 16px", background: brand.surface, border: `1px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 16px 16px", position: "relative", zIndex: 1 }}>
       {canManagePeople && (
-        <div style={{ marginBottom: canLeaveWith || ownerNeedsTransfer ? 18 : 0 }}>
+        <div>
           <button
             type="button"
             onClick={() => {
@@ -215,21 +231,24 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
               setRemoveError("");
               setTransferError("");
             }}
-            style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontSize: 11, fontWeight: 700 }}
+            style={actionRow}
           >
-            {managingPeople ? "Close people management" : "Manage people in this With"}
+            <span style={iconBox("teal")}><Users size={15} strokeWidth={2} /></span>
+            <span>
+              <span style={{ display: "block", fontSize: 12, fontWeight: 800 }}>{managingPeople ? "Close people management" : "Manage people"}</span>
+              <span style={{ display: "block", color: TEXT_MUTED, fontSize: 10, fontWeight: 600, marginTop: 2 }}>Members and ownership</span>
+            </span>
+            <ChevronDown size={15} color={TEXT_MUTED} style={{ transform: managingPeople ? "rotate(180deg)" : "none", transition: "transform .14s ease" }} />
           </button>
 
           {managingPeople && (
-            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+            <div style={{ display: "grid", gap: 8, margin: "4px 0 10px 39px" }}>
               {removableMembers.map((member) => (
                 <div key={member.userId} style={{ border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, padding: "10px 11px" }}>
                   {confirmTransfer?.userId === member.userId ? (
                     <div>
-                      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Make {member.name} the owner?</div>
-                      <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
-                        {member.name} will become the owner of {activeWith?.name || "this With"}. You’ll stay in the With as a member and can leave afterward if you want.
-                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}><Crown size={15} color={brand.tealDark} /><div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Make {member.name} the owner?</div></div>
+                      <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>{member.name} will become the owner of {activeWith?.name || "this With"}. You’ll stay in the With as a member and can leave afterward if you want.</div>
                       {transferError && <div role="alert" style={{ color: brand.warn, fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>{transferError}</div>}
                       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                         <button type="button" disabled={transferBusy} onClick={() => { setConfirmTransfer(null); setTransferError(""); }} style={{ flex: 1, minHeight: 40, borderRadius: 9, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT, fontWeight: 700 }}>Cancel</button>
@@ -238,10 +257,8 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
                     </div>
                   ) : confirmMember?.userId === member.userId ? (
                     <div>
-                      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Remove {member.name}?</div>
-                      <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
-                        They’ll keep their account, profile, goals, and health history. They just won’t be part of {activeWith?.name || "this With"} anymore.
-                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}><UserMinus size={15} color={brand.warn} /><div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Remove {member.name}?</div></div>
+                      <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>They’ll keep their account, profile, goals, and health history. They just won’t be part of {activeWith?.name || "this With"} anymore.</div>
                       {removeError && <div role="alert" style={{ color: brand.warn, fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>{removeError}</div>}
                       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                         <button type="button" disabled={removeBusy} onClick={() => { setConfirmMember(null); setRemoveError(""); }} style={{ flex: 1, minHeight: 40, borderRadius: 9, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT, fontWeight: 700 }}>Cancel</button>
@@ -254,9 +271,9 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
                         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 17, fontWeight: 600, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
                         <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 3 }}>Member of this With</div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                        <button type="button" onClick={() => { setConfirmTransfer(member); setConfirmMember(null); setTransferError(""); }} style={{ background: "none", border: "none", color: brand.tealDark, padding: "6px 0", fontSize: 11, fontWeight: 800 }}>Make owner</button>
-                        <button type="button" onClick={() => { setConfirmMember(member); setConfirmTransfer(null); setRemoveError(""); }} style={{ background: "none", border: "none", color: brand.warn, padding: "6px 0", fontSize: 11, fontWeight: 800 }}>Remove</button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                        <button type="button" onClick={() => { setConfirmTransfer(member); setConfirmMember(null); setTransferError(""); }} style={{ background: "none", border: "none", color: brand.tealDark, padding: "6px 0", fontSize: 11, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 4 }}><Crown size={12} /> Make owner</button>
+                        <button type="button" onClick={() => { setConfirmMember(member); setConfirmTransfer(null); setRemoveError(""); }} style={{ background: "none", border: "none", color: brand.warn, padding: "6px 0", fontSize: 11, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 4 }}><UserMinus size={12} /> Remove</button>
                       </div>
                     </div>
                   )}
@@ -268,30 +285,26 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
       )}
 
       {(canLeaveWith || ownerNeedsTransfer) && (
-        <div>
+        <div style={{ borderTop: canManagePeople ? `1px solid ${BORDER}` : "none", marginTop: canManagePeople ? 5 : 0, paddingTop: canManagePeople ? 5 : 0 }}>
           {!confirmLeave ? (
-            <>
-              <button
-                type="button"
-                disabled={ownerNeedsTransfer}
-                onClick={() => { setConfirmLeave(true); setLeaveError(""); }}
-                style={{ background: "none", border: "none", color: ownerNeedsTransfer ? TEXT_MUTED : brand.warn, padding: 0, fontSize: 11, fontWeight: 700, opacity: ownerNeedsTransfer ? .7 : 1 }}
-              >
-                Leave this With
-              </button>
-              {ownerNeedsTransfer && (
-                <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>You own this With. Transfer ownership before you leave.</div>
-              )}
-            </>
+            <button
+              type="button"
+              disabled={ownerNeedsTransfer}
+              onClick={() => { setConfirmLeave(true); setLeaveError(""); }}
+              style={{ ...actionRow, opacity: ownerNeedsTransfer ? .72 : 1 }}
+            >
+              <span style={iconBox(ownerNeedsTransfer ? "neutral" : "warn")}>{ownerNeedsTransfer ? <ShieldCheck size={15} strokeWidth={2} /> : <LogOut size={15} strokeWidth={2} />}</span>
+              <span>
+                <span style={{ display: "block", fontSize: 12, fontWeight: 800, color: ownerNeedsTransfer ? TEXT_MUTED : brand.warn }}>Leave this With</span>
+                <span style={{ display: "block", color: TEXT_MUTED, fontSize: 10, fontWeight: 600, marginTop: 2 }}>{ownerNeedsTransfer ? "Transfer ownership before leaving" : "Your account and health history stay yours"}</span>
+              </span>
+              {!ownerNeedsTransfer && <ChevronRight size={15} color={TEXT_MUTED} />}
+            </button>
           ) : (
-            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, padding: "11px" }}>
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Leave {activeWith?.name || "this With"}?</div>
-              <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>
-                Your account, profile, goals, and health history stay yours. You just won’t be part of this With anymore.
-              </div>
-              {withs.length === 1 && (
-                <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>This is your only With. You can start or join another one afterward without losing your personal data.</div>
-              )}
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, padding: 11, marginTop: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}><LogOut size={15} color={brand.warn} /><div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600, lineHeight: 1.15 }}>Leave {activeWith?.name || "this With"}?</div></div>
+              <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>Your account, profile, goals, and health history stay yours. You just won’t be part of this With anymore.</div>
+              {withs.length === 1 && <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>This is your only With. You can start or join another one afterward without losing your personal data.</div>}
               {leaveError && <div role="alert" style={{ color: brand.warn, fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>{leaveError}</div>}
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button type="button" disabled={leaveBusy} onClick={() => { setConfirmLeave(false); setLeaveError(""); }} style={{ flex: 1, minHeight: 40, borderRadius: 9, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT, fontWeight: 700 }}>Cancel</button>
@@ -323,57 +336,22 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
             key={withItem.id}
             type="button"
             onClick={() => switchWith(withItem.id)}
-            style={{
-              width: "100%",
-              border: `1px solid ${BORDER}`,
-              borderRadius: 11,
-              background: SURFACE_2,
-              color: TEXT,
-              padding: "10px 11px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              textAlign: "left",
-            }}
+            style={{ width: "100%", border: `1px solid ${BORDER}`, borderRadius: 11, background: SURFACE_2, color: TEXT, padding: "10px 11px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left" }}
           >
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontFamily: "'Newsreader', Georgia, serif", fontSize: 17, fontWeight: 600, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{withItem.name}</span>
               <span style={{ display: "block", color: TEXT_MUTED, fontSize: 11, marginTop: 3 }}>{withItem.role === "owner" ? "You own this With" : "Switch to this With"}</span>
             </span>
-            <span style={{ color: brand.tealDark, fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-              Switch <ChevronRight size={14} strokeWidth={2} />
-            </span>
+            <span style={{ color: brand.tealDark, fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>Switch <ChevronRight size={14} strokeWidth={2} /></span>
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={startAnotherWith}
-        style={{
-          background: "none",
-          border: "none",
-          color: TEXT_MUTED,
-          padding: "10px 0 0",
-          fontSize: 11,
-          fontWeight: 700,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        <Plus size={12} strokeWidth={2} /> Add another With
-      </button>
+      <button type="button" onClick={startAnotherWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: "10px 0 0", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><Plus size={12} strokeWidth={2} /> Add another With</button>
 
       <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
         <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Default With</div>
         <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>The With that opens when you sign in.</div>
-        <select
-          value={defaultWithId || ""}
-          onChange={(event) => setDefaultWith(event.target.value)}
-          aria-label="Default With"
-          style={{ width: "100%", minHeight: 42, border: `1px solid ${BORDER}`, borderRadius: 10, background: SURFACE_2, color: TEXT, padding: "9px 11px", font: "inherit", fontSize: 13 }}
-        >
+        <select value={defaultWithId || ""} onChange={(event) => setDefaultWith(event.target.value)} aria-label="Default With" style={{ width: "100%", minHeight: 42, border: `1px solid ${BORDER}`, borderRadius: 10, background: SURFACE_2, color: TEXT, padding: "9px 11px", font: "inherit", fontSize: 13 }}>
           <option value="" disabled>Choose a default With</option>
           {withs.map((withItem) => <option key={withItem.id} value={withItem.id}>{withItem.name}</option>)}
         </select>
@@ -381,10 +359,5 @@ export default function ProfileWithsPanel({ styles, onMultipleWithsChange, mode 
     </div>
   ) : null;
 
-  return (
-    <>
-      {managementContent}
-      {relationshipContent}
-    </>
-  );
+  return <>{managementContent}{relationshipContent}</>;
 }
