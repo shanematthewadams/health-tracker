@@ -66,7 +66,7 @@ function formatMetricValue(metric, value) {
 }
 
 export default function CustomTrendsSection({ profileId, profileName, isOwn, today, range, styles }) {
-  const { BORDER, TEXT, TEXT_MUTED, cardStyle, headingStyle } = styles;
+  const { BORDER, TEXT, TEXT_MUTED, SURFACE_2, cardStyle } = styles;
   const [metrics, setMetrics] = useState([]);
   const [entries, setEntries] = useState([]);
   const [selectedMetricId, setSelectedMetricId] = useState("");
@@ -188,11 +188,11 @@ export default function CustomTrendsSection({ profileId, profileName, isOwn, tod
 
   return (
     <section style={{ ...cardStyle, marginBottom: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-        <span aria-hidden="true" style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "0 0 18px" }}>
-          <SelectedIcon style={{ width: 15, height: 15, color: brand.teal, display: "block" }} strokeWidth={2} />
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+        <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 8, background: SURFACE_2, display: "grid", placeItems: "center", flex: "0 0 26px" }}>
+          <SelectedIcon size={14} color={brand.teal} strokeWidth={1.9} />
         </span>
-        <div style={{ ...headingStyle, fontSize: 18, lineHeight: "18px", marginBottom: 0 }}>{isOwn ? "Your trackers" : `${profileName}'s trackers`}</div>
+        <div style={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontSize: 11, lineHeight: 1.2, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em" }}>{isOwn ? "Your trackers" : `${profileName}'s trackers`}</div>
       </div>
 
       {error ? <div style={{ color: TEXT_MUTED, fontSize: 12, padding: "10px 0 2px" }}>{error}</div> : null}
