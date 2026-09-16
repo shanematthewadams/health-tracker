@@ -1,6 +1,24 @@
 import { brand } from "../brand.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, LogOut, Share2, Users, X } from "lucide-react";
+import {
+  Bell,
+  Check,
+  ChevronRight,
+  Clock3,
+  Droplets,
+  LockKeyhole,
+  LogOut,
+  Mail,
+  Pencil,
+  Share2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Target,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { WithMark } from "../WithMarks.jsx";
 import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
 import MyTrackersPanel from "../components/MyTrackersPanel.jsx";
@@ -148,10 +166,32 @@ export default function ProfileTab({
     padding: "14px 15px",
     textAlign: "left",
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) auto",
+    gridTemplateColumns: "34px minmax(0, 1fr) auto",
     alignItems: "center",
     gap: 12,
     boxShadow: "0 2px 8px rgba(28,36,48,.025)",
+  };
+
+  const iconTileStyle = {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    background: SURFACE_2,
+    border: `1px solid ${BORDER}`,
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+  };
+
+  const inlineActionStyle = {
+    background: "none",
+    border: "none",
+    padding: 0,
+    fontSize: 12,
+    fontWeight: 800,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
   };
 
   const goal = data[activeUser];
@@ -245,7 +285,24 @@ export default function ProfileTab({
     setTimeZoneBusy(false);
   }
 
-  function ModalShell({ title, children }) {
+  function IconTile({ icon: Icon, color = brand.tealDark }) {
+    return (
+      <span aria-hidden="true" style={iconTileStyle}>
+        <Icon size={17} strokeWidth={1.9} color={color} />
+      </span>
+    );
+  }
+
+  function InlineLabel({ icon: Icon, children, color = TEXT }) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color }}>
+        <Icon size={15} strokeWidth={1.9} aria-hidden="true" />
+        <span>{children}</span>
+      </span>
+    );
+  }
+
+  function ModalShell({ title, icon: Icon, children }) {
     return (
       <div
         role="dialog"
@@ -256,7 +313,10 @@ export default function ProfileTab({
       >
         <div style={{ width: "100%", maxWidth: 520, maxHeight: "88dvh", overflowY: "auto", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "16px 16px 20px", boxShadow: "0 20px 60px rgba(20,31,29,.22)" }}>
           <div style={{ position: "sticky", top: -16, zIndex: 2, background: SURFACE, padding: "2px 0 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1 }}>{title}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              {Icon && <IconTile icon={Icon} />}
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1 }}>{title}</div>
+            </div>
             <button type="button" onClick={closeModal} aria-label={`Close ${title}`} style={{ border: "none", background: SURFACE_2, color: TEXT, width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0 }}><X size={17} /></button>
           </div>
           {children}
@@ -265,9 +325,10 @@ export default function ProfileTab({
     );
   }
 
-  function PreferenceRow({ title, description, meta, onClick }) {
+  function PreferenceRow({ icon, title, description, meta, onClick }) {
     return (
       <button type="button" onClick={onClick} style={rowStyle}>
+        <IconTile icon={icon} />
         <span style={{ minWidth: 0 }}>
           <span style={{ display: "block", fontSize: 14, fontWeight: 800 }}>{title}</span>
           <span style={{ display: "block", color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 3 }}>{description}</span>
@@ -314,14 +375,18 @@ export default function ProfileTab({
                     <WithMark id={profileWithmark(activeUser)} size={25} color={profileColor(activeUser)} />
                     <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, lineHeight: 1.05, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profileNameInput || activeUser}</div>
                   </div>
-                  <button onClick={() => { clearAccountError(); setEditingProfile(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0" }}>Edit</button>
+                  <button onClick={() => { clearAccountError(); setEditingProfile(true); }} style={{ ...inlineActionStyle, color: brand.tealDark }}>
+                    <Pencil size={14} strokeWidth={1.9} /> Edit
+                  </button>
                 </div>
                 <div style={{ marginTop: 18, paddingTop: 15, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800 }}>Your goal</div>
-                    <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 3 }}>{goalSentence}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800 }}><InlineLabel icon={Target}>Your goal</InlineLabel></div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 5 }}>{goalSentence}</div>
                   </div>
-                  <button onClick={openGoalsEdit} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: 0, flexShrink: 0 }}>{goal?.goalWeight ? "Manage" : "Set goal"}</button>
+                  <button onClick={openGoalsEdit} style={{ ...inlineActionStyle, color: brand.tealDark, flexShrink: 0 }}>
+                    {goal?.goalWeight ? "Manage" : "Set goal"} <ChevronRight size={14} strokeWidth={1.9} />
+                  </button>
                 </div>
               </>
             ) : (
@@ -379,9 +444,15 @@ export default function ProfileTab({
                     </span>
                   ))}
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "7px 14px", marginTop: 13 }}>
-                  {householdRole === "owner" && <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); clearAccountError(); }} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: 0 }}>Edit With name</button>}
-                  <button type="button" onClick={() => openModal("invite")} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: 0 }}>Invite someone</button>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 14 }}>
+                  {householdRole === "owner" && (
+                    <button onClick={() => { setWithNameInput(householdName); setRenamingWith(true); clearAccountError(); }} style={{ ...inlineActionStyle, color: TEXT_MUTED }}>
+                      <Pencil size={14} strokeWidth={1.9} /> Edit With name
+                    </button>
+                  )}
+                  <button type="button" onClick={() => openModal("invite")} style={{ ...inlineActionStyle, color: brand.tealDark }}>
+                    <UserPlus size={15} strokeWidth={1.9} /> Invite someone
+                  </button>
                 </div>
               </>
             ) : (
@@ -406,7 +477,9 @@ export default function ProfileTab({
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 18, fontWeight: 600 }}>You can have more than one With</div>
                   <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 5 }}>Your health stays yours. One profile, one health history, however many groups of people you’re doing life With.</div>
-                  <button type="button" onClick={startAnotherWith} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "9px 0 0" }}>Start another With</button>
+                  <button type="button" onClick={startAnotherWith} style={{ ...inlineActionStyle, color: brand.tealDark, paddingTop: 9 }}>
+                    <UserPlus size={14} strokeWidth={1.9} /> Start another With
+                  </button>
                 </div>
               </div>
             </div>
@@ -418,9 +491,9 @@ export default function ProfileTab({
         <section>
           <div style={sectionLabel}>How you use With</div>
           <div style={{ display: "grid", gap: 9 }}>
-            <PreferenceRow title="Trackers" description="Choose what you track and who can see it." meta="Standard and custom trackers" onClick={() => openModal("trackers")} />
-            <PreferenceRow title="Reminders" description="Choose when With gives you a gentle nudge." meta="Logging and catch-up preferences" onClick={() => openModal("reminders")} />
-            <PreferenceRow title="Quick Add" description="Set the shortcuts that make everyday logging faster." meta={`Water: ${waterShortcuts.join(", ")} oz`} onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); openModal("quick-add"); }} />
+            <PreferenceRow icon={SlidersHorizontal} title="Trackers" description="Choose what you track and who can see it." meta="Standard and custom trackers" onClick={() => openModal("trackers")} />
+            <PreferenceRow icon={Bell} title="Reminders" description="Choose when With gives you a gentle nudge." meta="Logging and catch-up preferences" onClick={() => openModal("reminders")} />
+            <PreferenceRow icon={Droplets} title="Quick Add" description="Set the shortcuts that make everyday logging faster." meta={`Water: ${waterShortcuts.join(", ")} oz`} onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); openModal("quick-add"); }} />
           </div>
         </section>
       )}
@@ -430,10 +503,13 @@ export default function ProfileTab({
           <div style={sectionLabel}>Account</div>
           <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, boxShadow: "0 3px 12px rgba(28,36,48,.03)" }}>
             {!editingEmail ? (
-              <div style={{ paddingBottom: 14, borderBottom: `1px solid ${BORDER}` }}>
-                <div style={{ fontSize: 12, fontWeight: 800 }}>Email</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginTop: 3, overflowWrap: "anywhere" }}>{session?.user?.email}</div>
-                <button onClick={() => { clearAccountError(); setEditingEmail(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change email</button>
+              <div style={{ paddingBottom: 14, borderBottom: `1px solid ${BORDER}`, display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: 11, alignItems: "start" }}>
+                <IconTile icon={Mail} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800 }}>Email</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginTop: 3, overflowWrap: "anywhere" }}>{session?.user?.email}</div>
+                  <button onClick={() => { clearAccountError(); setEditingEmail(true); }} style={{ ...inlineActionStyle, color: brand.tealDark, paddingTop: 7 }}><Pencil size={14} strokeWidth={1.9} /> Change email</button>
+                </div>
               </div>
             ) : (
               <div style={{ paddingBottom: 14, borderBottom: `1px solid ${BORDER}` }}>
@@ -447,10 +523,13 @@ export default function ProfileTab({
             )}
 
             {!changingPassword ? (
-              <div style={{ padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
-                <div style={{ fontSize: 12, fontWeight: 800 }}>Password</div>
-                <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 3 }}>Your account is protected by a password.</div>
-                <button onClick={() => { clearAccountError(); setChangingPassword(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "6px 0 0" }}>Change password</button>
+              <div style={{ padding: "14px 0", borderBottom: `1px solid ${BORDER}`, display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: 11, alignItems: "start" }}>
+                <IconTile icon={LockKeyhole} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800 }}>Password</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 3 }}>Your account is protected by a password.</div>
+                  <button onClick={() => { clearAccountError(); setChangingPassword(true); }} style={{ ...inlineActionStyle, color: brand.tealDark, paddingTop: 7 }}><Pencil size={14} strokeWidth={1.9} /> Change password</button>
+                </div>
               </div>
             ) : (
               <div style={{ padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
@@ -465,45 +544,48 @@ export default function ProfileTab({
               </div>
             )}
 
-            <div style={{ paddingTop: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800 }}>Time zone</div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 3 }}>
-                    {followsDeviceTimeZone ? `Following this device · ${deviceTimeZone}` : `Fixed at ${timeZone}`}
+            <div style={{ paddingTop: 14, display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: 11, alignItems: "start" }}>
+              <IconTile icon={Clock3} />
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800 }}>Time zone</div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.45, marginTop: 3 }}>
+                      {followsDeviceTimeZone ? `Following this device · ${deviceTimeZone}` : `Fixed at ${timeZone}`}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={followsDeviceTimeZone}
+                    aria-label="Use my device time zone"
+                    disabled={timeZoneBusy}
+                    onClick={() => setFollowDeviceTimeZone(!followsDeviceTimeZone)}
+                    style={{ width: 46, height: 27, borderRadius: 999, border: "none", padding: 3, background: followsDeviceTimeZone ? brand.teal : "#D7D7D2", display: "flex", alignItems: "center", justifyContent: followsDeviceTimeZone ? "flex-end" : "flex-start", flexShrink: 0, opacity: timeZoneBusy ? .6 : 1 }}
+                  >
+                    <span style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", display: "block", boxShadow: "0 1px 3px rgba(0,0,0,.15)" }} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={followsDeviceTimeZone}
-                  aria-label="Use my device time zone"
-                  disabled={timeZoneBusy}
-                  onClick={() => setFollowDeviceTimeZone(!followsDeviceTimeZone)}
-                  style={{ width: 46, height: 27, borderRadius: 999, border: "none", padding: 3, background: followsDeviceTimeZone ? brand.teal : "#D7D7D2", display: "flex", alignItems: "center", justifyContent: followsDeviceTimeZone ? "flex-end" : "flex-start", flexShrink: 0, opacity: timeZoneBusy ? .6 : 1 }}
-                >
-                  <span style={{ width: 21, height: 21, borderRadius: "50%", background: "#fff", display: "block", boxShadow: "0 1px 3px rgba(0,0,0,.15)" }} />
-                </button>
+                <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 8 }}>Use my device time zone</div>
+                {!followsDeviceTimeZone && (
+                  <div style={{ marginTop: 9 }}>
+                    {!editingTimeZone ? (
+                      <button onClick={() => { clearAccountError(); setEditingTimeZone(true); }} style={{ ...inlineActionStyle, color: brand.tealDark }}>Choose a time zone <ChevronRight size={14} strokeWidth={1.9} /></button>
+                    ) : (
+                      <>
+                        <select defaultValue={timeZone} id="with-timezone-select" style={{ ...inputStyle, marginBottom: 8 }}>
+                          {timeZoneOptions.map((zone) => <option key={zone} value={zone}>{zone}{zone === deviceTimeZone ? " · device" : ""}</option>)}
+                        </select>
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <button onClick={() => setEditingTimeZone(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
+                          <button onClick={async () => { const nextZone = document.getElementById("with-timezone-select")?.value; const ok = await saveTimeZone(nextZone); if (ok !== false) { setEditingTimeZone(false); setTimeZoneStatus("Time zone updated."); } }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save time zone</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {timeZoneStatus && <div style={{ color: timeZoneStatus.startsWith("We couldn’t") ? WARN : successColor, fontSize: 11, lineHeight: 1.45, marginTop: 8 }}>{timeZoneStatus}</div>}
               </div>
-              <div style={{ color: TEXT_MUTED, fontSize: 11, lineHeight: 1.45, marginTop: 8 }}>Use my device time zone</div>
-              {!followsDeviceTimeZone && (
-                <div style={{ marginTop: 9 }}>
-                  {!editingTimeZone ? (
-                    <button onClick={() => { clearAccountError(); setEditingTimeZone(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: 0 }}>Choose a time zone</button>
-                  ) : (
-                    <>
-                      <select defaultValue={timeZone} id="with-timezone-select" style={{ ...inputStyle, marginBottom: 8 }}>
-                        {timeZoneOptions.map((zone) => <option key={zone} value={zone}>{zone}{zone === deviceTimeZone ? " · device" : ""}</option>)}
-                      </select>
-                      <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={() => setEditingTimeZone(false)} style={{ background: "none", border: "none", color: TEXT_MUTED, fontSize: 12, fontWeight: 700, padding: "8px 0" }}>Cancel</button>
-                        <button onClick={async () => { const nextZone = document.getElementById("with-timezone-select")?.value; const ok = await saveTimeZone(nextZone); if (ok !== false) { setEditingTimeZone(false); setTimeZoneStatus("Time zone updated."); } }} disabled={accountBusy} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}`, width: "auto" }}>Save time zone</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              {timeZoneStatus && <div style={{ color: timeZoneStatus.startsWith("We couldn’t") ? WARN : successColor, fontSize: 11, lineHeight: 1.45, marginTop: 8 }}>{timeZoneStatus}</div>}
             </div>
 
             {accountError && <div style={{ color: WARN, fontSize: 13, marginTop: 12 }}>{accountError}</div>}
@@ -519,15 +601,15 @@ export default function ProfileTab({
           </button>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px 14px", margin: "18px 0 16px" }}>
-            <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, fontSize: 11, textDecoration: "none" }}>Privacy policy</a>
-            <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              {shareStatus === "Link copied" ? <Check style={{ width: 12, height: 12 }} /> : <Share2 style={{ width: 12, height: 12 }} />}
+            <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, fontSize: 11, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}><ShieldCheck size={13} strokeWidth={1.9} /> Privacy policy</a>
+            <button onClick={shareWith} style={{ background: "none", border: "none", color: TEXT_MUTED, padding: 0, fontWeight: 700, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {shareStatus === "Link copied" ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />}
               {shareStatus || "Share With"}
             </button>
           </div>
 
           <details style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
-            <summary style={{ cursor: "pointer", color: WARN, fontWeight: 700, fontSize: 12 }}>Delete account</summary>
+            <summary style={{ cursor: "pointer", color: WARN, fontWeight: 700, fontSize: 12, listStyle: "none", display: "inline-flex", alignItems: "center", gap: 6 }}><Trash2 size={14} strokeWidth={1.9} /> Delete account</summary>
             <div style={{ marginTop: 12 }}>
               <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginBottom: 12 }}>
                 This permanently removes your login, your profile, and your personal health entries. It does not delete other people or their data.
@@ -543,7 +625,7 @@ export default function ProfileTab({
       )}
 
       {modal === "invite" && (
-        <ModalShell title="Invite someone">
+        <ModalShell title="Invite someone" icon={UserPlus}>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>Add someone you know to {householdName} so you can support each other while keeping your health data personal.</div>
           <div style={fieldLabel}>Email address</div>
           <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="friend@example.com" style={{ ...inputStyle, marginBottom: 10 }} />
@@ -554,24 +636,24 @@ export default function ProfileTab({
       )}
 
       {modal === "trackers" && (
-        <ModalShell title="Trackers">
+        <ModalShell title="Trackers" icon={SlidersHorizontal}>
           <MyTrackersPanel session={session} onOpenGoals={openGoalsEdit} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
       {modal === "reminders" && (
-        <ModalShell title="Reminders">
+        <ModalShell title="Reminders" icon={Bell}>
           <LoggingRemindersPanel session={session} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
       {modal === "quick-add" && (
-        <ModalShell title="Quick Add">
+        <ModalShell title="Quick Add" icon={Droplets}>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>Set the three water amounts you use most often.</div>
           {!editingWaterShortcuts ? (
             <>
               <div style={{ padding: 14, borderRadius: 12, background: SURFACE_2, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13 }}>Water shortcuts: <strong>{waterShortcuts.join(" oz, ")} oz</strong></div>
-              <button onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(true); }} style={{ background: "none", border: "none", color: brand.tealDark, fontSize: 12, fontWeight: 800, padding: "10px 0 0" }}>Change water shortcuts</button>
+              <button onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); setEditingWaterShortcuts(true); }} style={{ ...inlineActionStyle, color: brand.tealDark, paddingTop: 10 }}><Pencil size={14} strokeWidth={1.9} /> Change water shortcuts</button>
             </>
           ) : (
             <>
