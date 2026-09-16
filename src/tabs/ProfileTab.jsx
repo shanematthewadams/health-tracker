@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   LogOut,
   Mail,
+  NotebookPen,
   Pencil,
   Share2,
   ShieldCheck,
@@ -23,6 +24,7 @@ import { WithMark } from "../WithMarks.jsx";
 import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
 import MyTrackersPanel from "../components/MyTrackersPanel.jsx";
 import LoggingRemindersPanel from "../components/LoggingRemindersPanel.jsx";
+import { DailyReflectionPreferencePanel } from "../components/DailyReflection.jsx";
 import DataExportPanel from "../components/DataExportPanel.jsx";
 import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
@@ -507,6 +509,7 @@ export default function ProfileTab({
           <div style={{ display: "grid", gap: 9 }}>
             <PreferenceRow icon={SlidersHorizontal} title="Trackers" description="Choose what you track and who can see it." meta="Standard and custom trackers" onClick={() => openModal("trackers")} />
             <PreferenceRow icon={Bell} title="Reminders" description="Choose when With gives you a gentle nudge." meta="Logging and catch-up preferences" onClick={() => openModal("reminders")} />
+            <PreferenceRow icon={NotebookPen} title="Daily Reflection" description="Mark how the day was and keep a few words worth remembering." meta="Private · appears after 6 PM" onClick={() => openModal("daily-reflection")} />
             <PreferenceRow icon={Droplets} title="Quick Add" description="Set the shortcuts that make everyday logging faster." meta={`Water: ${waterShortcuts.join(", ")} oz`} onClick={() => { setWaterShortcutDraft(waterShortcuts.map(String)); openModal("quick-add"); }} />
           </div>
         </section>
@@ -652,6 +655,12 @@ export default function ProfileTab({
       {modal === "trackers" && (
         <ModalShell title="Trackers" icon={SlidersHorizontal}>
           <MyTrackersPanel session={session} onOpenGoals={openGoalsEdit} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
+        </ModalShell>
+      )}
+
+      {modal === "daily-reflection" && (
+        <ModalShell title="Daily Reflection" icon={NotebookPen}>
+          <DailyReflectionPreferencePanel session={session} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
