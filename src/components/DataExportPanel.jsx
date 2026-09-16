@@ -2,7 +2,45 @@ import { useState } from "react";
 import { Check, Copy, Download, FileText } from "lucide-react";
 import { brand } from "../brand.jsx";
 import { supabase } from "../supabase.js";
-import { buildStoredZip, preparePersonalDataExport } from "../dataExport.js";
+import { buildStoredZip, makeCsv, preparePersonalDataExport } from "../dataExport.js";
+
+const DAILY_REFLECTION_COLUMNS = [
+  { key: "reflection_date", label: "reflection_date" },
+  { key: "rating", label: "rating_1_to_5" },
+  { key: "note", label: "note" },
+  { key: "created_at", label: "created_at" },
+  { key: "updated_at", label: "updated_at" },
+];
+
+function addDailyReflectionsToExport(prepared, dailyReflections = []) {
+  const reflectionFile = {
+    name: "daily_reflections.csv",
+    content: makeCsv(DAILY_REFLECTION_COLUMNS, dailyReflections),
+  };
+
+  const readmeFile = prepared.files.find((file) => file.name === "README.txt");
+  const otherFiles = prepared.files.filter((file) => file.name !== "README.txt");
+
+  const updatedReadme = readmeFile
+    ? {
+        ...readmeFile,
+        content: readmeFile.content
+          .replace("- custom_tracker_entries.csv", "- custom_tracker_entries.csv\n- daily_reflections.csv")
+          .replace(
+            "- With does not interpret this export medically or use it to diagnose conditions.",
+            "- Daily reflections are private, person-owned entries and are included only for the signed-in profile.\n- With does not interpret this export medically or use it to diagnose conditions.",
+          ),
+      }
+    : null;
+
+  const analysisPrompt = `${prepared.analysisPrompt}\n\nDaily reflections:\n- daily_reflections.csv contains the person’s private 1–5 daily rating and optional note.\n- Treat reflection notes as subjective self-report, not objective evidence, diagnosis, or proof that one behavior caused another outcome.\n- Look for patterns across multiple reflections only when there is enough data. Do not over-interpret an individual day or rating.`;
+
+  return {
+    ...prepared,
+    files: [...otherFiles, reflectionFile, ...(updatedReadme ? [updatedReadme] : [])],
+    analysisPrompt,
+  };
+}
 
 export default function DataExportPanel({ styles }) {
   const { SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, bigButton } = styles;
@@ -21,7 +59,10 @@ export default function DataExportPanel({ styles }) {
       const { data: exportData, error: exportFunctionError } = await supabase.functions.invoke("export-personal-data", { body: {} });
       if (exportFunctionError) throw exportFunctionError;
 
-      const prepared = preparePersonalDataExport(exportData);
+      const prepared = addDailyReflectionsToExport(
+        preparePersonalDataExport(exportData),
+        exportData?.dailyReflections || [],
+      );
       const zipBytes = buildStoredZip(prepared.files);
       const blob = new Blob([zipBytes], { type: "application/zip" });
       const url = URL.createObjectURL(blob);

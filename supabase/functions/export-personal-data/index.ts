@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: ownedProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("id,name,goal_weight,bmr,calories,protein,carbs,fat,fiber_min,fiber_max,goal_date,profile_color,current_intention,intention_date,profile_withmark,goal_statement,water_target,steps_target,logging_reminders_enabled,support_enabled")
+      .select("id,name,goal_weight,bmr,calories,protein,carbs,fat,fiber_min,fiber_max,goal_date,profile_color,current_intention,intention_date,profile_withmark,goal_statement,water_target,steps_target,logging_reminders_enabled,support_enabled,daily_reflection_enabled")
       .eq("user_id", userData.user.id)
       .limit(1)
       .maybeSingle();
@@ -87,6 +87,7 @@ Deno.serve(async (req: Request) => {
       customTrackers,
       customEntries,
       customGoals,
+      dailyReflections,
     ] = await Promise.all([
       fetchAllOwnedRows({ table: "weight_entries", columns: "entry_date,weight", orderColumn: "entry_date" }),
       fetchAllOwnedRows({ table: "food_entries", columns: "entry_date,name,calories,protein,carbs,fat,fiber,meal,notes,created_at", orderColumn: "entry_date" }),
@@ -98,6 +99,7 @@ Deno.serve(async (req: Request) => {
       fetchAllOwnedRows({ table: "custom_metrics", columns: "id,name,value_type,unit,enabled,visibility,sort_order,icon_key,rating_low_label,rating_high_label,logging_reminder_enabled", orderColumn: "sort_order" }),
       fetchAllOwnedRows({ table: "custom_metric_entries", columns: "metric_id,entry_date,boolean_value,numeric_value", orderColumn: "entry_date" }),
       fetchAllOwnedRows({ table: "custom_metric_goals", columns: "metric_id,target_value,period", orderColumn: "metric_id" }),
+      fetchAllOwnedRows({ table: "daily_reflections", columns: "reflection_date,rating,note,created_at,updated_at", orderColumn: "reflection_date" }),
     ]);
 
     const { id: _profileId, ...profile } = ownedProfile;
@@ -114,6 +116,7 @@ Deno.serve(async (req: Request) => {
       customTrackers,
       customEntries,
       customGoals,
+      dailyReflections,
     });
   } catch (error) {
     console.error("Personal data export failed", error);
