@@ -161,6 +161,131 @@ function ProgressRow({ label, value, target, unit, color }) {
   );
 }
 
+
+function PublicHome({ onGetStarted, onSignIn }) {
+  const pageButton = (primary = false) => ({
+    minHeight: 46,
+    borderRadius: 999,
+    padding: "0 20px",
+    border: primary ? "1px solid " + brand.teal : "1px solid " + BORDER,
+    background: primary ? brand.teal : SURFACE,
+    color: primary ? brand.inkOn : TEXT,
+    fontSize: 14,
+    fontWeight: 800,
+    fontFamily: "'DM Sans', -apple-system, sans-serif",
+    cursor: "pointer",
+  });
+
+  const metricCard = (icon, label, value, detail, color) => (
+    <div style={{ background: SURFACE, border: "1px solid " + BORDER, borderRadius: 14, padding: 14, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, color: TEXT_MUTED, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 9, display: "grid", placeItems: "center", background: color + "18", color }}>{icon}</span>
+        {label}
+      </div>
+      <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1 }}>{value}</div>
+      <div style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 5 }}>{detail}</div>
+    </div>
+  );
+
+  return (
+    <div className="with-home" style={{ minHeight: "100vh", background: brand.bg, color: TEXT, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <style>{'.with-home *{box-sizing:border-box}.with-home button:focus-visible,.with-home a:focus-visible{outline:3px solid rgba(31,94,87,.22);outline-offset:3px}.with-home-hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:64px;align-items:center}.with-home-features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.with-home-actions{display:flex;gap:10px;flex-wrap:wrap}.with-home-nav-actions{display:flex;gap:8px;align-items:center}@media(max-width:820px){.with-home-hero{grid-template-columns:1fr;gap:34px}.with-home-features{grid-template-columns:1fr}.with-home-hero-copy{max-width:650px}.with-home-preview{max-width:560px;margin:0 auto;width:100%}}@media(max-width:520px){.with-home-nav-get-started{display:none}.with-home-header{padding-left:18px!important;padding-right:18px!important}.with-home-main{padding-left:18px!important;padding-right:18px!important}.with-home-hero-title{font-size:44px!important}.with-home-actions{display:grid;grid-template-columns:1fr}.with-home-actions button{width:100%}.with-home-preview-shell{padding:12px!important}.with-home-metric-grid{grid-template-columns:1fr 1fr!important}}'}</style>
+
+      <header className="with-home-header" style={{ maxWidth: 1180, margin: "0 auto", padding: "20px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
+        <BrandLogo style={{ width: 122 }} />
+        <div className="with-home-nav-actions">
+          <button type="button" onClick={onSignIn} style={{ ...pageButton(false), background: "transparent", borderColor: "transparent" }}>Sign in</button>
+          <button className="with-home-nav-get-started" type="button" onClick={onGetStarted} style={pageButton(true)}>Get started</button>
+        </div>
+      </header>
+
+      <main className="with-home-main">
+        <section className="with-home-hero" style={{ maxWidth: 1120, margin: "0 auto", padding: "72px 28px 82px" }}>
+          <div className="with-home-hero-copy">
+            <div style={{ color: brand.tealDark, fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".11em", marginBottom: 16 }}>A private health tracker for real life</div>
+            <h1 className="with-home-hero-title" style={{ margin: 0, maxWidth: 680, fontFamily: "'Newsreader', Georgia, serif", fontSize: 62, lineHeight: .98, letterSpacing: "-.035em", fontWeight: 600 }}>
+              Take care of yourself. <span style={{ color: brand.teal }}>With people who care about you.</span>
+            </h1>
+            <p style={{ maxWidth: 620, color: TEXT_MUTED, fontSize: 18, lineHeight: 1.6, margin: "24px 0 28px" }}>
+              Keep track of food, movement, weight, water, goals and the everyday things that matter to your health. Start on your own. Invite someone you trust when it feels useful.
+            </p>
+            <div className="with-home-actions">
+              <button type="button" onClick={onGetStarted} style={{ ...pageButton(true), minHeight: 52, padding: "0 24px", fontSize: 15, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                Get started <ChevronRight size={17} strokeWidth={2.2} />
+              </button>
+              <button type="button" onClick={onSignIn} style={{ ...pageButton(false), minHeight: 52, padding: "0 24px", fontSize: 15 }}>I already use With</button>
+            </div>
+            <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 17 }}>Private by default. No public feed. No leaderboards. No one grading your lunch.</div>
+          </div>
+
+          <div className="with-home-preview">
+            <div className="with-home-preview-shell" style={{ background: brand.teal, borderRadius: 28, padding: 18, boxShadow: "0 28px 70px rgba(23,78,73,.18)", transform: "rotate(1deg)" }}>
+              <div style={{ background: BG, borderRadius: 20, padding: 18, transform: "rotate(-1deg)", border: "1px solid rgba(255,255,255,.35)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 17 }}>
+                  <div>
+                    <div style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Today</div>
+                    <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 28, fontWeight: 600, marginTop: 2 }}>Good morning.</div>
+                  </div>
+                  <span style={{ width: 38, height: 38, borderRadius: 12, background: "#F06A24", color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 13 }}>A</span>
+                </div>
+                <div className="with-home-metric-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {metricCard(<Droplet size={15} />, "Water", "48 oz", "A little at a time.", "#6E9DB5")}
+                  {metricCard(<Footprints size={15} />, "Steps", "6,842", "Whatever movement looks like today.", "#D9A642")}
+                  {metricCard(<Utensils size={15} />, "Food", "Logged", "Information, not a grade.", brand.teal)}
+                  {metricCard(<Target size={15} />, "Intention", "Be present", "Your day can hold more than numbers.", "#9B88D8")}
+                </div>
+                <div style={{ marginTop: 12, background: SURFACE_2, border: "1px solid " + BORDER, borderRadius: 14, padding: "14px 15px" }}>
+                  <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 16, lineHeight: 1.4, fontStyle: "italic" }}>Missing a target is information, not failure.</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginTop: 7 }}>A gentler way to pay attention</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style={{ background: brand.stone, borderTop: "1px solid " + BORDER, borderBottom: "1px solid " + BORDER }}>
+          <div style={{ maxWidth: 1120, margin: "0 auto", padding: "72px 28px" }}>
+            <div style={{ maxWidth: 680, marginBottom: 32 }}>
+              <div style={{ color: brand.tealDark, fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Personal first</div>
+              <h2 style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 42, lineHeight: 1.05, letterSpacing: "-.025em", fontWeight: 600, margin: "0 0 12px" }}>Your health stays yours.</h2>
+              <p style={{ color: TEXT_MUTED, fontSize: 16, lineHeight: 1.6, margin: 0 }}>Being in a With does not mean sharing a body, a goal or a definition of progress. Each person keeps their own profile, targets and health data.</p>
+            </div>
+            <div className="with-home-features">
+              {[
+                ["Track what matters", "Food, weight, water, movement, steps, fasting, goals and personal trackers. Use what helps. Ignore what doesn’t."],
+                ["Start by yourself", "With works as your own private health tracker. You can invite someone later, or keep it personal for as long as you want."],
+                ["Share the experience", "When you do invite someone, the point is support, not competition. You can be working toward completely different things."]
+              ].map(([title, copy]) => (
+                <div key={title} style={{ background: SURFACE, border: "1px solid " + BORDER, borderRadius: 18, padding: 22 }}>
+                  <div style={{ width: 34, height: 5, borderRadius: 999, background: brand.clay, marginBottom: 18 }} />
+                  <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>{title}</div>
+                  <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.6 }}>{copy}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "78px 28px" }}>
+          <div style={{ background: brand.teal, color: brand.inkOn, borderRadius: 26, padding: "42px clamp(24px,5vw,58px)", display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 30, alignItems: "center" }}>
+            <div>
+              <div style={{ color: "rgba(255,255,255,.68)", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>We’re in this together.</div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 38, lineHeight: 1.05, fontWeight: 600, maxWidth: 650 }}>Take care of yourself. Let the right people be part of it.</div>
+              <div style={{ color: "rgba(255,255,255,.76)", fontSize: 14, lineHeight: 1.6, maxWidth: 620, marginTop: 12 }}>Start with your own goals and your own data. The invitation can come whenever you’re ready.</div>
+            </div>
+            <button type="button" onClick={onGetStarted} style={{ ...pageButton(false), minHeight: 50, padding: "0 24px", whiteSpace: "nowrap" }}>Get started</button>
+          </div>
+        </section>
+      </main>
+
+      <footer style={{ maxWidth: 1120, margin: "0 auto", padding: "0 28px 34px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap", color: TEXT_MUTED, fontSize: 11 }}>
+        <span>With · We’re in this together.</span>
+        <a href="/privacy" style={{ color: TEXT_MUTED, fontWeight: 700, textDecoration: "none" }}>Privacy policy</a>
+      </footer>
+    </div>
+  );
+}
+
 function AuthScreen({ initialMessage = "" }) {
   const params = new URLSearchParams(window.location.search);
   const inviteFromUrl = params.get("invite")?.trim().toUpperCase() || "";
@@ -226,25 +351,7 @@ function AuthScreen({ initialMessage = "" }) {
   const linkButton = { background: "none", border: "none", color: brand.tealDark, width: "100%", padding: "13px 8px 2px", fontSize: 13, fontWeight: 700 };
 
   if (mode === "welcome") {
-    return (
-      <div style={shell}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500;1,6..72,600;1,6..72,700&display=swap'); * { box-sizing: border-box; } body { margin: 0; } input, button { font-family: inherit; }`}</style>
-        <div style={panel}>
-          <BrandLogo style={{ width: 132, marginBottom: 14 }} />
-          <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 31, fontWeight: 600, lineHeight: 1.06, marginBottom: 12 }}>
-            Take care of yourself. With people who care about you.
-          </div>
-          <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.55, marginBottom: 22 }}>
-            With is a private place to keep track of the things that matter to your health, alongside the people who matter to you. Start on your own or start with someone. Either way, your goals and your health are yours.
-          </div>
-          <button type="button" onClick={() => changeMode("signup")} style={{ ...bigButton(brand.teal, brand.inkOn), marginBottom: 8 }}>Get started</button>
-          <button type="button" onClick={() => changeMode("signin")} style={{ ...bigButton(SURFACE_2, TEXT), border: `1px solid ${BORDER}` }}>I already have an account</button>
-          <div style={{ textAlign: "center", marginTop: 16 }}>
-            <a href="/privacy" style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>Privacy policy</a>
-          </div>
-        </div>
-      </div>
-    );
+    return <PublicHome onGetStarted={() => changeMode("signup")} onSignIn={() => changeMode("signin")} />;
   }
 
   if (mode === "confirm") {
