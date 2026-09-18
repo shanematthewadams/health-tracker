@@ -10,6 +10,7 @@ import WithSwitcher from "./components/WithSwitcher.jsx";
 import CreateWithDialog from "./components/CreateWithDialog.jsx";
 import { normalizeWithMemberships, chooseActiveWithId, readStoredActiveWithId, storeActiveWithId, clearStoredActiveWithId } from "./withMemberships.js";
 import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import PolishedPublicHome from "./PublicHome.jsx";
 import { CheckMark, WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
 const USERS = ["Alli", "Shane"];
@@ -351,7 +352,7 @@ function AuthScreen({ initialMessage = "" }) {
   const linkButton = { background: "none", border: "none", color: brand.tealDark, width: "100%", padding: "13px 8px 2px", fontSize: 13, fontWeight: 700 };
 
   if (mode === "welcome") {
-    return <PublicHome onGetStarted={() => changeMode("signup")} onSignIn={() => changeMode("signin")} />;
+    return <PolishedPublicHome onGetStarted={() => changeMode("signup")} onSignIn={() => changeMode("signin")} />;
   }
 
   if (mode === "confirm") {
