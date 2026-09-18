@@ -43,7 +43,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
     return (
       <div className="with-home-screen-card" style={{ transform: `rotate(${tilt}deg)` }}>
         <div className="with-home-screen-label">{label}</div>
-        <img src={src} alt={alt} loading="lazy" />
+        <img src={src} alt={alt} loading="eager" />
       </div>
     );
   }
