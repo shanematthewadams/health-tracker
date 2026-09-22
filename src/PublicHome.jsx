@@ -17,7 +17,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
     minHeight: 48,
     borderRadius: 999,
     padding: "0 22px",
-    border: primary ? \`1px solid \${brand.teal}\` : \`1px solid \${BORDER}\`,
+    border: primary ? `1px solid ${brand.teal}` : `1px solid ${BORDER}`,
     background: primary ? brand.teal : "rgba(255,255,255,.9)",
     color: primary ? brand.inkOn : TEXT,
     fontSize: 14,
@@ -50,7 +50,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
 
   function EditorialScreen({ src, alt, width, height, tilt = 0, label }) {
     return (
-      <figure className="with-home-screen-card" style={{ transform: \`rotate(\${tilt}deg)\` }}>
+      <figure className="with-home-screen-card" style={{ transform: `rotate(${tilt}deg)` }}>
         <figcaption className="with-home-screen-label">{label}</figcaption>
         <img
           src={src}
@@ -66,16 +66,16 @@ function PublicHome({ onGetStarted, onSignIn }) {
 
   return (
     <div className="with-home">
-      <style>{\`
+      <style>{`
         .with-home {
           min-height: 100vh;
           min-height: 100dvh;
-          color: \${TEXT};
-          font-family: \${sans};
+          color: ${TEXT};
+          font-family: ${sans};
           background:
             radial-gradient(circle at 88% 8%, rgba(242,201,109,.18) 0, rgba(242,201,109,0) 24rem),
             radial-gradient(circle at 5% 42%, rgba(183,200,191,.22) 0, rgba(183,200,191,0) 25rem),
-            \${brand.bg};
+            ${brand.bg};
           overflow-x: hidden;
         }
         .with-home * { box-sizing: border-box; }
@@ -119,7 +119,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           pointer-events: none;
         }
         .with-home-kicker {
-          color: \${brand.tealDark};
+          color: ${brand.tealDark};
           font-size: 11px;
           font-weight: 800;
           text-transform: uppercase;
@@ -129,24 +129,24 @@ function PublicHome({ onGetStarted, onSignIn }) {
         .with-home-title {
           margin: 0;
           max-width: 700px;
-          font-family: \${serif};
+          font-family: ${serif};
           font-size: clamp(52px, 6.4vw, 78px);
           line-height: .94;
           letter-spacing: -.045em;
           font-weight: 600;
           text-wrap: balance;
         }
-        .with-home-title em { color: \${brand.teal}; font-weight: 500; }
+        .with-home-title em { color: ${brand.teal}; font-weight: 500; }
         .with-home-lede {
           max-width: 620px;
-          color: \${TEXT_MUTED};
+          color: ${TEXT_MUTED};
           font-size: 18px;
           line-height: 1.62;
           margin: 26px 0 24px;
         }
         .with-home-actions { display:flex; flex-wrap:wrap; gap:10px; }
         .with-home-note {
-          color: \${TEXT_MUTED};
+          color: ${TEXT_MUTED};
           font-size: 12px;
           line-height: 1.55;
           margin-top: 17px;
@@ -161,11 +161,11 @@ function PublicHome({ onGetStarted, onSignIn }) {
           margin: 22px 0 0;
         }
         .with-home-track-list li {
-          border: 1px solid \${BORDER};
+          border: 1px solid ${BORDER};
           background: rgba(255,255,255,.62);
           border-radius: 999px;
           padding: 7px 11px;
-          color: \${TEXT_MUTED};
+          color: ${TEXT_MUTED};
           font-size: 11px;
           font-weight: 700;
           line-height: 1;
@@ -183,7 +183,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           height: 36%;
           right: -30%;
           top: 18%;
-          background: \${brand.clay};
+          background: ${brand.clay};
           opacity: .17;
           border-radius: 49% 51% 62% 38% / 47% 43% 57% 53%;
           transform: rotate(-18deg);
@@ -196,7 +196,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           height: 21%;
           left: -27%;
           bottom: 8%;
-          background: \${brand.sun};
+          background: ${brand.sun};
           opacity: .22;
           border-radius: 58% 42% 45% 55% / 50%;
           transform: rotate(17deg);
@@ -236,11 +236,11 @@ function PublicHome({ onGetStarted, onSignIn }) {
         .with-home-phone-screen {
           overflow: hidden;
           border-radius: 39px;
-          background: \${brand.bg};
+          background: ${brand.bg};
           aspect-ratio: 520 / 1132;
         }
         .with-home-phone-screen img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .with-home-manifesto { background: \${brand.teal}; color: \${brand.inkOn}; position: relative; overflow: hidden; }
+        .with-home-manifesto { background: ${brand.teal}; color: ${brand.inkOn}; position: relative; overflow: hidden; }
         .with-home-manifesto:before {
           content: "";
           position: absolute;
@@ -273,7 +273,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           padding-top: 8px;
         }
         .with-home-manifesto-copy {
-          font-family: \${serif};
+          font-family: ${serif};
           font-size: clamp(31px, 4vw, 48px);
           line-height: 1.08;
           letter-spacing: -.025em;
@@ -282,7 +282,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           max-width: 760px;
           text-wrap: balance;
         }
-        .with-home-manifesto-copy em { color: \${brand.sun}; font-weight: 500; }
+        .with-home-manifesto-copy em { color: ${brand.sun}; font-weight: 500; }
         .with-home-story { width: min(1100px, calc(100% - 48px)); margin: 0 auto; padding: 104px 0 112px; }
         .with-home-story-row {
           display: grid;
@@ -295,7 +295,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
         .with-home-story-row.reverse .with-home-story-copy { order: 2; }
         .with-home-story-row.reverse .with-home-screen-stage { order: 1; }
         .with-home-story-copy h2 {
-          font-family: \${serif};
+          font-family: ${serif};
           font-size: clamp(40px, 4.6vw, 58px);
           line-height: .99;
           letter-spacing: -.035em;
@@ -304,13 +304,13 @@ function PublicHome({ onGetStarted, onSignIn }) {
           text-wrap: balance;
         }
         .with-home-story-copy p {
-          color: \${TEXT_MUTED};
+          color: ${TEXT_MUTED};
           font-size: 16px;
           line-height: 1.68;
           margin: 0 0 16px;
           max-width: 560px;
         }
-        .with-home-rule { width: 74px; height: 5px; border-radius: 99px; background: \${brand.clay}; margin-bottom: 25px; }
+        .with-home-rule { width: 74px; height: 5px; border-radius: 99px; background: ${brand.clay}; margin-bottom: 25px; }
         .with-home-screen-stage {
           position: relative;
           min-height: 520px;
@@ -322,7 +322,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           content: "";
           position: absolute;
           inset: 8% 10%;
-          border: 1px solid \${BORDER};
+          border: 1px solid ${BORDER};
           border-radius: 44% 56% 48% 52% / 58% 42% 58% 42%;
           transform: rotate(-7deg);
           pointer-events: none;
@@ -332,7 +332,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           padding: 10px;
           margin: 0;
           border-radius: 24px;
-          background: \${SURFACE};
+          background: ${SURFACE};
           border: 1px solid rgba(231,227,219,.95);
           box-shadow: 0 28px 60px rgba(35,42,38,.13);
           position: relative;
@@ -343,8 +343,8 @@ function PublicHome({ onGetStarted, onSignIn }) {
           position: absolute;
           right: -14px;
           top: -15px;
-          background: \${brand.sun};
-          color: \${TEXT};
+          background: ${brand.sun};
+          color: ${TEXT};
           padding: 8px 12px;
           border-radius: 999px;
           font-size: 10px;
@@ -354,7 +354,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           transform: rotate(5deg);
           box-shadow: 0 5px 14px rgba(40,37,28,.10);
         }
-        .with-home-solo { background: \${brand.stone}; border-top: 1px solid \${BORDER}; border-bottom: 1px solid \${BORDER}; }
+        .with-home-solo { background: ${brand.stone}; border-top: 1px solid ${BORDER}; border-bottom: 1px solid ${BORDER}; }
         .with-home-solo-inner {
           width: min(1080px, calc(100% - 48px));
           margin: 0 auto;
@@ -365,7 +365,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           align-items: center;
         }
         .with-home-solo h2 {
-          font-family: \${serif};
+          font-family: ${serif};
           font-size: clamp(39px, 4.5vw, 54px);
           line-height: 1;
           letter-spacing: -.03em;
@@ -375,14 +375,14 @@ function PublicHome({ onGetStarted, onSignIn }) {
         }
         .with-home-solo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         .with-home-solo-card {
-          background: \${SURFACE};
-          border: 1px solid \${BORDER};
+          background: ${SURFACE};
+          border: 1px solid ${BORDER};
           border-radius: 18px;
           padding: 22px;
           min-height: 180px;
         }
-        .with-home-solo-card strong { display: block; font-family: \${serif}; font-size: 26px; font-weight: 600; margin-bottom: 8px; }
-        .with-home-solo-card p { color: \${TEXT_MUTED}; font-size: 14px; line-height: 1.58; margin: 0; }
+        .with-home-solo-card strong { display: block; font-family: ${serif}; font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+        .with-home-solo-card p { color: ${TEXT_MUTED}; font-size: 14px; line-height: 1.58; margin: 0; }
         .with-home-final {
           width: min(1050px, calc(100% - 48px));
           margin: 0 auto;
@@ -390,7 +390,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           text-align: center;
         }
         .with-home-final h2 {
-          font-family: \${serif};
+          font-family: ${serif};
           font-size: clamp(46px, 6vw, 70px);
           line-height: .96;
           letter-spacing: -.04em;
@@ -399,17 +399,17 @@ function PublicHome({ onGetStarted, onSignIn }) {
           margin: 0 auto 22px;
           text-wrap: balance;
         }
-        .with-home-final p { color: \${TEXT_MUTED}; font-size: 16px; line-height: 1.6; max-width: 610px; margin: 0 auto 28px; }
+        .with-home-final p { color: ${TEXT_MUTED}; font-size: 16px; line-height: 1.6; max-width: 610px; margin: 0 auto 28px; }
         .with-home-footer {
           width: min(1120px, calc(100% - 48px));
           margin: 0 auto;
           padding: 24px 0 34px;
-          border-top: 1px solid \${BORDER};
+          border-top: 1px solid ${BORDER};
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 20px;
-          color: \${TEXT_MUTED};
+          color: ${TEXT_MUTED};
           font-size: 11px;
         }
         @media (max-width: 860px) {
@@ -449,7 +449,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           .with-home-final { padding-top: 82px; }
           .with-home-footer { align-items:flex-start; flex-direction:column; }
         }
-      \`}</style>
+      `}</style>
 
       <header className="with-home-header">
         <BrandLogo style={{ width: 126 }} />
