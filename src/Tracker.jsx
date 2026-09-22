@@ -1261,11 +1261,11 @@ export default function Tracker() {
     const email = inviteEmail.trim();
     setInviteError(""); setInviteMessage("");
     if (!email) { setInviteError("Enter an email address."); return; }
-    if (!inviteCode) { setInviteError("Invite code isn’t available yet. Refresh and try again."); return; }
+    if (!householdId) { setInviteError("Your With isn’t available yet. Refresh and try again."); return; }
 
     setInviteBusy(true);
     const { error } = await supabase.functions.invoke("send-with-invite", {
-      body: { email, inviteCode, inviteUrl: inviteUrl() },
+      body: { email, householdId },
     });
     if (error) {
       setInviteError(friendlyError(error, "We couldn’t send that invitation. Try again."));
