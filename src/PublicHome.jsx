@@ -21,6 +21,43 @@ const TRACKED_ITEMS = [
   { label: "Goals", Icon: Target, color: brand.clay },
 ];
 
+function PhoneFrame({ src, alt }) {
+  return (
+    <div className="with-home-phone-wrap">
+      <div className="with-home-phone">
+        <div className="with-home-phone-speaker" aria-hidden="true" />
+        <div className="with-home-phone-screen">
+          <img
+            src={src}
+            alt={alt}
+            width="520"
+            height="1132"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditorialScreen({ src, alt, width, height, tilt = 0, label }) {
+  return (
+    <figure className="with-home-screen-card" style={{ transform: `rotate(${tilt}deg)` }}>
+      <figcaption className="with-home-screen-label">{label}</figcaption>
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        loading="lazy"
+        decoding="async"
+      />
+    </figure>
+  );
+}
+
 function PublicHome({ onGetStarted, onSignIn }) {
   const serif = "'Newsreader', Georgia, serif";
   const sans = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -38,43 +75,6 @@ function PublicHome({ onGetStarted, onSignIn }) {
     cursor: "pointer",
     boxShadow: primary ? "0 8px 22px rgba(31,94,87,.16)" : "0 2px 8px rgba(32,35,31,.04)",
   });
-
-  function PhoneFrame({ src, alt }) {
-    return (
-      <div className="with-home-phone-wrap">
-        <div className="with-home-phone">
-          <div className="with-home-phone-speaker" aria-hidden="true" />
-          <div className="with-home-phone-screen">
-            <img
-              src={src}
-              alt={alt}
-              width="520"
-              height="1132"
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function EditorialScreen({ src, alt, width, height, tilt = 0, label }) {
-    return (
-      <figure className="with-home-screen-card" style={{ transform: `rotate(${tilt}deg)` }}>
-        <figcaption className="with-home-screen-label">{label}</figcaption>
-        <img
-          src={src}
-          alt={alt}
-          width={width}
-          height={height}
-          loading="lazy"
-          decoding="async"
-        />
-      </figure>
-    );
-  }
 
   return (
     <div className="with-home">
