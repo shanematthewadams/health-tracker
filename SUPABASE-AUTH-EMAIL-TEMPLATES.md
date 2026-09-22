@@ -34,7 +34,7 @@ The invitation function reads the active `with_invitation` copy from `public.tra
 
 Automatic Supabase Auth template synchronization requires this Edge Function secret:
 
-`SUPABASE_ACCESS_TOKEN`
+`WITH_WITH_SUPABASE_ACCESS_TOKEN`
 
 It must be a Supabase personal access token with permission to manage the With project.
 
