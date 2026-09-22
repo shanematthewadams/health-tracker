@@ -1,4 +1,6 @@
-import { BrandLogo, brand } from "./brand.jsx";
+import { Activity, Droplet, Footprints, Heart, Scale, Target, Timer, UserRound, Users, Utensils } from "lucide-react";
+import { BrandLogo, brand, metricColors } from "./brand.jsx";
+import EditorialLine from "./components/EditorialLine.jsx";
 
 const SURFACE = brand.surface;
 const BORDER = brand.border;
@@ -8,6 +10,16 @@ const TEXT_MUTED = brand.textMuted;
 const todayScreen = "/home/today.webp";
 const trendsScreen = "/home/trends.webp";
 const goalsScreen = "/home/goals.webp";
+
+const TRACKED_ITEMS = [
+  { label: "Food", Icon: Utensils, color: metricColors.food },
+  { label: "Weight", Icon: Scale, color: metricColors.weight },
+  { label: "Movement", Icon: Activity, color: metricColors.activity },
+  { label: "Steps", Icon: Footprints, color: metricColors.steps },
+  { label: "Water", Icon: Droplet, color: metricColors.water },
+  { label: "Fasting", Icon: Timer, color: brand.teal },
+  { label: "Goals", Icon: Target, color: brand.clay },
+];
 
 function PublicHome({ onGetStarted, onSignIn }) {
   const serif = "'Newsreader', Georgia, serif";
@@ -162,13 +174,26 @@ function PublicHome({ onGetStarted, onSignIn }) {
         }
         .with-home-track-list li {
           border: 1px solid ${BORDER};
-          background: rgba(255,255,255,.62);
+          background: rgba(255,255,255,.68);
           border-radius: 999px;
-          padding: 7px 11px;
+          padding: 7px 11px 7px 8px;
           color: ${TEXT_MUTED};
           font-size: 11px;
           font-weight: 700;
           line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .with-home-track-icon {
+          width: 22px;
+          height: 22px;
+          border-radius: 999px;
+          display: inline-grid;
+          place-items: center;
+          background: color-mix(in srgb, var(--metric-color) 14%, white);
+          color: var(--metric-color);
+          flex: 0 0 auto;
         }
         .with-home-phone-wrap {
           position: relative;
@@ -240,49 +265,66 @@ function PublicHome({ onGetStarted, onSignIn }) {
           aspect-ratio: 520 / 1132;
         }
         .with-home-phone-screen img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .with-home-manifesto { background: ${brand.teal}; color: ${brand.inkOn}; position: relative; overflow: hidden; }
-        .with-home-manifesto:before {
+        .with-home-philosophy {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(180deg, rgba(255,255,255,.58), rgba(244,241,234,.86));
+          border-top: 1px solid ${BORDER};
+          border-bottom: 1px solid ${BORDER};
+        }
+        .with-home-philosophy:before {
           content: "";
           position: absolute;
-          inset: 0;
-          background-image:
-            radial-gradient(circle at 15% 20%, rgba(255,255,255,.07) 0 1px, transparent 1.5px),
-            radial-gradient(circle at 73% 65%, rgba(255,255,255,.05) 0 1px, transparent 1.5px);
-          background-size: 19px 19px, 27px 27px;
-          opacity: .28;
+          width: 230px;
+          height: 145px;
+          right: 7%;
+          top: -58px;
+          background: ${brand.sun};
+          opacity: .22;
+          border-radius: 52% 48% 62% 38% / 52% 38% 62% 48%;
+          transform: rotate(-8deg);
           pointer-events: none;
         }
-        .with-home-manifesto-inner {
-          width: min(1050px, calc(100% - 48px));
+        .with-home-philosophy-inner {
+          width: min(900px, calc(100% - 48px));
           margin: 0 auto;
-          padding: 72px 0;
+          padding: 78px 0 82px;
           position: relative;
           z-index: 1;
+          text-align: center;
+        }
+        .with-home-philosophy-mark {
+          width: 46px;
+          height: 46px;
+          margin: 0 auto 18px;
+          border-radius: 48% 52% 43% 57% / 56% 45% 55% 44%;
           display: grid;
-          grid-template-columns: .72fr 1.28fr;
-          gap: clamp(36px, 7vw, 90px);
-          align-items: start;
+          place-items: center;
+          background: rgba(31,94,87,.09);
+          color: ${brand.tealDark};
+          transform: rotate(-4deg);
         }
-        .with-home-manifesto-small {
-          color: rgba(255,255,255,.67);
-          font-size: 11px;
-          line-height: 1.5;
-          text-transform: uppercase;
-          letter-spacing: .12em;
-          font-weight: 800;
-          padding-top: 8px;
-        }
-        .with-home-manifesto-copy {
+        .with-home-philosophy-copy {
           font-family: ${serif};
-          font-size: clamp(31px, 4vw, 48px);
-          line-height: 1.08;
-          letter-spacing: -.025em;
+          font-size: clamp(35px, 4.7vw, 54px);
+          line-height: 1.02;
+          letter-spacing: -.032em;
           font-weight: 500;
-          margin: 0;
-          max-width: 760px;
+          margin: 8px auto 15px;
+          max-width: 820px;
           text-wrap: balance;
         }
-        .with-home-manifesto-copy em { color: ${brand.sun}; font-weight: 500; }
+        .with-home-philosophy-copy strong {
+          color: ${brand.teal};
+          font-weight: 600;
+        }
+        .with-home-philosophy-note {
+          max-width: 650px;
+          margin: 0 auto;
+          color: ${TEXT_MUTED};
+          font-size: 15px;
+          line-height: 1.62;
+        }
         .with-home-story { width: min(1100px, calc(100% - 48px)); margin: 0 auto; padding: 104px 0 112px; }
         .with-home-story-row {
           display: grid;
@@ -354,6 +396,41 @@ function PublicHome({ onGetStarted, onSignIn }) {
           transform: rotate(5deg);
           box-shadow: 0 5px 14px rgba(40,37,28,.10);
         }
+        .with-home-quote {
+          width: min(860px, calc(100% - 48px));
+          margin: 0 auto;
+          padding: 10px 0 112px;
+          text-align: center;
+          position: relative;
+        }
+        .with-home-quote-mark {
+          font-family: ${serif};
+          font-size: 86px;
+          line-height: .62;
+          color: ${brand.sun};
+          margin-bottom: 20px;
+          user-select: none;
+        }
+        .with-home-quote [data-editorial-placement="homepage"] > div:first-child {
+          font-family: ${serif};
+          font-size: clamp(29px, 4.1vw, 45px);
+          line-height: 1.14;
+          letter-spacing: -.02em;
+          font-style: italic;
+          font-weight: 500;
+          text-wrap: balance;
+        }
+        .with-home-quote [data-editorial-placement="homepage"] > div + div {
+          font-family: ${sans};
+          font-size: 11px !important;
+          font-style: normal;
+          text-transform: uppercase;
+          letter-spacing: .09em;
+          font-weight: 800;
+          color: ${TEXT_MUTED};
+          margin-top: 16px !important;
+          opacity: 1 !important;
+        }
         .with-home-solo { background: ${brand.stone}; border-top: 1px solid ${BORDER}; border-bottom: 1px solid ${BORDER}; }
         .with-home-solo-inner {
           width: min(1080px, calc(100% - 48px));
@@ -380,6 +457,20 @@ function PublicHome({ onGetStarted, onSignIn }) {
           border-radius: 18px;
           padding: 22px;
           min-height: 180px;
+        }
+        .with-home-solo-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 13px;
+          display: grid;
+          place-items: center;
+          color: ${brand.tealDark};
+          background: rgba(31,94,87,.08);
+          margin-bottom: 15px;
+        }
+        .with-home-solo-card:nth-child(2) .with-home-solo-icon {
+          color: ${brand.clay};
+          background: rgba(203,119,83,.10);
         }
         .with-home-solo-card strong { display: block; font-family: ${serif}; font-size: 26px; font-weight: 600; margin-bottom: 8px; }
         .with-home-solo-card p { color: ${TEXT_MUTED}; font-size: 14px; line-height: 1.58; margin: 0; }
@@ -416,8 +507,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           .with-home-hero { grid-template-columns: 1fr; text-align: center; padding-top: 42px; }
           .with-home-lede, .with-home-note { margin-left:auto; margin-right:auto; }
           .with-home-actions, .with-home-track-list { justify-content:center; }
-          .with-home-manifesto-inner, .with-home-solo-inner { grid-template-columns: 1fr; }
-          .with-home-manifesto-small { padding-top: 0; }
+          .with-home-solo-inner { grid-template-columns: 1fr; }
           .with-home-story-row, .with-home-story-row.reverse { grid-template-columns: 1fr; gap: 36px; margin-bottom: 84px; }
           .with-home-story-row.reverse .with-home-story-copy, .with-home-story-row.reverse .with-home-screen-stage { order: initial; }
           .with-home-story-copy { text-align:center; }
@@ -426,7 +516,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           .with-home-screen-stage { min-height: 0; padding: 28px 0; }
         }
         @media (max-width: 540px) {
-          .with-home-header, .with-home-hero, .with-home-manifesto-inner, .with-home-story, .with-home-solo-inner, .with-home-final, .with-home-footer {
+          .with-home-header, .with-home-hero, .with-home-philosophy-inner, .with-home-story, .with-home-quote, .with-home-solo-inner, .with-home-final, .with-home-footer {
             width: min(100% - 34px, 1120px);
           }
           .with-home-header { padding-top: 17px; }
@@ -441,7 +531,8 @@ function PublicHome({ onGetStarted, onSignIn }) {
           .with-home-phone-wrap { width: min(286px, 82vw); }
           .with-home-phone { border-radius: 42px; padding: 9px; }
           .with-home-phone-screen { border-radius: 34px; }
-          .with-home-manifesto-inner { padding: 58px 0; }
+          .with-home-philosophy-inner { padding: 60px 0 64px; }
+          .with-home-quote { padding-bottom: 82px; }
           .with-home-story { padding: 78px 0 88px; }
           .with-home-screen-card { width: min(315px, 86vw); }
           .with-home-solo-grid { grid-template-columns: 1fr; }
@@ -489,18 +580,27 @@ function PublicHome({ onGetStarted, onSignIn }) {
               Private by default. No public feed. No leaderboards. Each person keeps their own goals and health information.
             </div>
             <ul className="with-home-track-list" aria-label="Things you can track with With">
-              {["Food", "Weight", "Movement", "Steps", "Water", "Fasting", "Goals"].map((item) => <li key={item}>{item}</li>)}
+              {TRACKED_ITEMS.map(({ label, Icon, color }) => (
+                <li key={label}>
+                  <span className="with-home-track-icon" style={{ "--metric-color": color }} aria-hidden="true"><Icon size={13} strokeWidth={2.1} /></span>
+                  {label}
+                </li>
+              ))}
             </ul>
           </div>
           <PhoneFrame src={todayScreen} alt="With Today screen showing daily health tracking" />
         </section>
 
-        <section className="with-home-manifesto" aria-labelledby="with-home-philosophy">
-          <div className="with-home-manifesto-inner">
-            <div className="with-home-manifesto-small">A different kind of health tracker</div>
-            <h2 id="with-home-philosophy" className="with-home-manifesto-copy">
-              Health is personal. Support can be shared. <em>With keeps those two things from getting confused.</em>
+        <section className="with-home-philosophy" aria-labelledby="with-home-philosophy-title">
+          <div className="with-home-philosophy-inner">
+            <div className="with-home-philosophy-mark" aria-hidden="true"><Heart size={21} strokeWidth={1.9} /></div>
+            <div className="with-home-kicker">Built around people, not performance</div>
+            <h2 id="with-home-philosophy-title" className="with-home-philosophy-copy">
+              <strong>Health is personal.</strong> Support can be shared.
             </h2>
+            <p className="with-home-philosophy-note">
+              With keeps those two things from getting confused. Your goals and health information stay yours, while the people you trust can still be part of the experience.
+            </p>
           </div>
         </section>
 
@@ -546,6 +646,16 @@ function PublicHome({ onGetStarted, onSignIn }) {
           </div>
         </section>
 
+        <section className="with-home-quote" aria-label="A thought from the With editorial library">
+          <div className="with-home-quote-mark" aria-hidden="true">“</div>
+          <EditorialLine
+            placement="homepage"
+            fallback="A little consistency can be gentler than a lot of intensity."
+            style={{ maxWidth: 820, margin: "0 auto" }}
+            attributionStyle={{}}
+          />
+        </section>
+
         <section className="with-home-solo" aria-labelledby="with-home-solo-title">
           <div className="with-home-solo-inner">
             <div>
@@ -554,10 +664,12 @@ function PublicHome({ onGetStarted, onSignIn }) {
             </div>
             <div className="with-home-solo-grid">
               <div className="with-home-solo-card">
+                <div className="with-home-solo-icon" aria-hidden="true"><UserRound size={18} strokeWidth={2} /></div>
                 <strong>On your own</strong>
                 <p>Use With as a fully useful private tracker from day one. No invitation is required.</p>
               </div>
               <div className="with-home-solo-card">
+                <div className="with-home-solo-icon" aria-hidden="true"><Users size={18} strokeWidth={2} /></div>
                 <strong>With someone</strong>
                 <p>Invite a partner, friend or family member when it helps. Each of you keeps your own goals, targets and health information.</p>
               </div>
