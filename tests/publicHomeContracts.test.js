@@ -36,6 +36,16 @@ test("public homepage carries app iconography and the editorial library into the
   assert.match(homepage, /with-home-solo-icon/);
 });
 
+test("homepage screenshot wrappers stay stable across parent rerenders", async () => {
+  const homepage = await readSource("src/PublicHome.jsx");
+  const publicHomeIndex = homepage.indexOf("function PublicHome");
+  const phoneIndex = homepage.indexOf("function PhoneFrame");
+  const editorialIndex = homepage.indexOf("function EditorialScreen");
+
+  assert.ok(phoneIndex >= 0 && phoneIndex < publicHomeIndex, "PhoneFrame should be defined outside PublicHome");
+  assert.ok(editorialIndex >= 0 && editorialIndex < publicHomeIndex, "EditorialScreen should be defined outside PublicHome");
+});
+
 test("public homepage serves screenshots as standalone webp assets", async () => {
   const homepage = await readSource("src/PublicHome.jsx");
   const assets = ["today.webp", "trends.webp", "goals.webp"];
