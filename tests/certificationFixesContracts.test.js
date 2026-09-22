@@ -35,7 +35,11 @@ test("admin navigation waits for server-backed admin authorization", async () =>
   assert.match(source, /supabase\.rpc\("is_app_admin"\)/);
   assert.match(source, /const \[adminAuthorized, setAdminAuthorized\] = useState\(false\)/);
   assert.match(source, /\{adminAuthorized && \([\s\S]*<nav aria-label="Admin sections"/);
-  assert.match(source, /adminAuthorized && view === "quotes" \? <ReflectionQuotesAdmin \/> : <LegacyAdminApp \/>/);
+  assert.match(source, /adminAuthorized && view === "quotes"/);
+  assert.match(source, /<ReflectionQuotesAdmin \/>/);
+  assert.match(source, /adminAuthorized && view === "emails"/);
+  assert.match(source, /<EmailAdmin \/>/);
+  assert.match(source, /<LegacyAdminApp \/>/);
 });
 
 test("password recovery has a stable return marker and cannot leave stale recovery state behind", async () => {
