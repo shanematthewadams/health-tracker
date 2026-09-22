@@ -146,9 +146,9 @@ Deno.serve(async (req) => {
       .single();
     if (rowError || !row) return json({ error: "Email content could not be loaded." }, 404);
 
-    const managementToken = Deno.env.get("SUPABASE_ACCESS_TOKEN");
+    const managementToken = Deno.env.get("WITH_SUPABASE_ACCESS_TOKEN");
     if (!managementToken) {
-      const detail = "SUPABASE_ACCESS_TOKEN is not configured for Auth template sync.";
+      const detail = "WITH_SUPABASE_ACCESS_TOKEN is not configured for Auth template sync.";
       await setSyncState(admin, templateKey, detail);
       return json({ error: detail }, 503);
     }
