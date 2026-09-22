@@ -10,12 +10,34 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
 
-const escapeHtml = (value: string) => value
+const DEFAULT_INVITE_COPY = {
+  subject: "{{inviter_name}} invited you to With",
+  preheader: "Join {{with_name}} on With.",
+  headline: "{{inviter_name}} invited you to join {{with_name}}.",
+  body_copy: "With is a private place to take care of yourself alongside people you trust.",
+  cta_label: "Join on With",
+  supporting_text: "Joining shares the experience, not your health data or targets.",
+};
+
+const escapeHtml = (value: string) => String(value || "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
   .replaceAll(">", "&gt;")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#039;");
+
+function interpolate(value: string, data: Record<string, string>, html = false) {
+  const source = html ? escapeHtml(value) : String(value || "");
+  return source.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (_full, key) => {
+    const replacement = data[key] ?? "";
+    return html ? escapeHtml(replacement) : replacement;
+  });
+}
+
+function paragraph(value: string) {
+  if (!value) return "";
+  return `<p style="margin:0 0 14px;line-height:1.6;color:#171816;">${value.replaceAll("\n", "<br>")}</p>`;
+}
 
 function randomToken() {
   const bytes = new Uint8Array(32);
@@ -35,6 +57,42 @@ function safeOrigin(req: Request) {
     if (host === "imwith.me" || host.endsWith(".imwith.me") || host.endsWith(".netlify.app")) return url.origin;
   } catch {}
   return "https://imwith.me";
+}
+
+function renderInviteHtml(copy: Record<string, string>, data: Record<string, string>) {
+  const preheader = interpolate(copy.preheader, data, true);
+  const headline = interpolate(copy.headline, data, true);
+  const body = interpolate(copy.body_copy, data, true);
+  const supporting = interpolate(copy.supporting_text, data, true);
+  const cta = interpolate(copy.cta_label, data, true);
+  const safeInviteUrl = escapeHtml(data.action_url);
+  const safeEmail = escapeHtml(data.recipient_email);
+  const safeDays = escapeHtml(data.expires_days);
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#1F5E57;font-family:Arial,Helvetica,sans-serif;color:#171816;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>
+    <div style="padding:28px 14px;">
+      <div style="max-width:560px;margin:0 auto;background:#FCFBF8;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(17,50,46,.18);">
+        <div style="padding:28px 30px 18px;background:#1F5E57;color:#fff;">
+          <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;">With</div>
+          <div style="margin-top:7px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
+        </div>
+        <div style="padding:30px;">
+          <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.12;margin-bottom:16px;">${headline}</div>
+          ${paragraph(body)}
+          ${supporting ? paragraph(supporting) : ""}
+          <p style="margin:26px 0 0;">
+            <a href="${safeInviteUrl}" style="display:inline-block;background:#1F5E57;color:#fff;text-decoration:none;padding:13px 18px;border-radius:10px;font-weight:700;">${cta}</a>
+          </p>
+          <p style="font-size:13px;line-height:1.55;color:#5D615F;margin:22px 0 0;">This invitation was sent to ${safeEmail} and expires in ${safeDays} days.</p>
+          <p style="font-size:12px;line-height:1.5;color:#8A8F94;margin:26px 0 0;">If the button doesn’t work, use this link:<br><a href="${safeInviteUrl}" style="color:#174E49;word-break:break-all;">${safeInviteUrl}</a></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
 }
 
 Deno.serve(async (req) => {
@@ -57,11 +115,23 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const recipientEmail = String(body?.email || "").trim().toLowerCase();
-    const householdId = String(body?.householdId || "").trim();
+    let householdId = String(body?.householdId || "").trim();
+    const legacyInviteCode = String(body?.inviteCode || "").trim().toUpperCase();
 
     if (!recipientEmail || !recipientEmail.includes("@")) return json({ error: "Enter a valid email address." }, 400);
-    if (!householdId) return json({ error: "Choose a With first." }, 400);
     if (recipientEmail === String(userData.user.email || "").toLowerCase()) return json({ error: "You’re already in this With." }, 400);
+
+    // Temporary compatibility keeps the deployed function safe while the staging
+    // client finishes moving from legacy invite codes to stable With IDs.
+    if (!householdId && legacyInviteCode) {
+      const { data: householdByCode } = await admin
+        .from("households")
+        .select("id")
+        .eq("invite_code", legacyInviteCode)
+        .maybeSingle();
+      householdId = householdByCode?.id || "";
+    }
+    if (!householdId) return json({ error: "Choose a With first." }, 400);
 
     const { data: membership, error: memberError } = await admin
       .from("household_members")
@@ -71,15 +141,21 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (memberError || !membership?.household_id) return json({ error: "That With could not be found for your account." }, 403);
 
-    const [{ data: household }, { data: profile }] = await Promise.all([
+    const [{ data: household }, { data: profile }, { data: emailCopy }] = await Promise.all([
       admin.from("households").select("name").eq("id", householdId).single(),
       admin.from("profiles").select("name").eq("user_id", userData.user.id).maybeSingle(),
+      admin.from("transactional_email_content")
+        .select("subject,preheader,headline,body_copy,cta_label,supporting_text")
+        .eq("template_key", "with_invitation")
+        .eq("active", true)
+        .maybeSingle(),
     ]);
     if (!household) return json({ error: "Your With could not be found." }, 404);
 
     const inviteToken = randomToken();
     const tokenHash = await sha256(inviteToken);
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const expiresInDays = 30;
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
     const { data: existing } = await admin
       .from("household_invitations")
       .select("id")
@@ -122,10 +198,16 @@ Deno.serve(async (req) => {
     const inviteUrl = new URL(safeOrigin(req));
     inviteUrl.searchParams.set("invite", inviteToken);
     inviteUrl.searchParams.set("inviter", inviterName);
-    const safeInviter = escapeHtml(inviterName);
-    const safeWithName = escapeHtml(withName);
-    const safeInviteUrl = escapeHtml(inviteUrl.toString());
-    const safeEmail = escapeHtml(recipientEmail);
+
+    const copy = { ...DEFAULT_INVITE_COPY, ...(emailCopy || {}) };
+    const variables = {
+      inviter_name: inviterName,
+      with_name: withName,
+      recipient_email: recipientEmail,
+      expires_days: String(expiresInDays),
+      action_url: inviteUrl.toString(),
+    };
+    const subject = interpolate(copy.subject, variables).replace(/[\r\n]+/g, " ").trim() || `${inviterName} invited you to With`;
 
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -136,8 +218,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: fromEmail,
         to: [recipientEmail],
-        subject: `${inviterName} invited you to With`,
-        html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:28px;color:#162321"><div style="font-size:32px;font-weight:700;margin-bottom:20px">With</div><h1 style="font-size:26px;line-height:1.2;margin:0 0 12px">${safeInviter} invited you to join ${safeWithName}.</h1><p style="font-size:16px;line-height:1.6;color:#53615f;margin:0 0 22px">Your health stays yours. You only log once. This With is another private group of people sharing the experience with you.</p><a href="${safeInviteUrl}" style="display:inline-block;background:#1f5e57;color:white;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Join on With</a><p style="font-size:12px;line-height:1.5;color:#7b8785;margin-top:22px">This invitation was sent to ${safeEmail} and expires in 30 days.</p></div>`,
+        subject,
+        html: renderInviteHtml(copy, variables),
       }),
     });
 
