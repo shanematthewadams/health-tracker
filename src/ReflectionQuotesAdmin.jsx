@@ -20,6 +20,7 @@ const PLACEMENTS = [
   ["weekly_reflection", "Weekly reflection"],
   ["preparing_with", "Preparing your With"],
   ["onboarding", "Onboarding"],
+  ["homepage", "Homepage"],
 ];
 const PLACEMENT_IDS = PLACEMENTS.map(([id]) => id);
 
@@ -510,7 +511,7 @@ export default function ReflectionQuotesAdmin() {
 
         <div style={{ ...cardStyle, marginBottom: 14, background: brand.surfaceSoft }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, marginBottom: 5 }}><Sparkles size={16} color={brand.tealDark} /> Where the library appears</div>
-          <div style={{ color: brand.textMuted, fontSize: 12, lineHeight: 1.55 }}>Weekly reflections use theme-aware stable rotation. Preparing and onboarding moments use a quiet daily rotation and never inspect health data. A single item can be eligible for more than one placement.</div>
+          <div style={{ color: brand.textMuted, fontSize: 12, lineHeight: 1.55 }}>Weekly reflections use theme-aware stable rotation. Homepage, preparing, and onboarding moments use a quiet daily rotation and never inspect health data. A single item can be eligible for more than one placement.</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {PLACEMENTS.map(([id, label]) => <span key={id} style={{ background: brand.surface, border: `1px solid ${brand.border}`, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 800 }}>{label}: {placementCounts[id] || 0}</span>)}
           </div>
@@ -556,6 +557,7 @@ export default function ReflectionQuotesAdmin() {
                   })}
                 </div>
                 {draft.placements.includes("preparing_with") && <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 5 }}>Preparing your With items are limited to 90 characters.</div>}
+                {draft.placements.includes("homepage") && <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 5 }}>Homepage items rotate daily for signed-out visitors. Short, broadly human lines work best here.</div>}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
