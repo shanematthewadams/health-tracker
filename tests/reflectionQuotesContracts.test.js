@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const baseMigration = readFileSync("supabase/migrations/20260915211300_add_reflection_quotes.sql", "utf8");
 const placementMigration = readFileSync("supabase/migrations/20260915213841_expand_reflection_quotes_to_editorial_library.sql", "utf8");
 const homepageMigration = readFileSync("supabase/migrations/20260922202046_add_homepage_editorial_placement.sql", "utf8");
+const homepageCurationMigration = readFileSync("supabase/migrations/20260922203217_curate_homepage_editorial_pool.sql", "utf8");
 const reflection = readFileSync("src/components/WeeklyReflectionCard.jsx", "utf8");
 const editorialLine = readFileSync("src/components/EditorialLine.jsx", "utf8");
 const brand = readFileSync("src/brand.jsx", "utf8");
@@ -29,6 +30,13 @@ test("homepage editorial placement is public only for active homepage items and 
   assert.match(homepageMigration, /to anon[\s\S]*active = true[\s\S]*'homepage' = any\(placements\)/i);
   assert.doesNotMatch(homepageMigration, /grant select \([^)]*source_note/i);
   assert.match(admin, /\["homepage", "Homepage"\]/i);
+});
+
+test("homepage quote pool is explicitly curated rather than every active editorial item", () => {
+  assert.match(homepageCurationMigration, /array_remove\(placements, 'homepage'\)/i);
+  assert.match(homepageCurationMigration, /placements \|\| array\['homepage'\]::text\[\]/i);
+  const ids = homepageCurationMigration.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi) || [];
+  assert.equal(ids.length, 18);
 });
 
 test("weekly reflection only chooses weekly-reflection editorial items", () => {
