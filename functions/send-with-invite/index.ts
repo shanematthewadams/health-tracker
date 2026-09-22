@@ -75,9 +75,18 @@ function renderInviteHtml(copy: Record<string, string>, data: Record<string, str
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>
     <div style="padding:28px 14px;">
       <div style="max-width:560px;margin:0 auto;background:#FCFBF8;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(17,50,46,.18);">
-        <div style="padding:28px 30px 18px;background:#1F5E57;color:#fff;">
-          <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;">With</div>
-          <div style="margin-top:7px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
+        <div style="padding:24px 30px 18px;background:#1F5E57;color:#fff;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="vertical-align:middle;padding-right:11px;">
+                <img src="https://www.imwith.me/apple-touch-icon.png" width="42" height="42" alt="With" style="display:block;border:0;border-radius:9px;width:42px;height:42px;">
+              </td>
+              <td style="vertical-align:middle;">
+                <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1;">With</div>
+                <div style="margin-top:5px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
+              </td>
+            </tr>
+          </table>
         </div>
         <div style="padding:30px;">
           <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.12;margin-bottom:16px;">${headline}</div>
