@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase.js";
 
+const editorialLineCache = new Map();
+
 function stableHash(value) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -26,7 +28,10 @@ export default function EditorialLine({
   style = {},
   attributionStyle = {},
 }) {
-  const [item, setItem] = useState(undefined);
+  const cacheKey = placement ? placement + ":" + localDayKey() : "";
+  const [item, setItem] = useState(() => cacheKey && editorialLineCache.has(cacheKey)
+    ? editorialLineCache.get(cacheKey)
+    : undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +61,9 @@ export default function EditorialLine({
 
         const identity = sessionData?.session?.user?.id || "guest";
         const seed = `${identity}:${placement}:${localDayKey()}`;
-        setItem(rows[stableHash(seed) % rows.length]);
+        const selectedItem = rows[stableHash(seed) % rows.length];
+        if (cacheKey) editorialLineCache.set(cacheKey, selectedItem);
+        setItem(selectedItem);
       } catch (error) {
         console.warn(`Could not load editorial line for ${placement}`, error);
         if (!cancelled) setItem(null);

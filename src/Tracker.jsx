@@ -9,7 +9,7 @@ import ProfileTab from "./tabs/ProfileTab.jsx";
 import WithSwitcher from "./components/WithSwitcher.jsx";
 import CreateWithDialog from "./components/CreateWithDialog.jsx";
 import { normalizeWithMemberships, chooseActiveWithId, readStoredActiveWithId, storeActiveWithId, clearStoredActiveWithId } from "./withMemberships.js";
-import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import { BrandLogo, BrandLoading, brand, finishInitialOpening } from "./brand.jsx";
 import PolishedPublicHome from "./PublicHome.jsx";
 import { CheckMark, WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
@@ -916,7 +916,10 @@ export default function Tracker() {
       setActiveFasts(fastMap);
     } catch (e) {
       setSaveError(friendlyError(e, "We couldn’t load your With. Refresh and try again."));
-    } finally { setLoading(false); }
+    } finally {
+      await finishInitialOpening();
+      setLoading(false);
+    }
   }
 
   useEffect(() => { if (session?.user) loadAll(); else if (authReady) setLoading(false); }, [session?.user?.id, authReady, timeZone, todayStr(timeZone)]);

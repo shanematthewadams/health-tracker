@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { UsersRound, Plus, UserCheck, Clock3, CircleAlert } from "lucide-react";
 import { supabase } from "./supabase";
-import { BrandLogo, BrandLoading, brand } from "./brand.jsx";
+import { BrandLogo, BrandLoading, brand, finishInitialOpening } from "./brand.jsx";
 import EditorialLine from "./components/EditorialLine.jsx";
 import { WithMark, WITHMARK_OPTIONS } from "./WithMarks.jsx";
 
@@ -358,7 +358,9 @@ export default function OnboardingGate({ children }) {
       setCheckError(friendlyOnboardingError(error, "We couldn’t load your With. Try again."));
       setNeedsOnboarding(false);
     } else {
-      setNeedsOnboarding(!data?.length);
+      const shouldOnboard = !data?.length;
+      setNeedsOnboarding(shouldOnboard);
+      if (shouldOnboard) await finishInitialOpening();
     }
 
     setChecking(false);

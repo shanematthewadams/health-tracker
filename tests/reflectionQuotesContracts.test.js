@@ -10,6 +10,7 @@ const reflection = readFileSync("src/components/WeeklyReflectionCard.jsx", "utf8
 const editorialLine = readFileSync("src/components/EditorialLine.jsx", "utf8");
 const brand = readFileSync("src/brand.jsx", "utf8");
 const onboarding = readFileSync("src/OnboardingGate.jsx", "utf8");
+const tracker = readFileSync("src/Tracker.jsx", "utf8");
 const admin = readFileSync("src/ReflectionQuotesAdmin.jsx", "utf8");
 const adminShell = readFileSync("src/AdminApp.jsx", "utf8");
 
@@ -80,4 +81,28 @@ test("the reflection keeps its non-judgmental footer before the emotional closin
   const quoteIndex = reflection.indexOf("A thought to carry with you");
   assert.ok(footerIndex >= 0);
   assert.ok(quoteIndex > footerIndex);
+});
+
+
+test("editorial library admin supports in-place editing, search, filters, and explicit bulk status selection", () => {
+  assert.match(admin, /Search quote or attribution/i);
+  assert.match(admin, /statusFilter/i);
+  assert.match(admin, /themeFilter/i);
+  assert.match(admin, /authorFilter/i);
+  assert.match(admin, /draft\?\.id === quote\.id/i);
+  assert.match(admin, /Select all filtered/i);
+  assert.match(admin, /Pause selected/i);
+  assert.match(admin, /Resume selected/i);
+  assert.match(admin, /\.in\("id", ids\)/i);
+  assert.match(admin, /No editorial items match those filters/i);
+});
+
+test("initial opening is one shared editorial ritual with a minimum dwell and cached quote", () => {
+  assert.match(brand, /OPENING_MIN_DWELL_MS = 1250/i);
+  assert.match(brand, /Preparing your With/i);
+  assert.match(brand, /showEditorialOpening &&/i);
+  assert.match(brand, /deferFallbackUntilLoaded/i);
+  assert.match(tracker, /await finishInitialOpening\(\)/i);
+  assert.match(onboarding, /await finishInitialOpening\(\)/i);
+  assert.match(editorialLine, /editorialLineCache/i);
 });
