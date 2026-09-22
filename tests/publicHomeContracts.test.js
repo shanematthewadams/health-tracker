@@ -36,6 +36,27 @@ test("public homepage carries app iconography and the editorial library into the
   assert.match(homepage, /with-home-solo-icon/);
 });
 
+test("homepage quote waits for the selected editorial item without flashing the fallback", async () => {
+  const homepage = await readSource("src/PublicHome.jsx");
+  const editorialLine = await readSource("src/components/EditorialLine.jsx");
+
+  assert.match(homepage, /deferFallbackUntilLoaded/);
+  assert.match(homepage, /data-editorial-placement="homepage"[^\n]*\{[\s\S]*min-height: 146px/i);
+  assert.match(editorialLine, /deferFallbackUntilLoaded = false/);
+  assert.match(editorialLine, /item === undefined && deferFallbackUntilLoaded/);
+});
+
+test("homepage has explicit small-screen typography and spacing overrides", async () => {
+  const homepage = await readSource("src/PublicHome.jsx");
+
+  assert.match(homepage, /@media \(max-width: 540px\)/);
+  assert.match(homepage, /with-home-title \{ font-size: clamp\(42px, 12vw, 47px\)/);
+  assert.match(homepage, /with-home-story-copy h2 \{ font-size: 37px/);
+  assert.match(homepage, /with-home-solo h2 \{ font-size: 36px/);
+  assert.match(homepage, /with-home-final h2 \{ font-size: 40px/);
+  assert.match(homepage, /with-home-screen-label \{ right: -5px/);
+});
+
 test("homepage screenshot wrappers stay stable across parent rerenders", async () => {
   const homepage = await readSource("src/PublicHome.jsx");
   const publicHomeIndex = homepage.indexOf("function PublicHome");
