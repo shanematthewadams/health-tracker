@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const baseMigration = readFileSync("supabase/migrations/20260915211300_add_reflection_quotes.sql", "utf8");
 const placementMigration = readFileSync("supabase/migrations/20260915213841_expand_reflection_quotes_to_editorial_library.sql", "utf8");
+const homepageMigration = readFileSync("supabase/migrations/20260922202046_add_homepage_editorial_placement.sql", "utf8");
 const reflection = readFileSync("src/components/WeeklyReflectionCard.jsx", "utf8");
 const editorialLine = readFileSync("src/components/EditorialLine.jsx", "utf8");
 const brand = readFileSync("src/brand.jsx", "utf8");
@@ -19,6 +20,15 @@ test("editorial library keeps the original RLS protection and adds explicit plac
   for (const placement of ["weekly_reflection", "preparing_with", "onboarding"]) assert.match(placementMigration, new RegExp(placement, "i"));
   assert.match(placementMigration, /reflection_quotes_preparing_length_check/i);
   assert.match(placementMigration, /char_length\(btrim\(quote\)\) <= 90/i);
+});
+
+test("homepage editorial placement is public only for active homepage items and safe columns", () => {
+  assert.match(homepageMigration, /weekly_reflection','preparing_with','onboarding','homepage/i);
+  assert.match(homepageMigration, /grant select \(id, quote, attribution, quote_kind, placements, active\)[\s\S]*to anon/i);
+  assert.match(homepageMigration, /anonymous visitors can read homepage quotes/i);
+  assert.match(homepageMigration, /to anon[\s\S]*active = true[\s\S]*'homepage' = any\(placements\)/i);
+  assert.doesNotMatch(homepageMigration, /grant select \([^)]*source_note/i);
+  assert.match(admin, /\["homepage", "Homepage"\]/i);
 });
 
 test("weekly reflection only chooses weekly-reflection editorial items", () => {
