@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 
-const readSource = (path) => readFile(new URL(\`../\${path}\`, import.meta.url), "utf8");
+const readSource = (path) => readFile(new URL("../" + path, import.meta.url), "utf8");
 
 test("public homepage stays wired into the existing auth flow", async () => {
   const tracker = await readSource("src/Tracker.jsx");
@@ -33,8 +33,8 @@ test("public homepage serves screenshots as standalone webp assets", async () =>
   assert.match(homepage, /fetchPriority="high"/);
 
   for (const asset of assets) {
-    const info = await stat(new URL(\`../public/home/\${asset}\`, import.meta.url));
-    assert.ok(info.size > 0, \`\${asset} should not be empty\`);
-    assert.ok(info.size < 100_000, \`\${asset} should remain lightweight\`);
+    const info = await stat(new URL("../public/home/" + asset, import.meta.url));
+    assert.ok(info.size > 0, asset + " should not be empty");
+    assert.ok(info.size < 100_000, asset + " should remain lightweight");
   }
 });
