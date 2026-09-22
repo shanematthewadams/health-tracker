@@ -23,6 +23,19 @@ test("public homepage makes solo use and private ownership explicit", async () =
   assert.match(homepage, /I already use With/);
 });
 
+test("public homepage carries app iconography and the editorial library into the front door", async () => {
+  const homepage = await readSource("src/PublicHome.jsx");
+
+  assert.match(homepage, /from "lucide-react"/);
+  assert.match(homepage, /const TRACKED_ITEMS = \[/);
+  assert.match(homepage, /metricColors\.food/);
+  assert.match(homepage, /with-home-philosophy/);
+  assert.doesNotMatch(homepage, /with-home-manifesto/);
+  assert.match(homepage, /<EditorialLine/);
+  assert.match(homepage, /placement="homepage"/);
+  assert.match(homepage, /with-home-solo-icon/);
+});
+
 test("public homepage serves screenshots as standalone webp assets", async () => {
   const homepage = await readSource("src/PublicHome.jsx");
   const assets = ["today.webp", "trends.webp", "goals.webp"];
