@@ -58,7 +58,7 @@ test("preparing and onboarding editorial moments use placement-only rotation wit
 });
 
 test("editorial library admin supports placements, source context, and bulk CSV import", () => {
-  assert.match(adminShell, /Editorial Library/i);
+  assert.match(adminShell, /Editorial/i);\n  assert.match(adminShell, /\\["quotes", "Quotes"\\]/i);\n  assert.match(adminShell, /\\["emails", "Emails"\\]/i);
   assert.match(admin, /const PLACEMENTS/i);
   assert.match(admin, /const CSV_FIELDS = \["quote", "attribution", "quote_kind", "themes", "placements"/i);
   assert.match(admin, /Bulk CSV/i);
