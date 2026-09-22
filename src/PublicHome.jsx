@@ -411,6 +411,9 @@ function PublicHome({ onGetStarted, onSignIn }) {
           margin-bottom: 20px;
           user-select: none;
         }
+        .with-home-quote [data-editorial-placement="homepage"] {
+          min-height: 146px;
+        }
         .with-home-quote [data-editorial-placement="homepage"] > div:first-child {
           font-family: ${serif};
           font-size: clamp(29px, 4.1vw, 45px);
@@ -521,24 +524,33 @@ function PublicHome({ onGetStarted, onSignIn }) {
           }
           .with-home-header { padding-top: 17px; }
           .with-home-nav-start { display:none; }
-          .with-home-hero { padding-bottom: 76px; }
-          .with-home-title { font-size: clamp(44px, 13.2vw, 50px); }
+          .with-home-hero { padding-top: 32px; padding-bottom: 68px; }
+          .with-home-title { font-size: clamp(42px, 12vw, 47px); line-height: .97; }
           .with-home-lede { font-size: 16px; }
           .with-home-actions { display:grid; grid-template-columns:1fr; }
           .with-home-actions button { width:100%; }
-          .with-home-track-list { gap: 6px; }
-          .with-home-track-list li { padding: 7px 10px; }
+          .with-home-track-list { gap: 6px; max-width: 330px; margin-left: auto; margin-right: auto; }
+          .with-home-track-list li { padding: 7px 10px 7px 8px; }
           .with-home-phone-wrap { width: min(286px, 82vw); }
           .with-home-phone { border-radius: 42px; padding: 9px; }
           .with-home-phone-screen { border-radius: 34px; }
           .with-home-philosophy-inner { padding: 60px 0 64px; }
-          .with-home-quote { padding-bottom: 82px; }
-          .with-home-story { padding: 78px 0 88px; }
+          .with-home-philosophy-copy { font-size: 34px; }
+          .with-home-story { padding: 76px 0 84px; }
+          .with-home-story-row { gap: 28px; margin-bottom: 68px; }
+          .with-home-story-copy h2 { font-size: 37px; line-height: 1.01; }
           .with-home-screen-card { width: min(315px, 86vw); }
+          .with-home-screen-label { right: -5px; top: -12px; }
+          .with-home-quote { padding-bottom: 76px; }
+          .with-home-quote [data-editorial-placement="homepage"] { min-height: 164px; }
+          .with-home-quote [data-editorial-placement="homepage"] > div:first-child { font-size: 28px; line-height: 1.16; }
           .with-home-solo-grid { grid-template-columns: 1fr; }
+          .with-home-solo h2 { font-size: 36px; line-height: 1.02; }
           .with-home-solo-card { min-height: 0; }
-          .with-home-final { padding-top: 82px; }
-          .with-home-footer { align-items:flex-start; flex-direction:column; }
+          .with-home-final { padding-top: 78px; }
+          .with-home-final h2 { font-size: 40px; line-height: 1; }
+          .with-home-final button { width: 100%; max-width: 320px; }
+          .with-home-footer { align-items:flex-start; flex-direction:column; gap: 10px; }
         }
       `}</style>
 
@@ -651,6 +663,7 @@ function PublicHome({ onGetStarted, onSignIn }) {
           <EditorialLine
             placement="homepage"
             fallback="A little consistency can be gentler than a lot of intensity."
+            deferFallbackUntilLoaded
             style={{ maxWidth: 820, margin: "0 auto" }}
             attributionStyle={{}}
           />
