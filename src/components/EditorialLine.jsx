@@ -22,6 +22,7 @@ export default function EditorialLine({
   placement,
   fallback = "",
   showAttribution = true,
+  deferFallbackUntilLoaded = false,
   style = {},
   attributionStyle = {},
 }) {
@@ -65,6 +66,10 @@ export default function EditorialLine({
     loadEditorialLine();
     return () => { cancelled = true; };
   }, [placement]);
+
+  if (item === undefined && deferFallbackUntilLoaded) {
+    return <div data-editorial-placement={placement} aria-hidden="true" style={style} />;
+  }
 
   const text = item?.quote || fallback;
   if (!text) return null;
