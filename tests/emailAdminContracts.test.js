@@ -44,7 +44,7 @@ test("email editor exposes editorial fields but keeps system structure locked", 
 test("Auth template sync is admin-gated and uses the Management API", async () => {
   const fn = await readSource("functions/manage-transactional-email/index.ts");
   assert.match(fn, /app_admins/);
-  assert.match(fn, /SUPABASE_ACCESS_TOKEN/);
+  assert.match(fn, /WITH_SUPABASE_ACCESS_TOKEN/);
   assert.match(fn, /api\.supabase\.com\/v1\/projects/);
   assert.match(fn, /mailer_subjects_confirmation/);
   assert.match(fn, /mailer_templates_recovery_content/);
