@@ -44,3 +44,18 @@ test("auth, recovery, onboarding, and invitation text fields have accessible nam
   assert.match(onboarding, /aria-label="Your name"/);
   assert.match(invitation, /aria-label="Your name"/);
 });
+
+
+test("pending secure email changes are explained in Account settings", async () => {
+  const [tracker, profile] = await Promise.all([
+    readSource("src/Tracker.jsx"),
+    readSource("src/tabs/ProfileTab.jsx"),
+  ]);
+
+  assert.match(tracker, /Confirm the links sent to both your current and new email addresses to finish/);
+  assert.match(profile, /session\?\.user\?\.new_email/);
+  assert.match(profile, /Email change pending/);
+  assert.match(profile, /click both links/);
+  assert.match(profile, /Current:/);
+  assert.match(profile, /New:/);
+});
