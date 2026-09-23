@@ -39,6 +39,8 @@ test("email editor exposes editorial fields but keeps system structure locked", 
   assert.match(admin, /action URL/);
   assert.match(admin, /variable escaping/);
   assert.match(admin, /Sync to Supabase Auth/);
+  assert.match(admin, /Save before syncing/);
+  assert.match(admin, /Saved in With\. Sync to Supabase Auth/);
 });
 
 test("Auth template sync is admin-gated and uses the Management API", async () => {
@@ -49,6 +51,7 @@ test("Auth template sync is admin-gated and uses the Management API", async () =
   assert.match(fn, /mailer_subjects_confirmation/);
   assert.match(fn, /mailer_templates_recovery_content/);
   assert.match(fn, /mailer_templates_email_change_content/);
+  assert.match(fn, /restoreAllowedInlineTags/);
   assert.doesNotMatch(fn, /console\.log/);
 });
 
@@ -78,5 +81,7 @@ test("With invitations use stable With IDs and managed copy with safe fallback",
   assert.match(fn, /householdId/);
   assert.match(fn, /legacyInviteCode/);
   assert.match(fn, /escapeHtml/);
+  assert.match(fn, /restoreAllowedInlineTags/);
+  assert.match(fn, /interpolateInline/);
   assert.match(fn, /expires in/);
 });
