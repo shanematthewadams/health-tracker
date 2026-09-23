@@ -399,11 +399,11 @@ function AuthScreen({ initialMessage = "" }) {
         <div style={{ color: TEXT_MUTED, fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>{intro}</div>
 
         <div style={fieldLabel}>Email</div>
-        <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <input type="email" aria-label="Email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
 
         {!isForgot && <>
           <div style={fieldLabel}>Password</div>
-          <input type="password" minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
+          <input type="password" aria-label="Password" minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 10 }} />
         </>}
 
         {isSignup && hasInvite && inviterName && (
@@ -468,9 +468,9 @@ function ResetPasswordScreen({ onDone }) {
         <BrandLogo style={{ marginBottom: 12 }} />
         <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginBottom: 20 }}>Choose a new password.</div>
         <div style={fieldLabel}>New password</div>
-        <input type="password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <input type="password" aria-label="New password" minLength={6} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         <div style={fieldLabel}>Confirm password</div>
-        <input type="password" minLength={6} autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
+        <input type="password" aria-label="Confirm password" minLength={6} autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }} />
         {error && <div style={{ color: WARN, fontSize: 13, marginBottom: 10 }}>{error}</div>}
         <button disabled={busy} style={{ ...bigButton(brand.teal, brand.inkOn), opacity: busy ? .65 : 1 }}>{busy ? "Saving…" : "Save new password"}</button>
       </form>
