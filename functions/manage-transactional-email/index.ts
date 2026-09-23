@@ -44,8 +44,15 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#039;");
 }
 
-function replaceAllowedVariables(value: string, variables: Record<string, string>, escape = true) {
-  const source = escape ? escapeHtml(value) : String(value || "");
+function restoreAllowedInlineTags(value: string) {
+  return String(value || "")
+    .replace(/&lt;(\/?)(b|strong|i|em)&gt;/gi, (_full, slash, tag) => `<${slash}${String(tag).toLowerCase()}>`)
+    .replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+}
+
+function replaceAllowedVariables(value: string, variables: Record<string, string>, escape = true, inline = false) {
+  const escaped = escape ? escapeHtml(value) : String(value || "");
+  const source = escape && inline ? restoreAllowedInlineTags(escaped) : escaped;
   const unknown = [...source.matchAll(/{{\s*([a-z0-9_]+)\s*}}/gi)]
     .map((match) => match[1])
     .filter((key) => !variables[key]);
@@ -61,8 +68,8 @@ function paragraph(value: string) {
 function renderAuthHtml(row: Record<string, any>, variableMap: Record<string, string>) {
   const preheader = replaceAllowedVariables(row.preheader || "", variableMap);
   const headline = replaceAllowedVariables(row.headline || "", variableMap);
-  const body = replaceAllowedVariables(row.body_copy || "", variableMap);
-  const supporting = replaceAllowedVariables(row.supporting_text || "", variableMap);
+  const body = replaceAllowedVariables(row.body_copy || "", variableMap, true, true);
+  const supporting = replaceAllowedVariables(row.supporting_text || "", variableMap, true, true);
   const cta = replaceAllowedVariables(row.cta_label || "", variableMap);
   const note = escapeHtml(SYSTEM_NOTES[row.template_key] || "");
 
