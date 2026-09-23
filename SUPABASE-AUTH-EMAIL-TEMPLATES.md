@@ -20,7 +20,7 @@ Supabase Auth continues to send:
 
 The application does not replace Supabase Auth delivery or token behavior.
 
-The Admin editor stores approved copy in `public.transactional_email_content`. When an administrator saves one of these Auth-backed messages, `manage-transactional-email` renders the fixed With email structure and synchronizes the subject and HTML to the hosted Supabase Auth configuration through the Supabase Management API.
+The Admin editor stores approved copy in `public.transactional_email_content`. Saving an Auth-backed message updates the With copy only. An administrator then explicitly chooses **Sync to Supabase Auth** to have `manage-transactional-email` render the fixed With email structure and synchronize the subject and HTML to the hosted Supabase Auth configuration through the Supabase Management API.
 
 The renderer preserves `{{ .ConfirmationURL }}` for action and fallback links and maps approved With variables to supported Supabase Auth template variables. Admin users never edit raw HTML, CSS, auth URLs, or Supabase template syntax.
 
