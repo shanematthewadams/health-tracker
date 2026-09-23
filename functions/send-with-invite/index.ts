@@ -26,6 +26,17 @@ const escapeHtml = (value: string) => String(value || "")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#039;");
 
+function restoreAllowedInlineTags(value: string) {
+  return String(value || "")
+    .replace(/&lt;(\/?)(b|strong|i|em)&gt;/gi, (_full, slash, tag) => `<${slash}${String(tag).toLowerCase()}>`)
+    .replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+}
+
+function interpolateInline(value: string, data: Record<string, string>) {
+  const source = restoreAllowedInlineTags(escapeHtml(value));
+  return source.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (_full, key) => escapeHtml(data[key] ?? ""));
+}
+
 function interpolate(value: string, data: Record<string, string>, html = false) {
   const source = html ? escapeHtml(value) : String(value || "");
   return source.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (_full, key) => {
@@ -62,8 +73,8 @@ function safeOrigin(req: Request) {
 function renderInviteHtml(copy: Record<string, string>, data: Record<string, string>) {
   const preheader = interpolate(copy.preheader, data, true);
   const headline = interpolate(copy.headline, data, true);
-  const body = interpolate(copy.body_copy, data, true);
-  const supporting = interpolate(copy.supporting_text, data, true);
+  const body = interpolateInline(copy.body_copy, data);
+  const supporting = interpolateInline(copy.supporting_text, data);
   const cta = interpolate(copy.cta_label, data, true);
   const safeInviteUrl = escapeHtml(data.action_url);
   const safeEmail = escapeHtml(data.recipient_email);
