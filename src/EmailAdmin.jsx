@@ -69,12 +69,9 @@ function EmailPreview({ template, narrow }) {
     <div style={{ background: brand.teal, borderRadius: 14, padding: narrow ? 12 : 22, overflow: "auto" }}>
       <div style={{ width: "100%", maxWidth: width, margin: "0 auto", background: brand.bg, borderRadius: 18, overflow: "hidden", boxShadow: "0 10px 32px rgba(17,50,46,.18)" }}>
         <div style={{ padding: narrow ? "20px 20px 14px" : "24px 30px 18px", background: brand.teal }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-            <img src="/apple-touch-icon.png" width="42" height="42" alt="With" style={{ display: "block", width: 42, height: 42, borderRadius: 9 }} />
-            <div>
-              <div style={{ fontFamily: "Georgia, serif", color: "#fff", fontSize: narrow ? 25 : 28, fontWeight: 700, lineHeight: 1 }}>With</div>
-              <div style={{ marginTop: 5, fontFamily: "Arial, sans-serif", fontSize: 12, color: "rgba(255,255,255,.76)" }}>We’re in this together.</div>
-            </div>
+          <div>
+            <BrandLogo style={{ width: narrow ? 104 : 118, backgroundColor: "#fff" }} />
+            <div style={{ marginTop: 8, fontFamily: "Arial, sans-serif", fontSize: 12, color: "rgba(255,255,255,.76)" }}>We’re in this together.</div>
           </div>
         </div>
         <div style={{ padding: narrow ? 20 : 30, fontFamily: "Arial, sans-serif", color: brand.text }}>
