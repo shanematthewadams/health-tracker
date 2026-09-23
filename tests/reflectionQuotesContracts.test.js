@@ -99,7 +99,7 @@ test("editorial library admin supports in-place editing, search, filters, and ex
 });
 
 test("initial opening is one shared editorial ritual with a minimum dwell and cached quote", () => {
-  assert.match(brand, /OPENING_MIN_DWELL_MS = 1250/i);
+  assert.match(brand, /OPENING_MIN_DWELL_MS = 2500/i);
   assert.match(brand, /Preparing your With/i);
   assert.match(brand, /showEditorialOpening &&/i);
   assert.match(brand, /deferFallbackUntilLoaded/i);
