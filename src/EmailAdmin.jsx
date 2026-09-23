@@ -139,6 +139,10 @@ export default function EmailAdmin() {
     [templates, selectedKey]
   );
   const meta = draft ? EMAIL_TEMPLATE_META[draft.template_key] : null;
+  const hasUnsavedChanges = useMemo(() => {
+    if (!draft || !selected) return false;
+    return EDITABLE_EMAIL_FIELDS.some(([field]) => String(draft[field] || "") !== String(selected[field] || ""));
+  }, [draft, selected]);
 
   function selectTemplate(key) {
     const next = templates.find((row) => row.template_key === key);
@@ -159,6 +163,10 @@ export default function EmailAdmin() {
   async function syncTemplate(templateKey, quiet = false) {
     const row = templates.find((item) => item.template_key === templateKey) || draft;
     if (!row || row.delivery_path !== "supabase_auth") return true;
+    if (draft?.template_key === templateKey && hasUnsavedChanges) {
+      setError("Save your copy changes before syncing to Supabase Auth.");
+      return false;
+    }
     setSyncing(true);
     const { data, error: invokeError } = await supabase.functions.invoke("manage-transactional-email", {
       body: { action: "sync", templateKey },
@@ -203,9 +211,7 @@ export default function EmailAdmin() {
     await loadTemplates(draft.template_key);
     setBusy(false);
     if (draft.delivery_path === "supabase_auth") {
-      const synced = await syncTemplate(draft.template_key, true);
-      if (synced) setMessage("Saved and synced to Supabase Auth.");
-      else setError((current) => current || "Copy saved in With, but Supabase Auth sync still needs configuration.");
+      setMessage("Saved in With. Sync to Supabase Auth when you’re ready to publish these changes.");
     } else {
       setMessage("Saved. Future invitations will use this copy.");
     }
@@ -341,8 +347,14 @@ export default function EmailAdmin() {
                     </button>
                     <button type="button" disabled={busy || syncing} onClick={cancelChanges} style={{ ...buttonStyle, background: brand.surfaceSoft, color: brand.text, border: `1px solid ${brand.border}` }}>Cancel changes</button>
                     {draft.delivery_path === "supabase_auth" && (
-                      <button type="button" disabled={busy || syncing} onClick={() => syncTemplate(draft.template_key)} style={{ ...buttonStyle, background: brand.surface, color: brand.tealDark, border: `1px solid ${brand.border}`, display: "inline-flex", alignItems: "center", gap: 7 }}>
-                        <RefreshCw size={15} /> {syncing ? "Syncing…" : "Sync to Supabase Auth"}
+                      <button
+                        type="button"
+                        disabled={busy || syncing || hasUnsavedChanges}
+                        title={hasUnsavedChanges ? "Save your copy changes before syncing." : "Publish the saved copy to Supabase Auth."}
+                        onClick={() => syncTemplate(draft.template_key)}
+                        style={{ ...buttonStyle, background: brand.surface, color: brand.tealDark, border: `1px solid ${brand.border}`, display: "inline-flex", alignItems: "center", gap: 7, opacity: hasUnsavedChanges ? .55 : 1 }}
+                      >
+                        <RefreshCw size={15} /> {syncing ? "Syncing…" : hasUnsavedChanges ? "Save before syncing" : "Sync to Supabase Auth"}
                       </button>
                     )}
                   </div>
