@@ -273,6 +273,7 @@ function OnboardingScreen({ onComplete }) {
         <div style={fieldLabel}>What should we call your With?</div>
         <input
           type="text"
+          aria-label="With name"
           maxLength={40}
           required
           autoFocus
@@ -296,6 +297,7 @@ function OnboardingScreen({ onComplete }) {
             <div style={fieldLabel}>What should we call you?</div>
             <input
               type="text"
+              aria-label="Your name"
               maxLength={40}
               required
               placeholder="Your name"
