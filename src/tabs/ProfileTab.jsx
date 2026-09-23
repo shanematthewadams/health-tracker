@@ -35,6 +35,34 @@ const PROFILE_SECTIONS = [
   { id: "account", label: "Account" },
 ];
 
+function ModalShell({ title, icon: Icon, children, onClose, styles }) {
+  const { SURFACE, SURFACE_2, BORDER, TEXT } = styles;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(20,31,29,.38)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "20px 12px max(20px, env(safe-area-inset-bottom))" }}
+    >
+      <div style={{ width: "100%", maxWidth: 520, maxHeight: "88dvh", overflowY: "auto", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "16px 16px 20px", boxShadow: "0 20px 60px rgba(20,31,29,.22)" }}>
+        <div style={{ position: "sticky", top: -16, zIndex: 2, background: SURFACE, padding: "2px 0 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {Icon && (
+              <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 10, background: SURFACE_2, border: `1px solid ${BORDER}`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <Icon size={17} strokeWidth={1.9} color={brand.tealDark} />
+              </span>
+            )}
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1 }}>{title}</div>
+          </div>
+          <button type="button" onClick={onClose} aria-label={`Close ${title}`} style={{ border: "none", background: SURFACE_2, color: TEXT, width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0 }}><X size={17} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileTab({
   activeUser,
   data,
@@ -323,28 +351,6 @@ export default function ProfileTab({
     );
   }
 
-  function ModalShell({ title, icon: Icon, children }) {
-    return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onMouseDown={(event) => { if (event.target === event.currentTarget) closeModal(); }}
-        style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(20,31,29,.38)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "20px 12px max(20px, env(safe-area-inset-bottom))" }}
-      >
-        <div style={{ width: "100%", maxWidth: 520, maxHeight: "88dvh", overflowY: "auto", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: "16px 16px 20px", boxShadow: "0 20px 60px rgba(20,31,29,.22)" }}>
-          <div style={{ position: "sticky", top: -16, zIndex: 2, background: SURFACE, padding: "2px 0 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              {Icon && <IconTile icon={Icon} />}
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 24, fontWeight: 600, lineHeight: 1.1 }}>{title}</div>
-            </div>
-            <button type="button" onClick={closeModal} aria-label={`Close ${title}`} style={{ border: "none", background: SURFACE_2, color: TEXT, width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0 }}><X size={17} /></button>
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  }
 
   function PreferenceRow({ icon, title, description, meta, onClick }) {
     return (
@@ -661,7 +667,7 @@ export default function ProfileTab({
       </div>
 
       {modal === "invite" && (
-        <ModalShell title="Invite someone" icon={UserPlus}>
+        <ModalShell title="Invite someone" icon={UserPlus} onClose={closeModal} styles={{ SURFACE, SURFACE_2, BORDER, TEXT }}>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>Add someone you know to {householdName} so you can support each other while keeping your health data personal.</div>
           <div style={fieldLabel}>Email address</div>
           <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="friend@example.com" style={{ ...inputStyle, marginBottom: 10 }} />
@@ -672,25 +678,25 @@ export default function ProfileTab({
       )}
 
       {modal === "trackers" && (
-        <ModalShell title="Trackers" icon={SlidersHorizontal}>
+        <ModalShell title="Trackers" icon={SlidersHorizontal} onClose={closeModal} styles={{ SURFACE, SURFACE_2, BORDER, TEXT }}>
           <MyTrackersPanel session={session} onOpenGoals={openGoalsEdit} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
       {modal === "daily-reflection" && (
-        <ModalShell title="Daily Reflection" icon={NotebookPen}>
+        <ModalShell title="Daily Reflection" icon={NotebookPen} onClose={closeModal} styles={{ SURFACE, SURFACE_2, BORDER, TEXT }}>
           <DailyReflectionPreferencePanel session={session} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
       {modal === "reminders" && (
-        <ModalShell title="Reminders" icon={Bell}>
+        <ModalShell title="Reminders" icon={Bell} onClose={closeModal} styles={{ SURFACE, SURFACE_2, BORDER, TEXT }}>
           <LoggingRemindersPanel session={session} styles={{ SURFACE, SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, fieldLabel, inputStyle, bigButton }} />
         </ModalShell>
       )}
 
       {modal === "quick-add" && (
-        <ModalShell title="Quick Add" icon={Droplets}>
+        <ModalShell title="Quick Add" icon={Droplets} onClose={closeModal} styles={{ SURFACE, SURFACE_2, BORDER, TEXT }}>
           <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>Set the three water amounts you use most often.</div>
           {!editingWaterShortcuts ? (
             <>
