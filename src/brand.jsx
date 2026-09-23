@@ -2,7 +2,7 @@ import { useState } from "react";
 import withLogo from "./assets/brand/with-logo.svg";
 import EditorialLine from "./components/EditorialLine.jsx";
 
-const OPENING_MIN_DWELL_MS = 1250;
+const OPENING_MIN_DWELL_MS = 2500;
 let initialOpeningStartedAt = null;
 let initialOpeningFinished = false;
 
