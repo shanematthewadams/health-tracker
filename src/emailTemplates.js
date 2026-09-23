@@ -62,6 +62,34 @@ export const EDITABLE_EMAIL_FIELDS = [
   ["supporting_text", "Supporting text"],
 ];
 
+const INLINE_FORMATTING_FIELDS = new Set(["body_copy", "supporting_text"]);
+const INLINE_TAG_PATTERN = /<\/?(?:b|strong|i|em)>|<br\s*\/?>/gi;
+const HTML_LIKE_TAG_PATTERN = /<\s*\/?\s*[a-z][^>]*>/i;
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function restoreAllowedInlineTags(value) {
+  return String(value || "")
+    .replace(/&lt;(\/?)(b|strong|i|em)&gt;/gi, (_full, slash, tag) => `<${slash}${tag.toLowerCase()}>`)
+    .replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+}
+
+export function formatEmailInlineHtml(value) {
+  return restoreAllowedInlineTags(escapeHtml(value)).replaceAll("\n", "<br>");
+}
+
+export function unsupportedEmailMarkup(value) {
+  const remainder = String(value || "").replace(INLINE_TAG_PATTERN, "");
+  return HTML_LIKE_TAG_PATTERN.test(remainder);
+}
+
 const VARIABLE_PATTERN = /{{\s*([a-z0-9_]+)\s*}}/gi;
 
 export function extractVariables(value) {
@@ -94,7 +122,15 @@ export function validateEmailDraft(draft) {
     if (!String(draft[field] || "").trim()) problems.push(`${field.replaceAll("_", " ")} is required.`);
   }
   for (const [field, limit] of Object.entries(limits)) {
-    if (String(draft[field] || "").length > limit) problems.push(`${field.replaceAll("_", " ")} must be ${limit} characters or fewer.`);
+    const value = String(draft[field] || "");
+    if (value.length > limit) problems.push(`${field.replaceAll("_", " ")} must be ${limit} characters or fewer.`);
+    if (HTML_LIKE_TAG_PATTERN.test(value)) {
+      if (!INLINE_FORMATTING_FIELDS.has(field)) {
+        problems.push("Inline formatting is only available in body copy and supporting text.");
+      } else if (unsupportedEmailMarkup(value)) {
+        problems.push("Body copy and supporting text support only <b>, <strong>, <i>, <em>, and <br> tags without attributes.");
+      }
+    }
   }
 
   const meta = EMAIL_TEMPLATE_META[draft.template_key];
@@ -116,8 +152,10 @@ export function emailPreviewModel(template) {
     preheader: interpolateEmailText(template.preheader, sample),
     headline: interpolateEmailText(template.headline, sample),
     body: interpolateEmailText(template.body_copy, sample),
+    bodyHtml: formatEmailInlineHtml(interpolateEmailText(template.body_copy, sample)),
     cta: interpolateEmailText(template.cta_label, sample),
     supporting: interpolateEmailText(template.supporting_text, sample),
+    supportingHtml: formatEmailInlineHtml(interpolateEmailText(template.supporting_text, sample)),
     systemNote: interpolateEmailText(meta?.systemNote || "", sample),
     actionUrl: sample.action_url || "https://staging.imwith.me",
   };
