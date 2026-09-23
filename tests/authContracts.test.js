@@ -59,3 +59,13 @@ test("pending secure email changes are explained in Account settings", async () 
   assert.match(profile, /Current:/);
   assert.match(profile, /New:/);
 });
+
+
+test("Profile modals keep stable component identity while editing fields", async () => {
+  const profile = await readSource("src/tabs/ProfileTab.jsx");
+  const profileStart = profile.indexOf("export default function ProfileTab");
+  const modalStart = profile.indexOf("function ModalShell");
+  assert.ok(modalStart >= 0 && modalStart < profileStart);
+  assert.match(profile, /type="email" value=\{inviteEmail\}/);
+  assert.match(profile, /<ModalShell title="Invite someone" icon=\{UserPlus\} onClose=\{closeModal\}/);
+});
