@@ -1180,12 +1180,15 @@ export default function Tracker() {
       return true;
     }
     setAccountBusy(true); setAccountError(""); setAccountMessage("");
-    const { error } = await supabase.auth.updateUser(
+    const { data: updated, error } = await supabase.auth.updateUser(
       { email: nextEmail },
       { emailRedirectTo: window.location.origin }
     );
     if (error) { setAccountError(friendlyError(error, "We couldn’t update your email. Try again.")); setAccountBusy(false); return false; }
-    setAccountMessage("Email update requested. Check your inbox to confirm the change.");
+    if (updated?.user) {
+      setSession((current) => current ? { ...current, user: updated.user } : current);
+    }
+    setAccountMessage("Email change started. Confirm the links sent to both your current and new email addresses to finish.");
     setAccountBusy(false);
     return true;
   }
