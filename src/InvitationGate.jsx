@@ -282,7 +282,7 @@ export default function InvitationGate({ children }) {
       {!existingProfile && (
         <>
           <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>What should we call you?</div>
-          <input type="text" maxLength={40} value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Your name" style={{ ...inputStyle, marginBottom: 16 }} />
+          <input type="text" aria-label="Your name" maxLength={40} value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Your name" style={{ ...inputStyle, marginBottom: 16 }} />
           <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Your color</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 7, marginBottom: 16 }}>
             {PROFILE_COLORS.map((color) => <button key={color} type="button" aria-label={`Choose ${color}`} onClick={() => setProfileColor(color)} style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", background: color, border: profileColor === color ? `3px solid ${TEXT}` : "3px solid transparent" }} />)}
