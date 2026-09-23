@@ -134,6 +134,11 @@ export default function ProfileTab({
   } = styles;
 
   const metadata = session?.user?.user_metadata || {};
+  const currentEmail = String(session?.user?.email || "").trim();
+  const pendingEmail = String(session?.user?.new_email || "").trim();
+  const hasPendingEmailChange = Boolean(
+    pendingEmail && pendingEmail.toLowerCase() !== currentEmail.toLowerCase()
+  );
   const followsDeviceTimeZone = metadata.timezone_auto === true || (metadata.timezone_auto == null && !metadata.timezone);
 
   useEffect(() => {
@@ -524,8 +529,20 @@ export default function ProfileTab({
                 <IconTile icon={Mail} />
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800 }}>Email</div>
-                  <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginTop: 3, overflowWrap: "anywhere" }}>{session?.user?.email}</div>
-                  <button onClick={() => { clearAccountError(); setEditingEmail(true); }} style={{ ...inlineActionStyle, color: brand.tealDark, paddingTop: 7 }}><Pencil size={14} strokeWidth={1.9} /> Change email</button>
+                  <div style={{ color: TEXT_MUTED, fontSize: 13, lineHeight: 1.45, marginTop: 3, overflowWrap: "anywhere" }}>{currentEmail}</div>
+                  {hasPendingEmailChange && (
+                    <div role="status" aria-live="polite" style={{ marginTop: 10, padding: "11px 12px", borderRadius: 12, background: SURFACE_2, border: `1px solid ${BORDER}` }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: TEXT }}>Email change pending</div>
+                      <div style={{ color: TEXT_MUTED, fontSize: 12, lineHeight: 1.5, marginTop: 4 }}>
+                        To finish, open the confirmation emails sent to both addresses and click both links.
+                      </div>
+                      <div style={{ display: "grid", gap: 4, marginTop: 9, fontSize: 12, lineHeight: 1.4 }}>
+                        <div><span style={{ color: TEXT_MUTED }}>Current:</span> <span style={{ color: TEXT, fontWeight: 700, overflowWrap: "anywhere" }}>{currentEmail}</span></div>
+                        <div><span style={{ color: TEXT_MUTED }}>New:</span> <span style={{ color: TEXT, fontWeight: 700, overflowWrap: "anywhere" }}>{pendingEmail}</span></div>
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => { clearAccountError(); setEmailInput(hasPendingEmailChange ? pendingEmail : currentEmail); setEditingEmail(true); }} style={{ ...inlineActionStyle, color: brand.tealDark, paddingTop: 7 }}><Pencil size={14} strokeWidth={1.9} /> {hasPendingEmailChange ? "Use a different email" : "Change email"}</button>
                 </div>
               </div>
             ) : (
