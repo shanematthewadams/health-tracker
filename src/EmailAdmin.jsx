@@ -77,8 +77,8 @@ function EmailPreview({ template, narrow }) {
         <div style={{ padding: narrow ? 20 : 30, fontFamily: "Arial, sans-serif", color: brand.text }}>
           <div style={{ display: "none" }}>{preview.preheader}</div>
           <div style={{ fontFamily: "Georgia, serif", fontSize: narrow ? 25 : 28, fontWeight: 700, lineHeight: 1.12, marginBottom: 16 }}>{preview.headline}</div>
-          <p style={{ margin: "0 0 14px", lineHeight: 1.6, color: brand.textMuted }}>{preview.body}</p>
-          {preview.supporting && <p style={{ margin: "0 0 14px", lineHeight: 1.6, color: brand.text }}>{preview.supporting}</p>}
+          <div style={{ margin: "0 0 14px", lineHeight: 1.6, color: brand.textMuted }} dangerouslySetInnerHTML={{ __html: preview.bodyHtml }} />
+          {preview.supporting && <div style={{ margin: "0 0 14px", lineHeight: 1.6, color: brand.text }} dangerouslySetInnerHTML={{ __html: preview.supportingHtml }} />}
           <div style={{ margin: "24px 0 0" }}>
             <span style={{ display: "inline-block", background: brand.teal, color: "#fff", padding: "13px 18px", borderRadius: 10, fontWeight: 700 }}>{preview.cta}</span>
           </div>
@@ -297,12 +297,17 @@ export default function EmailAdmin() {
                       <div key={field} style={{ marginBottom: 14 }}>
                         <div style={labelStyle}>{label}</div>
                         {multiline ? (
-                          <textarea
-                            value={draft[field] || ""}
-                            rows={field === "body_copy" ? 5 : 3}
-                            onChange={(e) => setDraft((current) => ({ ...current, [field]: e.target.value }))}
-                            style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
-                          />
+                          <>
+                            <textarea
+                              value={draft[field] || ""}
+                              rows={field === "body_copy" ? 5 : 3}
+                              onChange={(e) => setDraft((current) => ({ ...current, [field]: e.target.value }))}
+                              style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
+                            />
+                            <div style={{ marginTop: 5, fontSize: 11, color: brand.textSoft, lineHeight: 1.45 }}>
+                              Inline formatting: <code>{"<b>bold</b>"}</code>, <code>{"<i>italics</i>"}</code>, <code>{"<br>"}</code>. Other HTML is blocked.
+                            </div>
+                          </>
                         ) : (
                           <input
                             value={draft[field] || ""}
@@ -326,7 +331,7 @@ export default function EmailAdmin() {
                   <div style={{ background: "#FAF8F3", border: `1px solid ${brand.border}`, borderRadius: 12, padding: 12, marginBottom: 16 }}>
                     <div style={labelStyle}>System controlled</div>
                     <div style={{ color: brand.textMuted, fontSize: 12, lineHeight: 1.55 }}>
-                      With controls the logo, HTML/CSS, action URL, fallback link, variable escaping, footer structure and required security text. Those pieces cannot be edited here.
+                      With controls the logo, layout/CSS, action URL, fallback link, variable escaping, footer structure and required security text. Body copy can use only the limited inline formatting shown above.
                     </div>
                   </div>
 
