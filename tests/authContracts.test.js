@@ -27,3 +27,20 @@ test("current invitation acceptance uses the Multiple Withs RPC", async () => {
   assert.match(invitationGate, /accept_with_invitation_v2/);
   assert.match(invitationGate, /existingProfile/);
 });
+
+
+test("auth, recovery, onboarding, and invitation text fields have accessible names", async () => {
+  const [tracker, onboarding, invitation] = await Promise.all([
+    readSource("src/Tracker.jsx"),
+    readSource("src/OnboardingGate.jsx"),
+    readSource("src/InvitationGate.jsx"),
+  ]);
+
+  assert.match(tracker, /type="email" aria-label="Email"/);
+  assert.match(tracker, /type="password" aria-label="Password"/);
+  assert.match(tracker, /type="password" aria-label="New password"/);
+  assert.match(tracker, /type="password" aria-label="Confirm password"/);
+  assert.match(onboarding, /aria-label="With name"/);
+  assert.match(onboarding, /aria-label="Your name"/);
+  assert.match(invitation, /aria-label="Your name"/);
+});
