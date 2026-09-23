@@ -34,7 +34,7 @@ The invitation function reads the active `with_invitation` copy from `public.tra
 
 Automatic Supabase Auth template synchronization requires this Edge Function secret:
 
-`WITH_WITH_SUPABASE_ACCESS_TOKEN`
+`WITH_SUPABASE_ACCESS_TOKEN`
 
 It must be a Supabase personal access token with permission to manage the With project.
 
@@ -72,6 +72,16 @@ Admin controls only approved editorial fields:
 - body copy
 - CTA label
 - supporting text
+
+### Limited inline formatting
+
+Body copy and supporting text may use only these inline tags:
+
+- `<b>` and `<strong>` for bold
+- `<i>` and `<em>` for italics
+- `<br>` for a manual line break
+
+Tags cannot include attributes. Other HTML remains escaped or is rejected by the Admin editor. Subject, preheader, headline, and CTA label remain plain text. Layout, CSS, links, branding, and email structure remain code-controlled.
 
 ## Supported Admin templates
 
