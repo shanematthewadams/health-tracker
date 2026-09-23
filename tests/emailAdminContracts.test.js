@@ -52,6 +52,21 @@ test("Auth template sync is admin-gated and uses the Management API", async () =
   assert.doesNotMatch(fn, /console\.log/);
 });
 
+test("email branding uses the canonical With wordmark instead of the app icon", async () => {
+  const [admin, inviteFn, authFn, wordmark] = await Promise.all([
+    readSource("src/EmailAdmin.jsx"),
+    readSource("functions/send-with-invite/index.ts"),
+    readSource("functions/manage-transactional-email/index.ts"),
+    readSource("public/with-logo-email.svg"),
+  ]);
+  assert.match(admin, /<BrandLogo/);
+  assert.match(inviteFn, /with-logo-email\.svg/);
+  assert.match(authFn, /with-logo-email\.svg/);
+  assert.doesNotMatch(inviteFn, /apple-touch-icon\.png/);
+  assert.doesNotMatch(authFn, /apple-touch-icon\.png/);
+  assert.match(wordmark, /aria-label="With logo"/);
+});
+
 test("With invitations use stable With IDs and managed copy with safe fallback", async () => {
   const [tracker, fn] = await Promise.all([
     readSource("src/Tracker.jsx"),
