@@ -113,6 +113,9 @@ export default function ProfileTab({
   styles,
 }) {
   const [section, setSection] = useState("overview");
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [section]);
   const [modal, setModal] = useState("");
   const [shareStatus, setShareStatus] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
