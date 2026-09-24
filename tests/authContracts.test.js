@@ -27,3 +27,45 @@ test("current invitation acceptance uses the Multiple Withs RPC", async () => {
   assert.match(invitationGate, /accept_with_invitation_v2/);
   assert.match(invitationGate, /existingProfile/);
 });
+
+
+test("auth, recovery, onboarding, and invitation text fields have accessible names", async () => {
+  const [tracker, onboarding, invitation] = await Promise.all([
+    readSource("src/Tracker.jsx"),
+    readSource("src/OnboardingGate.jsx"),
+    readSource("src/InvitationGate.jsx"),
+  ]);
+
+  assert.match(tracker, /type="email" aria-label="Email"/);
+  assert.match(tracker, /type="password" aria-label="Password"/);
+  assert.match(tracker, /type="password" aria-label="New password"/);
+  assert.match(tracker, /type="password" aria-label="Confirm password"/);
+  assert.match(onboarding, /aria-label="With name"/);
+  assert.match(onboarding, /aria-label="Your name"/);
+  assert.match(invitation, /aria-label="Your name"/);
+});
+
+
+test("pending secure email changes are explained in Account settings", async () => {
+  const [tracker, profile] = await Promise.all([
+    readSource("src/Tracker.jsx"),
+    readSource("src/tabs/ProfileTab.jsx"),
+  ]);
+
+  assert.match(tracker, /Confirm the links sent to both your current and new email addresses to finish/);
+  assert.match(profile, /session\?\.user\?\.new_email/);
+  assert.match(profile, /Email change pending/);
+  assert.match(profile, /click both links/);
+  assert.match(profile, /Current:/);
+  assert.match(profile, /New:/);
+});
+
+
+test("Profile modals keep stable component identity while editing fields", async () => {
+  const profile = await readSource("src/tabs/ProfileTab.jsx");
+  const profileStart = profile.indexOf("export default function ProfileTab");
+  const modalStart = profile.indexOf("function ModalShell");
+  assert.ok(modalStart >= 0 && modalStart < profileStart);
+  assert.match(profile, /type="email" value=\{inviteEmail\}/);
+  assert.match(profile, /<ModalShell title="Invite someone" icon=\{UserPlus\} onClose=\{closeModal\}/);
+});

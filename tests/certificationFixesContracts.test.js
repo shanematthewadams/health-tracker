@@ -35,7 +35,11 @@ test("admin navigation waits for server-backed admin authorization", async () =>
   assert.match(source, /supabase\.rpc\("is_app_admin"\)/);
   assert.match(source, /const \[adminAuthorized, setAdminAuthorized\] = useState\(false\)/);
   assert.match(source, /\{adminAuthorized && \([\s\S]*<nav aria-label="Admin sections"/);
-  assert.match(source, /adminAuthorized && view === "quotes" \? <ReflectionQuotesAdmin \/> : <LegacyAdminApp \/>/);
+  assert.match(source, /adminAuthorized && view === "quotes"/);
+  assert.match(source, /<ReflectionQuotesAdmin \/>/);
+  assert.match(source, /adminAuthorized && view === "emails"/);
+  assert.match(source, /<EmailAdmin \/>/);
+  assert.match(source, /<LegacyAdminApp \/>/);
 });
 
 test("password recovery has a stable return marker and cannot leave stale recovery state behind", async () => {
@@ -62,4 +66,17 @@ test("nutrition calculator shows one missing-goal-date instruction and prevents 
   assert.match(source, /\{needsGoalDate && <div[\s\S]*Add a goal date above so With can calculate the pace required\./);
   assert.match(source, /disabled=\{!canCalculate\}/);
   assert.match(source, /opacity: canCalculate \? 1 : \.55/);
+});
+
+
+test("major screen changes return to the top without tying scroll resets to modal state", async () => {
+  const [tracker, profile] = await Promise.all([
+    readSource("src/Tracker.jsx"),
+    readSource("src/tabs/ProfileTab.jsx"),
+  ]);
+
+  assert.match(tracker, /window\.scrollTo\(\{ top: 0, left: 0, behavior: "auto" \}\);\s*\}, \[tab\]\)/);
+  assert.match(tracker, /async function selectWith[\s\S]*window\.scrollTo\(\{ top: 0, left: 0, behavior: "auto" \}\)/);
+  assert.match(profile, /window\.scrollTo\(\{ top: 0, left: 0, behavior: "auto" \}\);\s*\}, \[section\]\)/);
+  assert.doesNotMatch(profile, /\[modal\][\s\S]{0,120}scrollTo/);
 });

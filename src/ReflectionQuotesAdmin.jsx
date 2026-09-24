@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, Download, Pencil, Plus, Sparkles, Star, Upload } from "lucide-react";
+import { ArrowLeft, Check, Download, Pencil, Plus, Search, Sparkles, Star, Upload } from "lucide-react";
 import { BrandLogo, brand } from "./brand.jsx";
 import { supabase } from "./supabase.js";
 
@@ -20,6 +20,7 @@ const PLACEMENTS = [
   ["weekly_reflection", "Weekly reflection"],
   ["preparing_with", "Preparing your With"],
   ["onboarding", "Onboarding"],
+  ["homepage", "Homepage"],
 ];
 const PLACEMENT_IDS = PLACEMENTS.map(([id]) => id);
 
@@ -208,6 +209,13 @@ export default function ReflectionQuotesAdmin() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [themeFilter, setThemeFilter] = useState("all");
+  const [authorFilter, setAuthorFilter] = useState("all");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [returnFocusId, setReturnFocusId] = useState(null);
 
   async function loadQuotes() {
     const { data, error: quoteError } = await supabase
@@ -242,6 +250,66 @@ export default function ReflectionQuotesAdmin() {
     quotes.filter((quote) => quote.active && (quote.placements || []).includes(placement)).length,
   ])), [quotes]);
 
+  const authors = useMemo(() => [...new Set(quotes.map((quote) => quote.attribution).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b)), [quotes]);
+
+  const filteredQuotes = useMemo(() => {
+    const query = normalizeKey(searchQuery);
+    return quotes.filter((quote) => {
+      const matchesSearch = !query || [quote.quote, quote.attribution, quote.source_note]
+        .some((value) => normalizeKey(value).includes(query));
+      const matchesStatus = statusFilter === "all"
+        || (statusFilter === "active" && quote.active)
+        || (statusFilter === "paused" && !quote.active);
+      const matchesTheme = themeFilter === "all" || (quote.themes || []).includes(themeFilter);
+      const matchesAuthor = authorFilter === "all" || quote.attribution === authorFilter;
+      return matchesSearch && matchesStatus && matchesTheme && matchesAuthor;
+    });
+  }, [quotes, searchQuery, statusFilter, themeFilter, authorFilter]);
+
+  const selectedCount = selectedIds.size;
+  const allFilteredSelected = filteredQuotes.length > 0
+    && filteredQuotes.every((quote) => selectedIds.has(quote.id));
+
+  useEffect(() => {
+    if (draft || !returnFocusId) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.querySelector('[data-edit-quote-id="' + returnFocusId + '"]')?.focus();
+      setReturnFocusId(null);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [draft, returnFocusId]);
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelection(id) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllFiltered() {
+    const filteredIds = new Set(filteredQuotes.map((quote) => quote.id));
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allFilteredSelected) filteredIds.forEach((id) => next.delete(id));
+      else filteredIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  function toggleSelectionMode() {
+    setSelectionMode((current) => {
+      if (current) clearSelection();
+      return !current;
+    });
+  }
+
   function startNewQuote() {
     setMessage(""); setError(""); setImportState(null);
     setDraft({ ...EMPTY_DRAFT, themes: [...EMPTY_DRAFT.themes], placements: [...EMPTY_DRAFT.placements] });
@@ -258,6 +326,11 @@ export default function ReflectionQuotesAdmin() {
       themes: [...(quote.themes || [])],
       placements: [...(quote.placements || ["weekly_reflection"])],
     });
+  }
+
+  function cancelDraft() {
+    if (draft?.id) setReturnFocusId(draft.id);
+    setDraft(null);
   }
 
   function toggleArrayValue(field, value) {
@@ -305,11 +378,23 @@ export default function ReflectionQuotesAdmin() {
         featured_week: item.featured_week || null,
         updated_at: new Date().toISOString(),
       };
-      const { error: saveError } = item.id
-        ? await supabase.from("reflection_quotes").update(payload).eq("id", item.id)
-        : await supabase.from("reflection_quotes").insert(payload);
+      const writeQuery = item.id
+        ? supabase.from("reflection_quotes").update(payload).eq("id", item.id)
+        : supabase.from("reflection_quotes").insert(payload);
+      const { data: savedItem, error: saveError } = await writeQuery
+        .select("id,quote,attribution,quote_kind,themes,placements,source_note,source_url,active,featured_week,created_at,updated_at")
+        .single();
       if (saveError) throw saveError;
-      await loadQuotes();
+      setQuotes((current) => {
+        const reconciled = item.featured_week
+          ? current.map((quote) => quote.id !== item.id && quote.featured_week === item.featured_week
+            ? { ...quote, featured_week: null }
+            : quote)
+          : current;
+        if (item.id) return reconciled.map((quote) => quote.id === savedItem.id ? savedItem : quote);
+        return [savedItem, ...reconciled];
+      });
+      if (item.id) setReturnFocusId(item.id);
       setDraft(null);
       setMessage("Editorial item saved.");
     } catch (saveError) {
@@ -324,10 +409,35 @@ export default function ReflectionQuotesAdmin() {
     try {
       const { error: updateError } = await supabase.from("reflection_quotes").update({ active: !quote.active, updated_at: new Date().toISOString() }).eq("id", quote.id);
       if (updateError) throw updateError;
-      await loadQuotes();
+      setQuotes((current) => current.map((item) => item.id === quote.id
+        ? { ...item, active: !quote.active, updated_at: new Date().toISOString() }
+        : item));
       setMessage(!quote.active ? "Item activated." : "Item paused.");
     } catch (updateError) {
       setError(updateError.message || "Could not update that item.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function bulkSetActive(active) {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    setBusy(true); setMessage(""); setError("");
+    try {
+      const updatedAt = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("reflection_quotes")
+        .update({ active, updated_at: updatedAt })
+        .in("id", ids);
+      if (updateError) throw updateError;
+      setQuotes((current) => current.map((quote) => selectedIds.has(quote.id)
+        ? { ...quote, active, updated_at: updatedAt }
+        : quote));
+      clearSelection();
+      setMessage((active ? "Resumed " : "Paused ") + ids.length + (ids.length === 1 ? " item." : " items."));
+    } catch (updateError) {
+      setError(updateError.message || "Could not update the selected items.");
     } finally {
       setBusy(false);
     }
@@ -341,8 +451,13 @@ export default function ReflectionQuotesAdmin() {
       await clearFeaturedWeek(week, quote.id);
       const { error: updateError } = await supabase.from("reflection_quotes").update({ active: true, featured_week: week, updated_at: new Date().toISOString() }).eq("id", quote.id);
       if (updateError) throw updateError;
-      await loadQuotes();
-      setMessage(`Featured for the next weekly reflection (${week}).`);
+      const updatedAt = new Date().toISOString();
+      setQuotes((current) => current.map((item) => {
+        if (item.id === quote.id) return { ...item, active: true, featured_week: week, updated_at: updatedAt };
+        if (item.featured_week === week) return { ...item, featured_week: null };
+        return item;
+      }));
+      setMessage("Featured for the next weekly reflection (" + week + ").");
     } catch (updateError) {
       setError(updateError.message || "Could not feature that item.");
     } finally {
@@ -355,7 +470,9 @@ export default function ReflectionQuotesAdmin() {
     try {
       const { error: updateError } = await supabase.from("reflection_quotes").update({ featured_week: null, updated_at: new Date().toISOString() }).eq("id", quote.id);
       if (updateError) throw updateError;
-      await loadQuotes();
+      setQuotes((current) => current.map((item) => item.id === quote.id
+        ? { ...item, featured_week: null, updated_at: new Date().toISOString() }
+        : item));
       setMessage("Featured week cleared.");
     } catch (updateError) {
       setError(updateError.message || "Could not clear the featured week.");
@@ -506,15 +623,45 @@ export default function ReflectionQuotesAdmin() {
           </div>
         </header>
 
-        {(message || error) && <div style={{ ...cardStyle, marginBottom: 12, borderColor: error ? brand.warn : brand.border, color: error ? brand.warn : brand.text, fontSize: 13 }}>{error || message}</div>}
+        {(message || error) && <div role={error ? "alert" : "status"} aria-live="polite" style={{ ...cardStyle, position: "fixed", right: 16, bottom: 16, left: 16, marginLeft: "auto", maxWidth: 520, zIndex: 30, borderColor: error ? brand.warn : brand.border, color: error ? brand.warn : brand.text, fontSize: 13 }}>{error || message}</div>}
 
         <div style={{ ...cardStyle, marginBottom: 14, background: brand.surfaceSoft }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, marginBottom: 5 }}><Sparkles size={16} color={brand.tealDark} /> Where the library appears</div>
-          <div style={{ color: brand.textMuted, fontSize: 12, lineHeight: 1.55 }}>Weekly reflections use theme-aware stable rotation. Preparing and onboarding moments use a quiet daily rotation and never inspect health data. A single item can be eligible for more than one placement.</div>
+          <div style={{ color: brand.textMuted, fontSize: 12, lineHeight: 1.55 }}>Weekly reflections use theme-aware stable rotation. Homepage, preparing, and onboarding moments use a quiet daily rotation and never inspect health data. A single item can be eligible for more than one placement.</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {PLACEMENTS.map(([id, label]) => <span key={id} style={{ background: brand.surface, border: `1px solid ${brand.border}`, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 800 }}>{label}: {placementCounts[id] || 0}</span>)}
           </div>
         </div>
+
+
+        <div style={{ ...cardStyle, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
+            <label>
+              <div style={labelStyle}>Search</div>
+              <div style={{ position: "relative" }}>
+                <Search size={15} aria-hidden="true" style={{ position: "absolute", left: 11, top: 13, color: brand.textMuted }} />
+                <input aria-label="Search quote or attribution" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Quote or attribution" style={{ ...inputStyle, paddingLeft: 34 }} />
+              </div>
+            </label>
+            <label><div style={labelStyle}>Status</div><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={inputStyle}><option value="all">All</option><option value="active">Active</option><option value="paused">Paused</option></select></label>
+            <label><div style={labelStyle}>Theme</div><select value={themeFilter} onChange={(event) => setThemeFilter(event.target.value)} style={inputStyle}><option value="all">All themes</option>{THEMES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+            <label><div style={labelStyle}>Attribution</div><select value={authorFilter} onChange={(event) => setAuthorFilter(event.target.value)} style={inputStyle}><option value="all">All attributions</option>{authors.map((author) => <option key={author} value={author}>{author}</option>)}</select></label>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+            <button type="button" onClick={toggleSelectionMode} style={{ ...buttonStyle, background: selectionMode ? brand.teal : brand.surfaceSoft, color: selectionMode ? brand.inkOn : brand.text, border: "1px solid " + (selectionMode ? brand.teal : brand.border) }}>{selectionMode ? "Done selecting" : "Select"}</button>
+            {(searchQuery || statusFilter !== "all" || themeFilter !== "all" || authorFilter !== "all") && <button type="button" onClick={() => { setSearchQuery(""); setStatusFilter("all"); setThemeFilter("all"); setAuthorFilter("all"); }} style={{ ...buttonStyle, background: "transparent", color: brand.textMuted, border: "1px solid " + brand.border }}>Clear filters</button>}
+          </div>
+        </div>
+
+        {selectionMode && (
+          <div role="region" aria-label="Bulk editorial actions" style={{ ...cardStyle, position: "sticky", bottom: 12, zIndex: 15, marginBottom: 14, background: brand.surfaceSoft, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <strong style={{ marginRight: "auto" }}>{selectedCount} selected</strong>
+            <button type="button" disabled={!filteredQuotes.length} onClick={toggleSelectAllFiltered} style={{ ...buttonStyle, background: "transparent", color: brand.text, border: "1px solid " + brand.border }}>{allFilteredSelected ? "Clear filtered selection" : "Select all filtered"}</button>
+            <button type="button" disabled={!selectedCount} onClick={clearSelection} style={{ ...buttonStyle, background: "transparent", color: brand.textMuted, border: "1px solid " + brand.border }}>Clear</button>
+            <button type="button" disabled={busy || !selectedCount} onClick={() => bulkSetActive(false)} style={{ ...buttonStyle, background: brand.surface, color: brand.text, border: "1px solid " + brand.border }}>Pause selected</button>
+            <button type="button" disabled={busy || !selectedCount} onClick={() => bulkSetActive(true)} style={{ ...buttonStyle, background: brand.teal, color: brand.inkOn }}>Resume selected</button>
+          </div>
+        )}
 
         {importState && (
           <div style={{ ...cardStyle, marginBottom: 14 }}>
@@ -537,7 +684,7 @@ export default function ReflectionQuotesAdmin() {
           </div>
         )}
 
-        {draft && (
+        {draft && !draft.id && (
           <div style={{ ...cardStyle, marginBottom: 14 }}>
             <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, marginBottom: 14 }}>{draft.id ? "Edit item" : "Add item"}</div>
             <div style={{ display: "grid", gap: 12 }}>
@@ -556,6 +703,7 @@ export default function ReflectionQuotesAdmin() {
                   })}
                 </div>
                 {draft.placements.includes("preparing_with") && <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 5 }}>Preparing your With items are limited to 90 characters.</div>}
+                {draft.placements.includes("homepage") && <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 5 }}>Homepage items rotate daily for signed-out visitors. Short, broadly human lines work best here.</div>}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
@@ -583,22 +731,77 @@ export default function ReflectionQuotesAdmin() {
             </div>
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-              <button type="button" disabled={busy} onClick={() => setDraft(null)} style={{ ...buttonStyle, background: brand.surfaceSoft, color: brand.text, border: `1px solid ${brand.border}` }}>Cancel</button>
+              <button type="button" disabled={busy} onClick={cancelDraft} style={{ ...buttonStyle, background: brand.surfaceSoft, color: brand.text, border: `1px solid ${brand.border}` }}>Cancel</button>
               <button type="button" disabled={busy} onClick={saveQuote} style={{ ...buttonStyle, background: brand.teal, color: brand.inkOn }}>{busy ? "Saving…" : "Save item"}</button>
             </div>
           </div>
         )}
 
-        <div style={{ color: brand.textMuted, fontSize: 11, marginBottom: 10 }}>{quotes.length} {quotes.length === 1 ? "item" : "items"} · {quotes.filter((quote) => quote.active).length} active</div>
+        <div style={{ color: brand.textMuted, fontSize: 11, marginBottom: 10 }}>{filteredQuotes.length} of {quotes.length} {quotes.length === 1 ? "item" : "items"} · {quotes.filter((quote) => quote.active).length} active</div>
 
         <div style={{ display: "grid", gap: 10 }}>
-          {quotes.map((quote) => {
+          {filteredQuotes.map((quote) => {
             const isNext = quote.featured_week === currentWeekMonday();
             const weeklyEligible = (quote.placements || []).includes("weekly_reflection");
+            if (draft?.id === quote.id) {
+              return (
+          <div key={quote.id} style={{ ...cardStyle }}>
+            <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 23, fontWeight: 600, marginBottom: 14 }}>{draft.id ? "Edit item" : "Add item"}</div>
+            <div style={{ display: "grid", gap: 12 }}>
+              <label>
+                <div style={labelStyle}>Text</div>
+                <textarea value={draft.quote} maxLength={360} rows={4} onChange={(event) => setDraft((current) => ({ ...current, quote: event.target.value }))} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} placeholder="A short thought that sounds like With." />
+                <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 4, textAlign: "right" }}>{draft.quote.length}/360</div>
+              </label>
+
+              <div>
+                <div style={labelStyle}>Placements</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {PLACEMENTS.map(([id, label]) => {
+                    const selected = draft.placements.includes(id);
+                    return <button key={id} type="button" onClick={() => toggleArrayValue("placements", id)} style={{ ...buttonStyle, minHeight: 32, padding: "5px 9px", borderRadius: 999, background: selected ? brand.surfaceSoft : "transparent", color: selected ? brand.text : brand.textMuted, border: `1px solid ${selected ? brand.teal : brand.border}` }}>{selected && <Check size={12} style={{ marginRight: 4, verticalAlign: -2 }} />}{label}</button>;
+                  })}
+                </div>
+                {draft.placements.includes("preparing_with") && <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 5 }}>Preparing your With items are limited to 90 characters.</div>}
+                {draft.placements.includes("homepage") && <div style={{ color: brand.textMuted, fontSize: 10, marginTop: 5 }}>Homepage items rotate daily for signed-out visitors. Short, broadly human lines work best here.</div>}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
+                <label><div style={labelStyle}>Kind</div><select value={draft.quote_kind} onChange={(event) => setDraft((current) => ({ ...current, quote_kind: event.target.value }))} style={inputStyle}>{QUOTE_KINDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+                <label><div style={labelStyle}>Attribution</div><input value={draft.attribution} onChange={(event) => setDraft((current) => ({ ...current, attribution: event.target.value }))} placeholder={draft.quote_kind === "with_original" ? "With" : "Author / speaker"} style={inputStyle} /></label>
+                {draft.placements.includes("weekly_reflection") && <label><div style={labelStyle}>Featured week (Monday)</div><input type="date" value={draft.featured_week} onChange={(event) => setDraft((current) => ({ ...current, featured_week: event.target.value }))} style={inputStyle} /></label>}
+              </div>
+
+              <div>
+                <div style={labelStyle}>Themes</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {THEMES.map(([id, label]) => {
+                    const selected = draft.themes.includes(id);
+                    return <button key={id} type="button" onClick={() => toggleArrayValue("themes", id)} style={{ ...buttonStyle, minHeight: 32, padding: "5px 9px", borderRadius: 999, background: selected ? brand.surfaceSoft : "transparent", color: selected ? brand.text : brand.textMuted, border: `1px solid ${selected ? brand.teal : brand.border}` }}>{selected && <Check size={12} style={{ marginRight: 4, verticalAlign: -2 }} />}{label}</button>;
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
+                <label><div style={labelStyle}>Source URL</div><input value={draft.source_url} onChange={(event) => setDraft((current) => ({ ...current, source_url: event.target.value }))} placeholder="Optional research/source link" style={inputStyle} /></label>
+                <label><div style={labelStyle}>Source / rights note</div><input value={draft.source_note} onChange={(event) => setDraft((current) => ({ ...current, source_note: event.target.value }))} placeholder="e.g. Public domain; verified Project Gutenberg" style={inputStyle} /></label>
+              </div>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700 }}><input type="checkbox" checked={draft.active} onChange={(event) => setDraft((current) => ({ ...current, active: event.target.checked }))} />Active in editorial library</label>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+              <button type="button" disabled={busy} onClick={cancelDraft} style={{ ...buttonStyle, background: brand.surfaceSoft, color: brand.text, border: `1px solid ${brand.border}` }}>Cancel</button>
+              <button type="button" disabled={busy} onClick={saveQuote} style={{ ...buttonStyle, background: brand.teal, color: brand.inkOn }}>{busy ? "Saving…" : "Save item"}</button>
+            </div>
+          </div>
+              );
+            }
             return (
               <div key={quote.id} style={{ ...cardStyle, opacity: quote.active ? 1 : 0.68 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 14, alignItems: "start" }}>
                   <div>
+                    {selectionMode && <label style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 10, fontSize: 12, fontWeight: 800, color: brand.textMuted }}><input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelection(quote.id)} aria-label={"Select quote by " + (quote.attribution || "With")} /> Select</label>}
                     <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 20, lineHeight: 1.35 }}>“{quote.quote}”</div>
                     {quote.attribution && <div style={{ color: brand.textMuted, fontSize: 12, marginTop: 6 }}>— {quote.attribution}</div>}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
@@ -610,7 +813,7 @@ export default function ReflectionQuotesAdmin() {
                     </div>
                     {(quote.source_note || quote.source_url) && <div style={{ color: brand.textMuted, fontSize: 10, lineHeight: 1.45, marginTop: 9 }}>{quote.source_note || "Source recorded"}{quote.source_url && <> · <a href={quote.source_url} target="_blank" rel="noreferrer" style={{ color: brand.tealDark }}>source</a></>}</div>}
                   </div>
-                  <button type="button" onClick={() => editQuote(quote)} style={{ ...buttonStyle, minWidth: 40, padding: 9, background: brand.surfaceSoft, color: brand.text, border: `1px solid ${brand.border}` }} aria-label={`Edit item by ${quote.attribution || "With"}`}><Pencil size={15} /></button>
+                  {!selectionMode && <button type="button" data-edit-quote-id={quote.id} onClick={() => editQuote(quote)} style={{ ...buttonStyle, minWidth: 40, padding: 9, background: brand.surfaceSoft, color: brand.text, border: `1px solid ${brand.border}` }} aria-label={`Edit item by ${quote.attribution || "With"}`}><Pencil size={15} /></button>}
                 </div>
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 14, paddingTop: 12, borderTop: `1px solid ${brand.border}` }}>
@@ -623,7 +826,7 @@ export default function ReflectionQuotesAdmin() {
           })}
         </div>
 
-        {!quotes.length && <div style={{ ...cardStyle, color: brand.textMuted, textAlign: "center", padding: 30 }}>No editorial items yet. This is where With’s tiny bits of humanity live instead of being scattered through the codebase like breadcrumbs.</div>}
+        {!quotes.length ? <div style={{ ...cardStyle, color: brand.textMuted, textAlign: "center", padding: 30 }}>No editorial items yet. This is where With’s tiny bits of humanity live instead of being scattered through the codebase like breadcrumbs.</div> : !filteredQuotes.length && <div style={{ ...cardStyle, color: brand.textMuted, textAlign: "center", padding: 30 }}>No editorial items match those filters.</div>}
       </div>
     </div>
   );

@@ -1,5 +1,24 @@
+import { useState } from "react";
 import withLogo from "./assets/brand/with-logo.svg";
 import EditorialLine from "./components/EditorialLine.jsx";
+
+const OPENING_MIN_DWELL_MS = 2500;
+let initialOpeningStartedAt = null;
+let initialOpeningFinished = false;
+
+function beginInitialOpening() {
+  if (initialOpeningFinished) return false;
+  if (initialOpeningStartedAt === null) initialOpeningStartedAt = Date.now();
+  return true;
+}
+
+export async function finishInitialOpening() {
+  if (initialOpeningFinished) return;
+  if (initialOpeningStartedAt === null) initialOpeningStartedAt = Date.now();
+  const remaining = Math.max(0, OPENING_MIN_DWELL_MS - (Date.now() - initialOpeningStartedAt));
+  if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
+  initialOpeningFinished = true;
+}
 
 export const brand = {
   teal: "#1F5E57",
@@ -86,6 +105,8 @@ export function BrandLogo({ compact = false, style = {} }) {
 }
 
 export function BrandLoading({ children = "Getting your With ready…" }) {
+  const [showEditorialOpening] = useState(beginInitialOpening);
+
   return (
     <div
       role="status"
@@ -94,7 +115,7 @@ export function BrandLoading({ children = "Getting your With ready…" }) {
         minHeight: "100vh",
         minHeight: "100dvh",
         background: brand.teal,
-        color: "rgba(255,255,255,.76)",
+        color: "rgba(255,255,255,.78)",
         display: "grid",
         placeItems: "center",
         padding: 24,
@@ -103,23 +124,29 @@ export function BrandLoading({ children = "Getting your With ready…" }) {
         fontFamily: "'DM Sans', -apple-system, sans-serif",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 300, textAlign: "center" }}>
-        <BrandLogo style={{ width: 132, margin: "0 auto 14px", backgroundColor: brand.inkOn }} />
-        <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>{children}</div>
-        <EditorialLine
-          placement="preparing_with"
-          style={{
-            marginTop: 14,
-            paddingTop: 13,
-            borderTop: "1px solid rgba(255,255,255,.16)",
-            color: "rgba(255,255,255,.88)",
-            fontFamily: "'Newsreader', Georgia, serif",
-            fontSize: 15,
-            fontStyle: "italic",
-            lineHeight: 1.4,
-          }}
-          attributionStyle={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal" }}
-        />
+      <div style={{ width: "100%", maxWidth: showEditorialOpening ? 460 : 320, textAlign: "center" }}>
+        <BrandLogo style={{ width: 136, margin: "0 auto 18px", backgroundColor: brand.inkOn }} />
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".035em", lineHeight: 1.45 }}>
+          {showEditorialOpening ? "Preparing your With" : children}
+        </div>
+        {showEditorialOpening && (
+          <EditorialLine
+            placement="preparing_with"
+            deferFallbackUntilLoaded
+            style={{
+              marginTop: 22,
+              paddingTop: 20,
+              borderTop: "1px solid rgba(255,255,255,.18)",
+              color: "rgba(255,255,255,.96)",
+              fontFamily: "'Newsreader', Georgia, serif",
+              fontSize: "clamp(20px, 4.8vw, 25px)",
+              fontStyle: "italic",
+              lineHeight: 1.45,
+              textWrap: "balance",
+            }}
+            attributionStyle={{ fontFamily: "'DM Sans', -apple-system, sans-serif", fontStyle: "normal", fontSize: "0.58em", marginTop: 8 }}
+          />
+        )}
       </div>
     </div>
   );

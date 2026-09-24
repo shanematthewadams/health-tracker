@@ -1,113 +1,114 @@
-# With V1 — Supabase Auth Email Templates
+# With v2.5 — Transactional Auth Email Operations
 
-These templates are for the hosted Supabase project and must be pasted into **Authentication → Email Templates** in the Supabase dashboard.
+With transactional email copy is now managed through the in-app Admin under:
 
-They intentionally use `{{ .ConfirmationURL }}` so the existing environment-aware redirect behavior remains unchanged.
+**Admin → Editorial → Emails**
 
-## Confirm signup
+The guiding rule is:
 
-**Subject**
+> Content is admin-managed. Structure is code-managed.
 
-`Welcome to With — confirm your email`
+## Current delivery paths
 
-**Body**
+### Supabase Auth
 
-```html
-<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#1F5E57;font-family:Arial,sans-serif;color:#171816;">
-    <div style="padding:28px 14px;">
-      <div style="max-width:560px;margin:0 auto;background:#FCFBF8;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(17,50,46,.18);">
-        <div style="padding:28px 30px 18px;background:#1F5E57;color:#fff;">
-          <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;">With</div>
-          <div style="margin-top:7px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
-        </div>
-        <div style="padding:30px;">
-          <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.12;margin-bottom:16px;">Confirm your email.</div>
-          <p style="margin:0 0 14px;line-height:1.6;color:#5D615F;">You’re almost in. Confirm this email address to finish creating your With account.</p>
-   <p style="margin:0;line-height:1.6;color:#171816;"><strong>Your health stays yours.</strong> With simply gives you a private place to take care of yourself alongside people you trust.</p>
-          <p style="margin:26px 0 0;">
-            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F5E57;color:#fff;text-decoration:none;padding:13px 18px;border-radius:10px;font-weight:700;">Confirm my email</a>
-          </p>
-          
-          <p style="font-size:12px;line-height:1.5;color:#8A8F94;margin:26px 0 0;">If the button doesn’t work, use this link:<br><a href="{{ .ConfirmationURL }}" style="color:#174E49;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
-```
+Supabase Auth continues to send:
 
-## Reset password
+- account confirmation
+- password recovery
+- email-change confirmation
 
-**Subject**
+The application does not replace Supabase Auth delivery or token behavior.
 
-`Reset your With password`
+The Admin editor stores approved copy in `public.transactional_email_content`. Saving an Auth-backed message updates the With copy only. An administrator then explicitly chooses **Sync to Supabase Auth** to have `manage-transactional-email` render the fixed With email structure and synchronize the subject and HTML to the hosted Supabase Auth configuration through the Supabase Management API.
 
-**Body**
+The renderer preserves `{{ .ConfirmationURL }}` for action and fallback links and maps approved With variables to supported Supabase Auth template variables. Admin users never edit raw HTML, CSS, auth URLs, or Supabase template syntax.
 
-```html
-<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#1F5E57;font-family:Arial,sans-serif;color:#171816;">
-    <div style="padding:28px 14px;">
-      <div style="max-width:560px;margin:0 auto;background:#FCFBF8;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(17,50,46,.18);">
-        <div style="padding:28px 30px 18px;background:#1F5E57;color:#fff;">
-          <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;">With</div>
-          <div style="margin-top:7px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
-        </div>
-        <div style="padding:30px;">
-          <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.12;margin-bottom:16px;">Choose a new password.</div>
-          <p style="margin:0 0 14px;line-height:1.6;color:#5D615F;">We received a request to reset your With password.</p>
-   <p style="margin:0;line-height:1.6;color:#171816;">Use the button below to choose a new one. If you didn’t request this, you can safely ignore this email.</p>
-          <p style="margin:26px 0 0;">
-            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F5E57;color:#fff;text-decoration:none;padding:13px 18px;border-radius:10px;font-weight:700;">Reset my password</a>
-          </p>
-          
-          <p style="font-size:12px;line-height:1.5;color:#8A8F94;margin:26px 0 0;">If the button doesn’t work, use this link:<br><a href="{{ .ConfirmationURL }}" style="color:#174E49;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
-```
+### With invitations
 
-## Change email address
+With invitations continue to send through the `send-with-invite` Edge Function and Resend.
 
-**Subject**
+The invitation function reads the active `with_invitation` copy from `public.transactional_email_content` at send time. If the editorial row cannot be read, the function uses code-owned fallback copy so an editorial problem cannot prevent an invitation from being sent.
 
-`Confirm your new With email`
+## Required server-side secret
 
-**Body**
+Automatic Supabase Auth template synchronization requires this Edge Function secret:
 
-```html
-<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#1F5E57;font-family:Arial,sans-serif;color:#171816;">
-    <div style="padding:28px 14px;">
-      <div style="max-width:560px;margin:0 auto;background:#FCFBF8;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(17,50,46,.18);">
-        <div style="padding:28px 30px 18px;background:#1F5E57;color:#fff;">
-          <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;">With</div>
-          <div style="margin-top:7px;font-size:12px;color:rgba(255,255,255,.76);">We’re in this together.</div>
-        </div>
-        <div style="padding:30px;">
-          <div style="font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.12;margin-bottom:16px;">Confirm your new email.</div>
-          <p style="margin:0 0 14px;line-height:1.6;color:#5D615F;">You asked to change the email address you use to sign in to With.</p>
-   <p style="margin:0;line-height:1.6;color:#171816;">Confirm <strong>{{ .NewEmail }}</strong> to finish the change. If you didn’t request this, you can safely ignore this email.</p>
-          <p style="margin:26px 0 0;">
-            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F5E57;color:#fff;text-decoration:none;padding:13px 18px;border-radius:10px;font-weight:700;">Confirm new email</a>
-          </p>
-          
-          <p style="font-size:12px;line-height:1.5;color:#8A8F94;margin:26px 0 0;">If the button doesn’t work, use this link:<br><a href="{{ .ConfirmationURL }}" style="color:#174E49;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
-```
+`WITH_SUPABASE_ACCESS_TOKEN`
 
-## Notes
+It must be a Supabase personal access token with permission to manage the With project.
 
-- Invitation emails are handled separately by the `send-with-invite` function and have already been styled in code.
-- Do not replace `{{ .ConfirmationURL }}` with a fixed production URL. With already passes the correct redirect destination for staging vs. production.
-- The email HTML deliberately uses web-safe fonts rather than relying on remote font loading, which is unreliable in email clients.
+**Never put this token in React/Vite environment variables, GitHub source, browser code, logs, or this document.**
+
+Configure it only as a Supabase Edge Function secret.
+
+If the secret is missing or rejected:
+
+- Admin copy still saves successfully to With
+- invitation copy continues to work through Resend
+- Auth template synchronization fails safely
+- the Email editor shows the sync error
+- the last working hosted Supabase Auth template remains in place
+
+## System-controlled email structure
+
+Code controls:
+
+- approved With branding
+- email-safe HTML and responsive structure
+- CTA URL and fallback URL
+- supported template variables
+- variable escaping
+- required security/account language
+- footer structure
+- provider integration
+- environment-aware redirects
+
+Admin controls only approved editorial fields:
+
+- subject
+- preheader
+- headline
+- body copy
+- CTA label
+- supporting text
+
+### Limited inline formatting
+
+Body copy and supporting text may use only these inline tags:
+
+- `<b>` and `<strong>` for bold
+- `<i>` and `<em>` for italics
+- `<br>` for a manual line break
+
+Tags cannot include attributes. Other HTML remains escaped or is rejected by the Admin editor. Subject, preheader, headline, and CTA label remain plain text. Layout, CSS, links, branding, and email structure remain code-controlled.
+
+## Supported Admin templates
+
+| Template key | Admin name | Delivery |
+| --- | --- | --- |
+| `confirm_signup` | Confirm email | Supabase Auth |
+| `password_recovery` | Password recovery | Supabase Auth |
+| `email_change` | Confirm email change | Supabase Auth |
+| `with_invitation` | Join a With invitation | Resend |
+
+Magic-link/OTP and reauthentication emails are not currently exposed in Admin because the application does not currently use those flows.
+
+## Redirect behavior
+
+Do not replace Supabase's `{{ .ConfirmationURL }}` with a fixed production URL.
+
+Signup and recovery calls already pass environment-aware return destinations. Staging-originated flows must return to staging; production-originated flows must return to production.
+
+## Email-client assumptions
+
+Transactional templates deliberately use email-safe typography and simple single-column markup.
+
+- body fallback: Arial / Helvetica / sans-serif
+- editorial heading fallback: Georgia / serif
+- no remote web-font dependency
+- no background-image dependency
+- no animation
+- no essential information contained only in images
+
+The email remains understandable if images are blocked.
