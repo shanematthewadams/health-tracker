@@ -609,6 +609,9 @@ export default function Tracker() {
   const [activeUser, setActiveUser] = useState("Alli");
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [tab, setTab] = useState("today");
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [tab]);
   const [logTab, setLogTab] = useState(() => localStorage.getItem("with-log-tab") || "food");
   const [toast, setToast] = useState(null);
   const [buttonSuccess, setButtonSuccess] = useState(null);
@@ -947,6 +950,7 @@ export default function Tracker() {
 
   async function selectWith(withId) {
     if (!withId || withId === activeWithId) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     setFastEditorOpen(false);
     setLoading(true);
     await loadAll(withId);
