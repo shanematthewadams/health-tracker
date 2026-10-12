@@ -121,7 +121,7 @@ revoke all on function public.with_mcp_access_token_hook(jsonb) from public,anon
 grant execute on function public.with_mcp_access_token_hook(jsonb) to supabase_auth_admin;
 
 create function private.mcp_profile() returns uuid language sql stable security definer set search_path='' as $$
- select p.id from public.profiles p where p.user_id=auth.uid() and exists(select 1 from public.connected_ai_apps c where c.user_id=p.user_id and c.client_id=auth.jwt()->>'client_id' and c.resource=auth.jwt()->>'aud' and c.revoked_at is null and c.expires_at>now() and exists(select 1 from auth.sessions s where s.user_id=p.user_id and s.id::text=auth.jwt()->>'session_id'));
+ select case when count(*)=1 then min(p.id::text)::uuid else null end from public.profiles p where p.user_id=auth.uid() and exists(select 1 from public.connected_ai_apps c where c.user_id=p.user_id and c.client_id=auth.jwt()->>'client_id' and c.resource=auth.jwt()->>'aud' and c.revoked_at is null and c.expires_at>now() and exists(select 1 from auth.sessions s where s.user_id=p.user_id and s.id::text=auth.jwt()->>'session_id'));
 $$;
 revoke all on function private.mcp_profile() from public,anon,authenticated;
 grant execute on function private.mcp_profile() to with_mcp;
