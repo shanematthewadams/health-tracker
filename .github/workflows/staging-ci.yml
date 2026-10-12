@@ -23,4 +23,7 @@ jobs:
       - name: Run safety tests
         run: npm test
       - name: Build staging bundle
+        env:
+          VITE_SUPABASE_URL: https://with-ci.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ci-publishable-validation-only
         run: npm run build

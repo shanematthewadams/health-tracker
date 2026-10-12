@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.netlify/
+.env
+.env.*
+!.env.example
+
+supabase/.temp/
+
+netlify/functions/*.zip
+netlify/functions/manifest.json

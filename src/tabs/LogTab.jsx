@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import WorkoutRecordsPanel from "../components/WorkoutRecordsPanel.jsx";
 import LogTabBase from "./LogTabBase.jsx";
 import CustomTrackersLogSection from "../components/CustomTrackersLogSection.jsx";
 import FastingHistorySection from "../components/FastingHistorySection.jsx";
@@ -233,6 +234,7 @@ export default function LogTab(props) {
         <>
           <div className="with-log-standard-shell">
             <LogTabBase {...baseProps} />
+            {props.logTab === "activity" && props.activeCanEdit && <WorkoutRecordsPanel date={props.actDate || props.today} styles={props.styles} />}
           </div>
           {props.activeCanEdit && fastingEnabled && !activeFast && (
             <FastingTodaySection

@@ -25,6 +25,7 @@ import ProfileWithsPanel from "../components/ProfileWithsPanel.jsx";
 import MyTrackersPanel from "../components/MyTrackersPanel.jsx";
 import LoggingRemindersPanel from "../components/LoggingRemindersPanel.jsx";
 import { DailyReflectionPreferencePanel } from "../components/DailyReflection.jsx";
+import ConnectedAppsPanel from "../components/ConnectedAppsPanel.jsx";
 import DataExportPanel from "../components/DataExportPanel.jsx";
 import { supabase } from "../supabase.js";
 import { readStoredActiveWithId } from "../withMemberships.js";
@@ -636,6 +637,7 @@ export default function ProfileTab({
           </div>
 
           <div style={{ marginTop: 22 }}>
+            <ConnectedAppsPanel session={session} styles={styles} />
             <DataExportPanel styles={{ SURFACE_2, BORDER, TEXT, TEXT_MUTED, WARN, bigButton }} />
           </div>
 

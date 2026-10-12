@@ -1,0 +1,81 @@
+# With V3 Connected Health — implementation checkpoint
+
+## Verified scope
+
+Development source: `staging`, initially `0ca812b8ce3f52efca9a536c7d9653579b608b55` (V2.5).
+Production: `main`, Netlify site `244de24a-8f2e-4772-ad10-96b31ad17766`.
+Supabase project: `zlrnragsrttgipmeliwo`, PostgreSQL 17, shared by staging and production; no development database branch exists.
+Live schema and RLS were inspected through the Supabase connector. No health records were exported or changed.
+Latest applied migration at inspection: `20260922224908`.
+Existing activity records have name/date/calories, without structured sets, distance or recovery.
+Live personal record ownership and per-metric sharing are already implemented. All inspected security-definer functions have PUBLIC execution revoked.
+
+## Implemented
+
+- Official MCP SDK 1.32.1, stateless Streamable HTTP POST in a Netlify Function at `/mcp`.
+- RFC 9728 protected-resource metadata; Supabase OAuth 2.1 discovery is the authorization server. Supabase owns PKCE, code exchange, refresh rotation and client registration. With never handles users' passwords in a new auth system or stores OAuth bearer tokens.
+- Dedicated `with_mcp` database role. It does not inherit `authenticated` or With membership access. User tokens and RLS apply to data queries; no service-role credential is used by the MCP server.
+- Signed-token verification using `auth.getClaims`, issuer/resource audience/expiry/role/client/session checks, followed by Auth `getUser` and a live session/consent check in PostgreSQL.
+- Per-user/client consent: categories, read/write permissions, 90-day expiry, revocation. OIDC `openid` is a login scope; health permissions are separate live With grants, not invented Supabase OAuth scopes.
+- Bounded queries (93 days, 2,000 rows), strict validation, 64 KB request limit, same-origin validation when Origin is present, no-store responses, generic errors without health payload logging, Netlify declarative IP/domain rate limiting.
+- Own profile/goals, weight, nutrition, activities, workouts/strength, wellness, preferences, summaries, range comparisons and missing-record tools. Missing days and null measurements never become observed zeros.
+- Weight/food/workout/wellness writes; goal/correction safeguards with one-time, expiring human approval in With; tracker enable/hide. No SQL, admin, delete, membership or sharing mutation tools.
+- An AI boolean cannot approve goals or corrections: prepare a request, have the owner approve its exact before/after values in With, then consume that immutable approval on the matching write. Optimistic concurrency rejects changed records.
+- Transactional SQL RPC with durable submission receipts, SHA-256 fingerprints, advisory locks, rejection of reusing keys for different inputs, and atomic rollback of activity/workout/provenance/audit writes.
+- Structured workout sets preserve exercise, muscle groups, equipment, reps, weight/unit, load basis, RPE and RIR. Workouts bridge to the existing Activity UI rather than duplicating totals.
+- Wellness records preserve unknown sleep/RHR/HRV/energy/fatigue/soreness values.
+- Connection settings, OAuth consent and workout detail UI.
+- Inbound health import planner with explicit categories, original units/timestamps/source IDs, exact-id duplicate detection and cross-source review candidates. Original observations are retained; overlapping totals are never summed.
+
+## Activation status
+
+The server defaults to disabled. A disabled staging endpoint is infrastructure, not a completed authenticated integration. Migrations are committed but **not applied to the shared live database**. OAuth settings, token hook, resource audience and client connection are not yet verified live.
+
+The schema test uses PGlite PostgreSQL and a synthetic subset of the live schema, including deliberately broad browser sharing. It meaningfully tests SQL/RLS/transactions, but does not replace testing Auth, PostgREST, the existing food triggers, or Netlify deployment.
+
+The native Apple Health data path, iOS companion, background delivery, direct Garmin/Strava sync and an in-app AI model are not implemented. No paid API or resource was enabled. Coaching occurs in the connected AI client once activation is complete.
+
+## Required activation sequence (maintainer)
+
+1. Review the two migrations and run `npm test` plus `npm run build`. Validate them against a full isolated schema copy before applying to the shared database. Do not replay historical migrations or backfill health records.
+2. Apply the new migration(s) only once. Grant the dedicated role to PostgREST's authenticator. Check security/performance advisors and the current browser flows. The security-definer PUBLIC grant loop preserves old browser/backend access; the live audit found no functions that require this change.
+3. Supabase Dashboard → Authentication → OAuth Server: enable OAuth Server, choose `/oauth/consent` as the authorization path, and configure the staging site URL/authorization UI carefully. The single shared project cannot silently move production login/recovery redirects to staging. Prefer an explicit full staging authorization URL if supported; otherwise resolve this environment limitation before activation. Do not change the project's Site URL simply to make OAuth work.
+4. Authentication → Hooks → Custom Access Token: select `public.with_mcp_access_token_hook`. Preserve any existing hook behavior by composing it, if one is configured. Normal login claims remain unchanged; authorized OAuth clients receive role `with_mcp` and their exact MCP resource audience. The hook must be enabled **before any third-party OAuth authorization**.
+5. Register an OAuth client (or enable dynamic registration after considering abuse). Use public-client PKCE, exact redirect URI from the ChatGPT connection UI, and `openid`. Verify refresh tokens are actually issued and honored. Do not claim offline access based on a scope name the provider doesn't support.
+6. Netlify → project → Environment variables: create `WITH_MCP_ENABLED=true`, `WITH_MCP_RESOURCE=https://staging--shane-and-alli-health-tracker.netlify.app/mcp`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, scoped to **staging branch Functions**, then redeploy staging. Never enable the switch in production. These are publishable credentials, not a service-role key.
+7. Verify the live protected-resource metadata, OAuth issuer metadata, PKCE flow, client redirect, audience-bound signed JWT and `with_mcp` PostgREST role. Supabase's `resource` parameter behavior still needs an actual exchange test; a static audience hook alone does not prove full RFC 8707 interoperability.
+8. Use a dedicated test user's independent account/profile. Connect a supported client, read its weight/nutrition history, add synthetic records, retry IDs, test a second user and same-With sharing, revoke and test the original token again. Confirm workouts and sets render in the staging application. Do not write test records into Shane, Alli or Tyson's real histories.
+9. Only after the staging demonstration, ask Shane for explicit production promotion approval. Never write `main` without it.
+
+## Connect from ChatGPT (after activation)
+
+Official documentation was checked October 12, 2026: https://developers.openai.com/api/docs/guides/custom-mcp-server and https://developers.openai.com/plugins/build/auth . UI availability remains account/workspace dependent.
+
+1. Open ChatGPT on the web and go to **Plugins**.
+2. Select **+ → Add custom MCP server**.
+3. Name it **With** and enter the staging `/mcp` URL.
+4. Choose **OAuth**. Use the pre-registered client or the configured DCR flow; copy the exact displayed callback URI into Supabase's client registration. No shared bearer secret or database key goes here.
+5. Review the connection notice and choose **Create as a plugin**.
+6. Install the resulting personal/workspace plugin, sign in to your With account, choose information categories, and optionally approve write access.
+7. In a conversation with With enabled, try a bounded weight/nutrition query. Deployment alone does not connect or install this plugin.
+
+Revocation: With → Profile → Account → **Connected Apps & AI → Disconnect**. The live With grant blocks existing tokens immediately; the UI also revokes the Supabase OAuth grant. Disconnect the plugin in ChatGPT as well if removing the client entirely.
+
+## Test checklist before calling the milestone complete
+
+- Authenticated live SDK client + ChatGPT connection, own history retrieval
+- Different-person and same-With isolation
+- Test-account write visible in Activity and Workout details
+- Idempotent retry, conflicting request key, invalid input, read-only denial
+- Revocation, expiry, wrong issuer/audience, removed Auth session
+- Existing browser auth/onboarding/invitations/food triggers
+- Production remains unmodified; health migrations and configuration are explicitly tracked
+
+## Remaining limitations
+
+- Pagination is intentionally not implemented; users must narrow a query above 2,000 rows. No silent truncation.
+- Existing macro zeros may mean default values entered by the legacy UI; the server cannot reconstruct what was unknown historically.
+- Workout calories are unknown unless supplied. The old dashboard may display those as zero; detailed workout UI retains the unknown value.
+- Physiological estimates, PRs, progressive overload recommendations and training-load calculation are not generated. Any provided training load retains provenance; it is not assumed equivalent across providers.
+- Legacy workout/food edits in the current UI are not automatically included in the new MCP receipts. Do not claim a complete audit history of all application writes.
+- Native Apple Health sync and provider registration remain future work after the first authenticated milestone.
