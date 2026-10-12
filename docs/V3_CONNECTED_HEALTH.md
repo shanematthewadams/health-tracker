@@ -29,7 +29,7 @@ Live personal record ownership and per-metric sharing are already implemented. A
 
 ## Activation status
 
-The server defaults to disabled. A disabled staging endpoint is infrastructure, not a completed authenticated integration. Migrations are committed but **not applied to the shared live database**. OAuth settings, token hook, resource audience and client connection are not yet verified live.
+The server is held behind a private readiness gate. The MCP and readiness migrations **are applied to the shared database**; the external-observation migration is not. The Custom Access Token hook is saved and enabled in Supabase. OAuth Server remains off, and a live client exchange has not been verified. The readiness gate remains false pending a successful ordinary With login and the OAuth configuration checks below.
 
 The schema test uses PGlite PostgreSQL and a synthetic subset of the live schema, including deliberately broad browser sharing. It meaningfully tests SQL/RLS/transactions, but does not replace testing Auth, PostgREST, the existing food triggers, or Netlify deployment.
 
@@ -98,4 +98,8 @@ The production release contains only OAuth consent, human change-review and conn
 
 Connection readiness is held in a private administrative table. Public `mcp_rollout_status()` returns only the setup flag and canonical endpoint. Its SECURITY DEFINER advisor warning is intentional: it reads no health data and public clients cannot modify the private flag. Existing app routines were not rewritten. Performance advisors identified constant per-row checks in new policies and inherited preference policies; these do not widen access and are a later optimization.
 
-The Supabase dashboard sign-in requires a human CAPTCHA. The access-token hook cannot be selected until that is completed. Keep OAuth off until `with_mcp_access_token_hook` is saved and normal sign-in is verified; only then set `private.mcp_rollout_settings.security_ready=true`. This gate prevents the deployed consent UI from issuing approval before the restricted role is ready. No Netlify environment edits are required: the function uses the existing project's publishable configuration and the fixed staging address. The publishable key is not a server secret.
+Supabase dashboard sign-in is complete. On October 12, `public.with_mcp_access_token_hook` was selected as the enabled Postgres Customize Access Token (JWT) Claims hook. There was no existing hook to replace. Live SQL confirms Supabase Auth can execute it, browser users cannot execute it, normal-login input is returned unchanged, and an unregistered OAuth client is rejected. The connector cannot impersonate `supabase_auth_admin` via SET ROLE; execution privileges were verified instead.
+
+A fresh production With sign-in attempt returned the application's incorrect-email/password message. This does not establish a successful ordinary sign-in, so the readiness gate remains false. Retry with the user's With credentials through secure sign-in or manual handoff; never request credentials in chat. OAuth Server is still disabled. Its disabled dashboard hides authorization-path settings, so `/oauth/consent` must still be configured when activating it. Keep the readiness gate false until normal login and the saved OAuth path are verified; then set `private.mcp_rollout_settings.security_ready=true`. The gate prevents deployed consent UI from approving an AI connection before setup is complete.
+
+No Netlify environment edits are required: the function uses the existing project's publishable configuration and fixed staging address. The publishable key is not a server secret. Earlier activation instructions above describe historical defaults; this shared-instance checkpoint is authoritative.
