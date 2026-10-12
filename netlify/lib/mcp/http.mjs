@@ -2,10 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import {buildServer} from './server.mjs';
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...headers}});
-export function createHandler({env,makeClient=createClient,makeServer=buildServer,log=()=>{}}) {
+export function createHandler({env,makeClient=createClient,makeServer=buildServer,log=()=>{},getReadiness=async()=>false}) {
  return async function handle(req,context={}) {
   const path=new URL(req.url).pathname;
-  const enabled=env('WITH_MCP_ENABLED')==='true';
+  const enabled=env('WITH_MCP_ENABLED')==='true' && await getReadiness();
   if(path==='/connected-health/status') return json({enabled,version:'3.0.0-alpha.1',state:enabled?'authorization_required':'not_activated',integrations:{apple_health:'not_connected',garmin:'not_connected',strava:'not_connected'}});
   if(!enabled) return json({error:'Connected Health is not activated in this environment.'},503);
   const resource=env('WITH_MCP_RESOURCE');

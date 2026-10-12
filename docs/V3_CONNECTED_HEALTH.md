@@ -85,3 +85,17 @@ Revocation: With → Profile → Account → **Connected Apps & AI → Disconnec
 ## Current blocker
 
 Supabase OAuth discovery confirms the OAuth Server is disabled. Its consent UI is tied to the project Site URL (production). The live project has ES256 signing keys, but no third-party exchange has been tested. Do not change Site URL to staging: that risks redirecting production account flows. The connected tools cannot modify OAuth/Auth Hook or Netlify branch environment settings. Those settings require a dashboard workflow, with approval at the moment new sensitive-data access is created. Production consent-page changes remain a production deployment and are not implicitly authorized by this V3 brief.
+
+## Shared-instance preparation — October 12, 2026
+
+Shane explicitly chose to keep one Supabase instance and authorized the narrow production consent/settings release. No separate project or billing was created.
+
+The exact live public schema (31 tables, 37 functions, existing policies and eight triggers) was recreated locally without health rows. Synthetic weight, food and workout operations, duplicate retry, admin RPC denial and revocation passed against that copy. The MCP migration was applied as `20261012143823_connected_health_mcp`; the readiness gate as `20261012143835_mcp_rollout_readiness`. Repository filenames now match the live ledger. The external-observation migration remains unapplied.
+
+Health row counts were unchanged before and after application. Live SQL also verified that the unauthenticated `with_mcp` role sees no weight rows and lacks admin RPC execution. The readiness flag remains false.
+
+The production release contains only OAuth consent, human change-review and connection-management UI plus a public metadata function. Its consent uses the exact staging MCP resource instead of the production page origin. The production MCP server is not part of this release. Supabase Site URL and existing account redirects remain unchanged.
+
+Connection readiness is held in a private administrative table. Public `mcp_rollout_status()` returns only the setup flag and canonical endpoint. Its SECURITY DEFINER advisor warning is intentional: it reads no health data and public clients cannot modify the private flag. Existing app routines were not rewritten. Performance advisors identified constant per-row checks in new policies and inherited preference policies; these do not widen access and are a later optimization.
+
+The Supabase dashboard sign-in requires a human CAPTCHA. The access-token hook cannot be selected until that is completed. Keep OAuth off until `with_mcp_access_token_hook` is saved and normal sign-in is verified; only then set `private.mcp_rollout_settings.security_ready=true`. This gate prevents the deployed consent UI from issuing approval before the restricted role is ready. No Netlify environment edits are required: the function uses the existing project's publishable configuration and the fixed staging address. The publishable key is not a server secret.
