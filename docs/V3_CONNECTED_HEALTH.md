@@ -29,7 +29,7 @@ Live personal record ownership and per-metric sharing are already implemented. A
 
 ## Activation status
 
-The server is held behind a private readiness gate. The MCP and readiness migrations **are applied to the shared database**; the external-observation migration is not. The Custom Access Token hook is saved and enabled in Supabase. OAuth Server remains off, and a live client exchange has not been verified. A fresh ordinary With login is verified. The readiness gate remains false pending the saved OAuth authorization-path checks below.
+The server is held behind a private readiness gate. The MCP and readiness migrations **are applied to the shared database**; the external-observation migration is not. The Custom Access Token hook is saved and enabled in Supabase. OAuth Server remains off, and a live client exchange has not been verified. A fresh ordinary With login is verified. OAuth Server is enabled, its authorization path is verified as `/oauth/consent`, and the readiness gate is true. Live client registration and an authenticated exchange remain pending.
 
 The schema test uses PGlite PostgreSQL and a synthetic subset of the live schema, including deliberately broad browser sharing. It meaningfully tests SQL/RLS/transactions, but does not replace testing Auth, PostgREST, the existing food triggers, or Netlify deployment.
 
@@ -100,6 +100,16 @@ Connection readiness is held in a private administrative table. Public `mcp_roll
 
 Supabase dashboard sign-in is complete. On October 12, `public.with_mcp_access_token_hook` was selected as the enabled Postgres Customize Access Token (JWT) Claims hook. There was no existing hook to replace. Live SQL confirms Supabase Auth can execute it, browser users cannot execute it, normal-login input is returned unchanged, and an unregistered OAuth client is rejected. The connector cannot impersonate `supabase_auth_admin` via SET ROLE; execution privileges were verified instead.
 
-The initial production With login attempt returned an incorrect-email/password message. After the user completed manual sign-in, a fresh browser observation confirmed the authenticated Today screen and Profile → Account → Connected Apps & AI. No health records were changed. Ordinary login is now verified. OAuth Server is still disabled. Its disabled dashboard hides authorization-path settings, so `/oauth/consent` must still be configured when activating it. Keep the readiness gate false until normal login and the saved OAuth path are verified; then set `private.mcp_rollout_settings.security_ready=true`. The gate prevents deployed consent UI from approving an AI connection before setup is complete.
+The initial production With login attempt returned an incorrect-email/password message. After the user completed manual sign-in, a fresh browser observation confirmed the authenticated Today screen and Profile → Account → Connected Apps & AI. No health records were changed. Ordinary login is now verified. Shane enabled and saved OAuth Server. A fresh dashboard load confirms it is on, dynamic OAuth registration is off, Site URL is unchanged at `https://www.imwith.me`, and Authorization Path is `/oauth/consent`. After these checks, the private readiness flag was set true. This enables staging MCP and the production consent UI; it does not deploy production MCP or create a user consent grant.
 
 No Netlify environment edits are required: the function uses the existing project's publishable configuration and fixed staging address. The publishable key is not a server secret. Earlier activation instructions above describe historical defaults; this shared-instance checkpoint is authoritative.
+
+## Live activation verification — October 12, 2026
+
+- Supabase discovery is HTTP 200 and advertises the expected issuer and S256 PKCE. Dynamic registration and CIMD are not advertised.
+- Staging status is HTTP 200, enabled/consent_enabled true. Production status remains enabled false, consent_enabled true.
+- Protected-resource metadata is HTTP 200 and identifies the exact staging MCP resource and Supabase issuer.
+- An unauthenticated MCP initialize request returns HTTP 401 with the RFC 9728 protected-resource metadata challenge; it returns no tools or health records.
+- No OAuth client has been registered yet and no authenticated client read/write is claimed. With no DCR or CIMD, use a pre-registered client and copy the exact redirect URI displayed by ChatGPT. Current OpenAI docs require the callback-ID-specific URI for authorization servers without RFC 9207 issuer response support; do not guess a universal callback.
+
+Next: get the exact callback from ChatGPT's custom MCP connection screen, register that client in Supabase OAuth Apps, supply its Client ID in ChatGPT, and let the individual user authorize selected health categories. Test writes only with a dedicated test account.
